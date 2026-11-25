@@ -1,0 +1,49 @@
+# =============================================================================
+# VM Pool Manager — SERVICE image dependencies  (SOURCE / documentation only)
+# =============================================================================
+#
+# NOTE: These deps are a STRICT SUBSET of proxy/requirements.in (fastapi, uvicorn,
+# httpx, boto3, psycopg2-binary). In the shared local .venv they are installed via
+# the merged, hash-pinned proxy/requirements.txt lock — this file is NOT compiled
+# or installed on its own and there is deliberately no pool_manager/requirements.txt
+# lockfile. It is passed as a compile INPUT (to document coverage) and kept as the
+# minimal source-of-truth for what the pool-manager SERVICE container needs. See
+# proxy/requirements.in for the lock-regeneration command.
+# =============================================================================
+#
+# This is the runtime dependency set for the pool-manager SERVICE container
+# image (pool_manager/Dockerfile), the same process local_install.sh starts
+# bound to POOL_BIND_HOST (127.0.0.1 by default; the container binds 0.0.0.0).
+#
+# It is DISTINCT from the other two requirement sets in this repo:
+#   • proxy/requirements.txt  — the full proxy host deps (AI/agent, data catalog,
+#                               encryption, formatting). The pool manager needs
+#                               NONE of that: no strands-agents, bedrock-agentcore,
+#                               pandas, pyarrow, onnx, scikit-learn, joblib, ruff,
+#                               sqlglot, cryptography, websockets. Those are proxy /
+#                               AI / data-catalog concerns, not pool-manager runtime.
+#   • app/requirements.txt    — the IN-VM (Firecracker) app deps. Unrelated.
+#
+# Derived by reading what pool_manager/*.py and proxy/storage/*.py actually import
+# on the pool manager's code paths. Keep this MINIMAL — add a line only when an
+# import on a reachable path needs it.
+#
+# Pins are >= ranges, the same style as proxy/requirements.in.
+
+# Web framework — pool_manager/server.py (FastAPI app + uvicorn entrypoint)
+fastapi>=0.139.0
+uvicorn>=0.51.0
+
+# HTTP client — pool_manager/aws_backend.py (VM /health, /rebind, /restore-state)
+httpx>=0.28.1
+
+# AWS SDK — pool_manager/aws_backend.py (boto3 'lambda-microvms' control-plane client)
+boto3>=1.43.51
+
+# PostgreSQL driver — REQUIRED. The pool manager hard-imports proxy.storage, and in
+# ECS it runs with STORAGE_BACKEND=postgres against the shared Aurora pool_vms ledger.
+# proxy/storage/postgres_db.py imports psycopg2 lazily in initialize() and raises a
+# RuntimeError if the driver is absent, so without this line the pool-manager service
+# cannot reach the shared ledger at all. proxy/requirements.txt carries the same
+# driver + pin for the proxy's own Postgres path (both services share proxy.storage).
+psycopg2-binary>=2.9

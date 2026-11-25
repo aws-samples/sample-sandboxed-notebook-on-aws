@@ -1,0 +1,152 @@
+{
+  "name": "Sales Data Analysis",
+  "description": "Analyze real order data from Athena with SQL (DuckDB) and interactive Plotly charts — top products, monthly revenue trend, and category mix across 2024.",
+  "savedAt": "2026-09-20T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 📊 Sales Data Analysis\n\nWhat's actually selling, and how does revenue move through the year? This workbook answers that from **real order data** in the sandbox — the `orders` and `products` tables in **Athena** — then teaches the core analyst loop: **query with SQL (DuckDB), then visualize with interactive Plotly**.\n\n**What you'll do**\n- Pull real orders joined to their products from Athena into a DataFrame\n- Rank products, trend revenue month-over-month, and find each product's best month — all in **SQL cells over the DataFrame**\n- Build interactive **Plotly** charts (area, box, scatter) and a static matplotlib trend\n\nAll AWS access uses the MicroVM's **execution role** — no credentials in the notebook. Turn on **Reactive** and drag the sliders to re-query live.\n\n```mermaid\ngraph LR\n  O[\"Athena: orders\"] --> J[\"orders × products (SQL join)\"]\n  P[\"Athena: products\"] --> J\n  J --> R[\"Rank + trend (SQL over the DataFrame)\"]\n  R --> V[\"Interactive Plotly charts\"]\n  R --> M[\"matplotlib trend\"]\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · Load real sales — Athena (`orders` × `products`)\n\nThe next cell runs one **`read_athena`** query that joins `orders` to `products` so every line carries a real product **name, category, brand, price and cost**. The result is a pandas DataFrame called `sales` that every SQL and chart cell below queries — exactly the analyst pattern of *pull once, slice many ways*.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import pandas as pd\nimport numpy as np\nimport plotly.express as px\nimport plotly.graph_objects as go\nimport matplotlib.pyplot as plt\n\n# Real orders joined to products (Athena). One row per order line, with the\n# product's category/brand/margin attached — the frame every cell below queries.\nsales = read_athena(\"\"\"\n    SELECT o.order_id,\n           o.order_date,\n           o.quantity,\n           o.unit_price,\n           o.total                              AS revenue,\n           p.product_id,\n           p.name                               AS product,\n           p.category,\n           p.brand,\n           ROUND(p.price - p.cost, 2)           AS unit_margin\n    FROM microvm_demo_db.orders o\n    JOIN microvm_demo_db.products p ON o.product_id = p.product_id\n\"\"\")\n# order_date arrives as a real date; make sure it's a datetime for grouping/plots.\nsales['date'] = pd.to_datetime(sales['order_date'])\nprint(f\"Loaded {len(sales):,} order lines across {sales['product'].nunique()} products \"\n      f\"and {sales['category'].nunique()} categories\")\nsales.head(10)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · Rank & trend with SQL (DuckDB)\n\nSQL cells query the `sales` DataFrame directly — DuckDB auto-detects it in the namespace, no upload needed. Three questions a merchandiser always asks: **top sellers**, the **monthly revenue trend** (with a running total), and each product's **best month**.\n\n⚙️ The **Top N** slider feeds the first query via a `{var}` placeholder (`LIMIT {top_n_products}`) — drag it (Reactive on) and the ranked list re-queries.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 20, \"step\": 1, \"default\": 10, \"label\": \"Top N products\"}\ntop_n_products = 10\nprint(f\"Ranking the top {top_n_products} products by revenue\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- Top products by total revenue (limited by the {top_n_products} scalar param)\nSELECT\n    product,\n    category,\n    SUM(quantity)        AS total_units,\n    ROUND(SUM(revenue), 2) AS total_revenue,\n    ROUND(AVG(revenue), 2) AS avg_order_value\nFROM sales\nGROUP BY product, category\nORDER BY total_revenue DESC\nLIMIT {top_n_products}",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "top_products"
+    },
+    {
+      "type": "sql",
+      "code": "-- Monthly revenue trend with a running (cumulative) total across 2024\nSELECT\n    strftime(date, '%Y-%m')                              AS month,\n    ROUND(SUM(revenue), 2)                               AS monthly_revenue,\n    ROUND(SUM(SUM(revenue)) OVER (ORDER BY strftime(date, '%Y-%m')), 2) AS cumulative_revenue\nFROM sales\nGROUP BY strftime(date, '%Y-%m')\nORDER BY month",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "monthly_trend"
+    },
+    {
+      "type": "sql",
+      "code": "-- Best-selling month per category (which categories peak when?)\nSELECT category, best_month, monthly_revenue FROM (\n    SELECT category,\n           strftime(date, '%Y-%m')                AS best_month,\n           ROUND(SUM(revenue), 2)                 AS monthly_revenue,\n           ROW_NUMBER() OVER (PARTITION BY category\n                              ORDER BY SUM(revenue) DESC) AS rn\n    FROM sales\n    GROUP BY category, strftime(date, '%Y-%m')\n)\nWHERE rn = 1\nORDER BY monthly_revenue DESC",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "best_months"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Visualize — interactive Plotly\n\nThe payoff: turn the numbers into charts you can zoom, pan, hover, and export. First the **revenue mix by category over the year** (stacked area), then the **spread of order values per category** (box), then **quantity vs revenue** with unit margin as bubble size.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive: monthly revenue by category (stacked area) — real 2024 seasonality\nmonthly_cat = (sales.assign(month=sales['date'].dt.to_period('M').dt.to_timestamp())\n                    .groupby(['month', 'category'])['revenue'].sum().reset_index())\nfig = px.area(\n    monthly_cat, x='month', y='revenue', color='category',\n    title='Monthly Revenue by Category (2024)',\n    labels={'revenue': 'Revenue ($)', 'month': 'Month'},\n    color_discrete_sequence=px.colors.qualitative.Set2,\n)\nfig.update_layout(hovermode='x unified')\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive: distribution of order values by category (box plot)\nfig = px.box(\n    sales, x='category', y='revenue', color='category',\n    title='Order-Value Distribution by Category',\n    points='outliers',\n    color_discrete_sequence=px.colors.qualitative.Pastel,\n)\nfig.update_layout(showlegend=False, xaxis_title='', yaxis_title='Order value ($)')\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive: quantity vs revenue per order, bubble = unit margin, colored by category\nfig = px.scatter(\n    sales, x='quantity', y='revenue', color='category', size='unit_margin',\n    hover_data=['product', 'date'],\n    title='Quantity vs Revenue per order (bubble = unit margin)',\n    color_discrete_sequence=px.colors.qualitative.Bold,\n)\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · A shareable static chart — matplotlib\n\nInteractive charts are great in the notebook; a static PNG is what you paste into a deck. The same monthly trend rendered with matplotlib.\n\n⚙️ The **Chart width** slider resizes the figure.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 6, \"max\": 16, \"step\": 2, \"default\": 10, \"label\": \"Chart width\"}\nfig_width = 10\n# Static matplotlib: total monthly revenue trend across 2024\nmonthly_revenue = sales.groupby(sales['date'].dt.to_period('M').dt.to_timestamp())['revenue'].sum()\nplt.figure(figsize=(fig_width, 5))\nplt.plot(monthly_revenue.index, monthly_revenue.values, marker='o', linewidth=2, color='#89b4fa')\nplt.fill_between(monthly_revenue.index, monthly_revenue.values, alpha=0.1, color='#89b4fa')\nplt.title('Monthly Total Revenue (2024)', color='white', fontsize=14)\nplt.xlabel('Month', color='#a6adc8')\nplt.ylabel('Revenue ($)', color='#a6adc8')\nplt.xticks(rotation=45, color='#a6adc8')\nplt.yticks(color='#a6adc8')\nplt.grid(True, alpha=0.2)\nplt.tight_layout()\nplt.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · The helper one-liners — `query_df`, `plot_pie`, `plot_corr`\n\nSteps 3-4 reach for raw `px.*` / matplotlib. The pre-loaded helpers collapse the common cases to a single line (dark theme + column validation + auto-display baked in).\n\n`query_df` runs SQL **across the DataFrames already in memory** — reference each by its variable name, no re-query to Athena. We have three to work with: **`top_products`** (the top sellers from the SQL cell), **`sales`** (every order line), and **`monthly_cat`** (revenue per category per month). The query below **JOINs all three** — enriching each top product with its category's full-year revenue and its single best sales month — exactly the kind of multi-frame stitch that would otherwise be a chain of `pd.merge` + `groupby`. Then `plot_pie` shows revenue share and `plot_corr` surfaces how the numeric fields move together."
+    },
+    {
+      "type": "code",
+      "code": "# query_df: JOIN THREE in-memory frames by variable name (DuckDB in-process, no AWS\n# round-trip) — each top product enriched with its category's full-year revenue and\n# its best-selling month. This is the multi-DataFrame stitch query_df is for.\nproduct_brief = query_df('''\n    WITH cat_year AS (            -- full-year revenue per category, from every order line\n        SELECT category, ROUND(SUM(revenue), 2) AS category_year_revenue\n        FROM sales\n        GROUP BY category\n    ),\n    cat_peak AS (                -- each category's single best month, from monthly_cat\n        SELECT category, month AS best_month, revenue AS best_month_revenue\n        FROM (\n            SELECT category, month, revenue,\n                   ROW_NUMBER() OVER (PARTITION BY category ORDER BY revenue DESC) AS rn\n            FROM monthly_cat\n        ) WHERE rn = 1\n    )\n    SELECT t.product,\n           t.category,\n           t.total_revenue                       AS product_revenue,\n           c.category_year_revenue,\n           ROUND(100.0 * t.total_revenue / c.category_year_revenue, 1) AS pct_of_category,\n           p.best_month,\n           p.best_month_revenue\n    FROM top_products t\n    JOIN cat_year c  ON t.category = c.category\n    JOIN cat_peak  p ON t.category = p.category\n    ORDER BY t.total_revenue DESC\n''')\nproduct_brief"
+    },
+    {
+      "type": "code",
+      "code": "# plot_pie: revenue share across categories. A quick single-frame query_df feeds it.\ncat_rev = query_df('''\n    SELECT category, ROUND(SUM(revenue), 2) AS revenue\n    FROM sales\n    GROUP BY category\n    ORDER BY revenue DESC\n''')\nplot_pie(cat_rev, names='category', values='revenue', title='Revenue Share by Category')"
+    },
+    {
+      "type": "code",
+      "code": "# plot_corr: correlation heatmap of the numeric order fields — the EDA companion to\n# profile(). Auto-selects numeric columns (needs \u22652); here: quantity, unit_price,\n# revenue, unit_margin.\nplot_corr(sales, title='Order Metrics — Correlation')"
+    }
+  ]
+}

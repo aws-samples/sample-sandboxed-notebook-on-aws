@@ -1,0 +1,26 @@
+{
+  "name": "Semantic search over a column",
+  "desc": "Embed a text column once with Titan, then rank rows by meaning for any query",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 🔎 Semantic search over a column\n\nFind rows by **meaning**, not keywords. A keyword filter misses \"the checkout kept spinning\" when you search \"payment failed\"; a semantic search ranks it near the top because the *embeddings* are close. The trick to doing this cheaply: **embed the corpus once** with Amazon Titan v2, keep the vectors, and reuse them for every query — re-embedding the whole column on each search is the slow, costly mistake this recipe avoids.\n\n**Flow:** load a text column → `embed_texts` the corpus once → `semantic_search(query, corpus, corpus_vectors=...)` for any number of queries. The embedding round-trip is install-free and uses the VM's execution role — no keys, no `pip install`."
+    },
+    {
+      "type": "code",
+      "code": "# 1) Load rows that have a free-text column to search over (reviews, tickets,\n#    descriptions, ...). Swap the reader for whatever holds your text.\ndf = read_athena(\"SELECT * FROM <table_with_text> LIMIT 1000\")\ndf.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 2) Embed the corpus ONCE with Titan v2. Keep corpus_vectors around — this is the\n#    expensive step and you never want to repeat it per query.\ncorpus = df[\"<text_column>\"].tolist()\ncorpus_vectors = embed_texts(corpus)\nprint(\"embedded\", corpus_vectors.shape[0], \"rows into\", corpus_vectors.shape[1], \"dims\")"
+    },
+    {
+      "type": "code",
+      "code": "# 3) Query. Passing corpus_vectors makes this a pure vector comparison — it does NOT\n#    re-embed the corpus, only the short query. Returns a DataFrame (rank, score, text)\n#    sorted by similarity. Run this cell as many times as you like with new queries.\nhits = semantic_search(\"<your query>\", corpus, corpus_vectors=corpus_vectors, top_k=5)\nhits"
+    },
+    {
+      "type": "code",
+      "code": "# 4) Join the matches back to the original rows for full context (ids, dates,\n#    revenue, ...). semantic_search returns the matched `text` + `score`; merge on the\n#    text column to recover every other field of the winning rows.\ntop = hits.merge(df, left_on=\"text\", right_on=\"<text_column>\", how=\"left\")\ntop.head()"
+    }
+  ]
+}

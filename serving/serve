@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+"""SageMaker hosting entrypoint. SageMaker starts the serving container with the
+single arg `serve`; this launches gunicorn for the Flask app on :8080.
+
+Serverless-safe: gunicorn binds :8080 DIRECTLY (no nginx → no /etc writes), and its
+worker temp dir is forced under /tmp (the only writable path on serverless).
+"""
+import os
+import subprocess
+import sys
+
+# SERVERLESS write-path hardening: on SageMaker Serverless the container root fs is
+# READ-ONLY and only /tmp is writable. Anything that writes elsewhere at startup
+# (gunicorn's control socket under $HOME/.gunicorn, python/lib caches under $HOME,
+# tempfiles) would fail the health check — the exact class of error that sank the
+# stock SKLearn container (it wrote /etc/sagemaker-nginx.conf). So force EVERY
+# writable location under /tmp before launching gunicorn.
+_TMP_ENV = {
+    "HOME": "/tmp",                     # gunicorn ctl socket → /tmp/.gunicorn/
+    "TMPDIR": "/tmp",
+    "XDG_CACHE_HOME": "/tmp/.cache",
+    "MPLCONFIGDIR": "/tmp/.mpl",        # matplotlib (if ever imported) writes here
+    "NUMBA_CACHE_DIR": "/tmp/.numba",
+    "PYTHONPYCACHEPREFIX": "/tmp/.pycache",
+    "GUNICORN_CMD_ARGS": "",
+}
+os.environ.update(_TMP_ENV)
+os.makedirs("/tmp/.cache", exist_ok=True)
+
+CMD = [
+    "gunicorn",
+    "--bind", "0.0.0.0:8080",
+    "--workers", "1",
+    "--threads", "4",
+    "--timeout", "120",
+    # Keep ALL gunicorn runtime scratch under /tmp (serverless root fs is read-only).
+    "--worker-tmp-dir", "/tmp",
+    "--log-file", "-",          # stdout/stderr → CloudWatch
+    "--access-logfile", "-",
+    "serve_app:app",            # serve_app.py exposes `app`
+]
+
+if __name__ == "__main__":
+    # SageMaker invokes `serve`; ignore any extra args and start gunicorn with the
+    # /tmp-only environment inherited from above.
+    sys.exit(subprocess.call(CMD, env=os.environ))

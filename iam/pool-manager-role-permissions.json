@@ -1,0 +1,39 @@
+{
+  "_comment": "Least-privilege ECS TASK ROLE policy for the VM Pool Manager service (pool_manager/). This is the TASK role the pool-manager process assumes when hosted on ECS/Fargate — DISTINCT from (a) the MicroVM EXECUTION role (MicroVMSandboxExecRole, iam/exec-role-permissions.json) that each spawned MicroVM runs under, and (b) the build role. Like iam/proxy-role-permissions.json, this file is DOCUMENTATION of the exact grant to attach when the service moves to a hosted role; setup_iam.sh does NOT apply it today because the pool manager currently runs locally under your own dev/admin AWS credentials. Current operating assumption: desiredCount=1 (one pool-manager instance). Permissions are derived 1:1 from the boto3 calls in pool_manager/aws_backend.py. ACTION-PREFIX CAVEAT: the boto3 client id is 'lambda-microvms'; the IAM action prefix is assumed to be 'lambda-microvms:' with PascalCase action names matching the API operations below, but this MUST be confirmed against the lambda-microvms service's IAM documentation — adjust the prefix/casing if the service publishes a different IAM namespace. No actions were invented: the seven control-plane actions map exactly to run_microvm, get_microvm, list_microvms, suspend_microvm, resume_microvm, terminate_microvm, create_microvm_auth_token.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "MicrovmControlPlane",
+      "Effect": "Allow",
+      "Action": [
+        "lambda-microvms:RunMicrovm",
+        "lambda-microvms:GetMicrovm",
+        "lambda-microvms:ListMicrovms",
+        "lambda-microvms:SuspendMicrovm",
+        "lambda-microvms:ResumeMicrovm",
+        "lambda-microvms:TerminateMicrovm",
+        "lambda-microvms:CreateMicrovmAuthToken"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PassMicrovmExecutionRole",
+      "_comment": "run_microvm is called with executionRoleArn=self.exec_role_arn (pool_manager/aws_backend.py:168), so the task must be allowed to PassRole the MicroVM execution role (EXEC_ROLE_NAME=MicroVMSandboxExecRole in scripts/config.sh). Scoped to that one role, and conditioned on the role only being passed to the lambda-microvms service.",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/MicroVMSandboxExecRole",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda-microvms.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ReadAuroraRwDbSecret",
+      "_comment": "Only needed when the Aurora read-write DB password (feeding STORAGE_CONNECTION for the shared pool_vms ledger under STORAGE_BACKEND=postgres) is resolved from Secrets Manager. Scoped to the read-write DB secret pattern (AURORA_RW_SECRET_NAME=microvm/proxy-db/readwrite in scripts/config.sh). Remove this statement if the connection string / password is injected another way.",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:*:*:secret:microvm/proxy-db/readwrite*"
+    }
+  ]
+}

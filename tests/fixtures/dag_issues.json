@@ -1,0 +1,553 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (proxy/notebook/dag.py builder output)",
+ "scenarios": {
+  "every_code": {
+   "cells": [
+    {
+     "id": "i1",
+     "type": "code",
+     "code": "df = load()"
+    },
+    {
+     "id": "i2",
+     "type": "code",
+     "code": "df['a'] = 1"
+    },
+    {
+     "id": "i3",
+     "type": "code",
+     "code": "df = other()"
+    },
+    {
+     "id": "i4",
+     "type": "code",
+     "code": "print(df, ghost)"
+    },
+    {
+     "id": "i5",
+     "type": "code",
+     "code": "exec(\"w = 1\")"
+    },
+    {
+     "id": "i6",
+     "type": "code",
+     "code": "late_value = 2 * early"
+    },
+    {
+     "id": "i7",
+     "type": "code",
+     "code": "early = 1"
+    },
+    {
+     "id": "i8",
+     "type": "code",
+     "code": "p = q + 1"
+    },
+    {
+     "id": "i9",
+     "type": "code",
+     "code": "q = p + 1"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 9,
+    "nodes": [
+     {
+      "cell_id": "i1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "46ef4c5d84ef5412d44c353ca2599511f177acf72f5a5dcf8ef9de585d1aea23",
+      "run_hash": "46ef4c5d84ef5412d44c353ca2599511f177acf72f5a5dcf8ef9de585d1aea23",
+      "run_output_variable": null,
+      "facts_hash": "46ef4c5d84ef5412d44c353ca2599511f177acf72f5a5dcf8ef9de585d1aea23",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "url",
+        "id": "https://example.com/feed.json"
+       },
+       {
+        "kind": "s3",
+        "id": "s3://bucket/raw/x.csv"
+       },
+       {
+        "kind": "local",
+        "id": "/tmp/x.csv"
+       },
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "6dc3a48f09e88d4535b7be82bac4cb8d1bbe54bf4f53fea8fc525259229359e9",
+      "run_hash": "6dc3a48f09e88d4535b7be82bac4cb8d1bbe54bf4f53fea8fc525259229359e9",
+      "run_output_variable": null,
+      "facts_hash": "6dc3a48f09e88d4535b7be82bac4cb8d1bbe54bf4f53fea8fc525259229359e9",
+      "facts_origin": "runtime",
+      "reads": [
+       "df"
+      ],
+      "writes": [
+       "df"
+      ],
+      "mutates": [
+       "df"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9d5fabeed50245aa5a98ec5a9a5db9c68281cbb19a29ad27896512f3a699fe46",
+      "run_hash": "9d5fabeed50245aa5a98ec5a9a5db9c68281cbb19a29ad27896512f3a699fe46",
+      "run_output_variable": null,
+      "facts_hash": "9d5fabeed50245aa5a98ec5a9a5db9c68281cbb19a29ad27896512f3a699fe46",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "df"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i4",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "381969073a34d02fa5e07dea2c8a04454183291825bdb9dc8108fda25611d7d9",
+      "run_hash": "381969073a34d02fa5e07dea2c8a04454183291825bdb9dc8108fda25611d7d9",
+      "run_output_variable": null,
+      "facts_hash": "381969073a34d02fa5e07dea2c8a04454183291825bdb9dc8108fda25611d7d9",
+      "facts_origin": "runtime",
+      "reads": [
+       "df",
+       "ghost"
+      ],
+      "writes": [],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "bfc18fcf4d39cbc2237ab16999813b5527aa5c040cf34d2378bc9dca2df514b2",
+      "run_hash": "bfc18fcf4d39cbc2237ab16999813b5527aa5c040cf34d2378bc9dca2df514b2",
+      "run_output_variable": null,
+      "facts_hash": "bfc18fcf4d39cbc2237ab16999813b5527aa5c040cf34d2378bc9dca2df514b2",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "w"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [
+       "exec()"
+      ],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i6",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "01e547eefbbffedbed4e902e274e281b2ef3daad40c4e438a9aedcc2bf282d70",
+      "run_hash": "01e547eefbbffedbed4e902e274e281b2ef3daad40c4e438a9aedcc2bf282d70",
+      "run_output_variable": null,
+      "facts_hash": "01e547eefbbffedbed4e902e274e281b2ef3daad40c4e438a9aedcc2bf282d70",
+      "facts_origin": "runtime",
+      "reads": [
+       "early"
+      ],
+      "writes": [
+       "late_value"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "early"
+       ],
+       "via": [
+        "i7"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 6,
+      "last_ok_seq": 6,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i7",
+      "position": 6,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "784e036119b29edf289d737f8e9b78b39568e85f52df82470d214c0257336a30",
+      "run_hash": "784e036119b29edf289d737f8e9b78b39568e85f52df82470d214c0257336a30",
+      "run_output_variable": null,
+      "facts_hash": "784e036119b29edf289d737f8e9b78b39568e85f52df82470d214c0257336a30",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "early"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 7,
+      "last_ok_seq": 7,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i8",
+      "position": 7,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "adb01a6a390dde056198441834c90996e3e31167b9f7985d56bea7d71e65e586",
+      "run_hash": "adb01a6a390dde056198441834c90996e3e31167b9f7985d56bea7d71e65e586",
+      "run_output_variable": null,
+      "facts_hash": "adb01a6a390dde056198441834c90996e3e31167b9f7985d56bea7d71e65e586",
+      "facts_origin": "runtime",
+      "reads": [
+       "q"
+      ],
+      "writes": [
+       "p"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "q"
+       ],
+       "via": [
+        "i9"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 8,
+      "last_ok_seq": 8,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "i9",
+      "position": 8,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "35baf5e717bcd1e217634b9b3a06ec965154806d584034303cbba8d717319ff1",
+      "run_hash": "35baf5e717bcd1e217634b9b3a06ec965154806d584034303cbba8d717319ff1",
+      "run_output_variable": null,
+      "facts_hash": "35baf5e717bcd1e217634b9b3a06ec965154806d584034303cbba8d717319ff1",
+      "facts_origin": "runtime",
+      "reads": [
+       "p"
+      ],
+      "writes": [
+       "q"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "i8"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 9,
+      "last_ok_seq": 9,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "i1",
+      "to": "i2",
+      "var": "df",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "i3",
+      "to": "i4",
+      "var": "df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "i7",
+      "to": "i6",
+      "var": "early",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": true
+     },
+     {
+      "from": "i9",
+      "to": "i8",
+      "var": "q",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": true
+     },
+     {
+      "from": "i8",
+      "to": "i9",
+      "var": "p",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "i1",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "local",
+       "id": "/tmp/x.csv"
+      },
+      "detail": "reads local /tmp/x.csv; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "i1",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "url",
+       "id": "https://example.com/feed.json"
+      },
+      "detail": "reads url https://example.com/feed.json; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "i1",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "s3",
+       "id": "s3://bucket/raw/x.csv"
+      },
+      "detail": "reads s3 s3://bucket/raw/x.csv; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "i2",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "df",
+      "related": [
+       "i1"
+      ],
+      "source": null,
+      "detail": "mutates df defined in cell i1"
+     },
+     {
+      "cell_id": "i3",
+      "code": "multiple_definitions",
+      "severity": "info",
+      "var": "df",
+      "related": [
+       "i1"
+      ],
+      "source": null,
+      "detail": "redefines df, also defined in cell i1"
+     },
+     {
+      "cell_id": "i4",
+      "code": "missing_producer",
+      "severity": "amber",
+      "var": "ghost",
+      "related": [],
+      "source": null,
+      "detail": "reads ghost, which no cell in this notebook defines"
+     },
+     {
+      "cell_id": "i5",
+      "code": "dynamic_names",
+      "severity": "amber",
+      "var": null,
+      "related": [],
+      "source": null,
+      "detail": "uses exec(); its reads and writes may be incomplete"
+     },
+     {
+      "cell_id": "i6",
+      "code": "out_of_order",
+      "severity": "amber",
+      "var": "early",
+      "related": [
+       "i7"
+      ],
+      "source": null,
+      "detail": "reads early from cell i7, which comes after it in the notebook"
+     },
+     {
+      "cell_id": "i8",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "i9"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells i9"
+     },
+     {
+      "cell_id": "i8",
+      "code": "out_of_order",
+      "severity": "amber",
+      "var": "q",
+      "related": [
+       "i9"
+      ],
+      "source": null,
+      "detail": "reads q from cell i9, which comes after it in the notebook"
+     },
+     {
+      "cell_id": "i9",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "i8"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells i8"
+     }
+    ],
+    "runtime": {
+     "clock": 9,
+     "vars": {
+      "early": {
+       "defined_by": "i7",
+       "defined_at": 7,
+       "modified_by": [],
+       "last_cell": "i7",
+       "last_exec": 7
+      },
+      "q": {
+       "defined_by": "i9",
+       "defined_at": 9,
+       "modified_by": [],
+       "last_cell": "i9",
+       "last_exec": 9
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "8c3cb0dd353e4470f092fe61c1a4e06ae57a282e16aa4f2b198fdd01559da426",
+    "runtime_hash": "eed0747aafb9f3ebbfaa6b9107e4b0d774fa0a42e1fd9880929a8bcd3f8d6c44",
+    "runtime_version": 1
+   }
+  }
+ }
+}

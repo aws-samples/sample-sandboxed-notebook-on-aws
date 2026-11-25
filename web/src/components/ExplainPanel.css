@@ -1,0 +1,319 @@
+/* Focus-mode "Explain this code" panel. Every colour is a theme token (light, dark,
+   ember). Layout: .cell-focus-split holds [code/outputs column][splitter][panel]; below
+   ~900 px (`.is-stacked`) the panel sits UNDER the column and the splitter is gone. */
+.cell-focus-split {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+}
+.cell-focus-split.is-stacked { flex-direction: column; }
+/* Cell.css gives .cell-focus-body `flex: 1 1 auto`; inside the split it must share the row. */
+.cell-focus-split > .cell-focus-body {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+/* Vertical splitter between the column and the panel. */
+.cell-explain-splitter {
+  flex: 0 0 auto;
+  width: 10px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  border-radius: var(--radius-sm);
+}
+.cell-explain-splitter-grip {
+  width: 4px;
+  height: 44px;
+  border-radius: 2px;
+  background: var(--border-default);
+  transition: background var(--transition-fast);
+}
+.cell-explain-splitter:hover .cell-explain-splitter-grip,
+.cell-explain-splitter:focus-visible .cell-explain-splitter-grip { background: var(--accent-primary); }
+.cell-explain-splitter:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 0; }
+/* Same hover feedback as the notebook's sidebar divider: the whole vertical line turns
+   accent on hover / while dragging, not just the small grip. */
+.cell-explain-splitter { position: relative; }
+.cell-explain-splitter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--transition-fast);
+  pointer-events: none;
+}
+.cell-explain-splitter:hover::before,
+.cell-explain-splitter:active::before,
+.cell-explain-splitter:focus-visible::before { background: var(--accent-primary); }
+.cell-explain-splitter:active .cell-explain-splitter-grip { background: var(--accent-primary); }
+.cell-explain-splitter-grip { position: relative; z-index: 1; }
+/* The panel card. */
+.cell-explain-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  margin: 12px 12px 12px 0;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  font-family: var(--font-sans, inherit);
+  line-height: var(--line-height-normal, 1.5);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.cell-explain-panel.is-stacked {
+  width: auto !important;
+  margin: 0 12px 12px;
+  flex: 0 0 min(42%, 380px);
+}
+.cell-explain-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cell-explain-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.cell-explain-model {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cell-explain-collapse {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cell-explain-collapse:hover { color: var(--text-primary); background: var(--surface-4); }
+.cell-explain-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+}
+.cell-explain-foot {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+}
+.cell-explain-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cell-explain-confirm { margin: 0 0 6px; font-size: var(--font-size-xs); color: var(--text-secondary); }
+/* Buttons */
+.cell-explain-btn-sm {
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 4px 10px;
+  color: var(--text-secondary);
+  background: var(--surface-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+.cell-explain-btn-sm:hover:not(:disabled) { color: var(--text-primary); border-color: var(--accent-primary); }
+.cell-explain-btn-sm:disabled { cursor: default; color: var(--text-secondary); }
+.cell-explain-btn-primary:not(:disabled) {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.cell-explain-btn-primary:hover:not(:disabled) {
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+.cell-explain-btn-sm:focus-visible,
+.cell-explain-collapse:focus-visible,
+.cell-explain-link:focus-visible,
+.cell-explain-badge-link:focus-visible,
+.cell-explain-section-btn:focus-visible,
+.cell-explain-strip:focus-visible,
+.cell-explain-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.cell-explain-link {
+  font: inherit;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+/* Text */
+.cell-explain-text { color: var(--text-primary); font-size: var(--font-size-sm); min-width: 0; }
+.cell-explain-text p { margin: 4px 0; }
+.cell-explain-text ul, .cell-explain-text ol { margin: 4px 0; padding-left: 20px; }
+.cell-explain-text code {
+  background: var(--surface-4);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+.cell-explain-overview { margin-bottom: 8px; }
+.cell-explain-sections { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cell-explain-section { padding: 2px 0; min-width: 0; }
+.cell-explain-section > .cell-explain-text { padding: 2px 6px 0; }
+.cell-explain-section-btn {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  text-align: left;
+  font: inherit;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-left: 3px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.cell-explain-section-title { font-size: var(--font-size-sm); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.cell-explain-range {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.cell-explain-section:hover > .cell-explain-section-btn,
+.cell-explain-section.is-pinned > .cell-explain-section-btn {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+}
+.cell-explain-stale {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  background: var(--surface-3);
+  border: 1px solid var(--accent-warning, var(--border-default));
+  border-radius: var(--radius-sm);
+}
+/* Depends on */
+.cell-explain-deps { margin-top: 12px; }
+.cell-explain-deps-title {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.cell-explain-deps-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cell-explain-dep {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  min-width: 0;
+}
+.cell-explain-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  color: var(--text-primary);
+  border: 1px solid var(--lang-python);
+}
+.cell-explain-badge.cell-type-sql { border-color: var(--lang-sql); }
+/* beats the shared light/dark badge colour (4.33:1 in light) so the label is >= 4.5:1 */
+.cell-explain-panel .cell-explain-badge.cell-explain-badge.cell-type-badge { color: var(--text-primary); }
+.cell-explain-badge-link { font-family: inherit; cursor: pointer; }
+.cell-explain-badge-link:hover { filter: brightness(1.15); text-decoration: underline; }
+.cell-explain-var {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+}
+.cell-explain-why { color: var(--text-secondary); min-width: 0; }
+.cell-explain-notes { margin-top: 10px; color: var(--text-secondary); }
+.cell-explain-line { margin: 10px 0 0; font-size: var(--font-size-xs); color: var(--text-secondary); }
+/* Loading / error / idle / empty */
+.cell-explain-state { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.cell-explain-state-text { color: var(--text-primary); font-size: var(--font-size-sm); }
+.cell-explain-empty { margin: 0; color: var(--text-secondary); font-size: var(--font-size-sm); }
+/* Collapsed strip */
+.cell-explain-strip {
+  flex: 0 0 auto;
+  width: 36px;
+  margin: 12px 12px 12px 0;
+  padding: 8px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+}
+.cell-explain-strip:hover { color: var(--text-primary); border-color: var(--accent-primary); }
+.cell-explain-strip.is-stacked {
+  width: auto;
+  height: 32px;
+  margin: 0 12px 12px;
+  padding: 0;
+  align-items: center;
+}
+/* Toolbar button (the circled "?" in .cell-actions and the focus toolbar) */
+.cell-explain-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.cell-explain-btn[aria-busy="true"] { cursor: progress; }
+.cell-explain-btn[aria-pressed="true"] { color: var(--accent-primary); border-color: var(--accent-primary); background: var(--accent-primary-subtle); }
+/* Visually hidden live region */
+.cell-explain-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell-explain-btn-sm, .cell-explain-splitter-grip { transition: none; }
+}

@@ -1,0 +1,385 @@
+/* ============================================================
+   LogsPanel — Bottom panel for streaming CloudWatch logs
+   ============================================================ */
+
+.logs-bottom-panel {
+  flex-shrink: 0;
+  min-height: 100px;
+  max-height: 70vh;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-0);
+  position: relative;
+}
+
+.logs-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+}
+
+.logs-resize-handle:hover {
+  background: var(--accent-primary);
+  opacity: 0.4;
+}
+
+/* Header */
+.logs-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.logs-panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.logs-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.logs-status-connected {
+  background: var(--accent-success);
+}
+
+.logs-status-disconnected {
+  background: var(--text-muted);
+}
+
+.logs-filter-select {
+  font-size: 10px;
+  padding: 1px 4px;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.logs-autoscroll {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.logs-autoscroll input {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--accent-primary);
+}
+
+.logs-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.logs-panel-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.logs-panel-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+.logs-panel-btn:disabled { opacity: 0.35; cursor: default; }
+/* Pressed/active toggle state (pause on, wrap on). */
+.logs-panel-btn.active {
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+/* Search box — grows to take the free space, pushing the action cluster right. */
+/* Wrapper carries the flex sizing the input used to have, and anchors the clear
+   (✕) button inside the input's right edge. */
+.logs-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 80px;
+  max-width: 280px;
+  display: flex;
+}
+.logs-search-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  padding: 2px 7px;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.logs-search-input:focus { border-color: var(--accent-primary); }
+.logs-search-input::placeholder { color: var(--text-muted); }
+
+/* Clear button — shown only while there's text; reserve input right padding so
+   typed text never runs under it. */
+.logs-search-wrap:has(.logs-search-clear) .logs-search-input {
+  padding-right: 22px;
+}
+.logs-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.logs-search-clear:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+/* Error navigation cluster (badge + prev/next). */
+.logs-error-nav {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.logs-error-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--surface-0);
+  background: var(--accent-danger);
+  border-radius: 8px;
+  padding: 1px 5px;
+  margin-right: 2px;
+}
+.logs-error-nav .logs-panel-btn { padding: 2px 4px; font-size: 11px; line-height: 1; }
+
+/* Search-match highlight inside a log line. */
+.log-hl {
+  background: var(--accent-warning, #e0a341);
+  color: var(--surface-0);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Briefly flash a log line we jumped to (error nav). */
+.log-line-flash {
+  animation: logLineFlash 1.2s ease-out;
+}
+@keyframes logLineFlash {
+  0%   { background: color-mix(in srgb, var(--accent-danger) 40%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .log-line-flash { animation: none; }
+}
+
+/* "New logs below" jump-to-live pill — floats above the bottom edge of the panel. */
+.logs-new-pill {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 12;
+  background: var(--accent-primary);
+  color: var(--surface-0, #fff);
+  border: none;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.logs-new-pill:hover { transform: translateX(-50%) translateY(-1px); }
+
+/* Log container */
+.logs-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.logs-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.logs-container::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+
+/* "Load earlier logs" — sits at the very top of the log list; paging back in time
+   prepends older lines beneath it. Full-width, unobtrusive, monospace to match. */
+.logs-load-earlier {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 4px 12px 6px;
+  padding: 5px 8px;
+  background: var(--surface-1);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.logs-load-earlier:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+.logs-load-earlier:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Individual log line */
+.log-line {
+  display: flex;
+  gap: 8px;
+  padding: 1px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-line:hover {
+  background: var(--surface-1);
+  white-space: normal;
+  word-break: break-all;
+}
+
+/* Wrap toggle ON: every line wraps (not just on hover), and the message can grow
+   vertically instead of being clipped with an ellipsis. */
+.log-line.log-wrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: clip;
+}
+.log-line.log-wrap .log-msg {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: pre-wrap;
+}
+
+.log-msg {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Level colors */
+.log-info .log-msg {
+  color: var(--text-secondary);
+}
+
+.log-warn .log-msg {
+  color: var(--accent-warning);
+}
+
+.log-error .log-msg {
+  color: var(--accent-danger, #ff5c5c);
+}
+
+.log-debug .log-msg {
+  color: var(--text-muted);
+}
+
+/* Emoji/icon highlights in messages */
+.log-line .log-msg:has(🚀) { color: var(--accent-success); }
+
+/* Per-notebook error-metric chip in the header (aggregated APP_METRIC counts). */
+.logs-metric-chip {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-danger, #ff5c5c);
+  background: color-mix(in srgb, var(--accent-danger) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-danger) 40%, transparent);
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* A parsed error-metric line rendered in the stream (distinct from a plain ERROR
+   log line so it reads as a structured signal, not raw text). */
+.log-line.log-metric {
+  background: color-mix(in srgb, var(--accent-danger) 8%, transparent);
+  border-left: 2px solid var(--accent-danger, #ff5c5c);
+}
+.log-line.log-metric .log-msg {
+  color: var(--accent-danger, #ff5c5c);
+  font-weight: 600;
+}
+
+/* Per-line VM tag, shown only when a session has spanned multiple VMs
+   (rotation/recovery), so it's clear which VM emitted a line. */
+.log-vm-tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-right: 6px;
+  font-family: var(--font-mono);
+}
+
+/* "agent" pill on log lines from AI-assistant (execute_code) executions, so the
+   agent's explore/self-correct probes are visibly distinct from user-run cells. */
+.log-agent-pill {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle, color-mix(in srgb, var(--accent-primary) 15%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 40%, transparent);
+  border-radius: 3px;
+  padding: 0 5px;
+  margin-right: 6px;
+  font-family: var(--font-mono);
+  text-transform: lowercase;
+}

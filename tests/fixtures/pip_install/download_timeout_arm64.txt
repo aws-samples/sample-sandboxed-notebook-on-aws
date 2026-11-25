@@ -1,0 +1,2 @@
+Collecting torch==2.3.1
+  Downloading torch-2.3.1-cp311-cp311-manylinux2014_aarch64.whl (86.2 MB)

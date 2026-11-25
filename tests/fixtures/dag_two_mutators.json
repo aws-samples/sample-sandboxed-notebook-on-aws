@@ -1,0 +1,288 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (proxy/notebook/dag.py builder output)",
+ "scenarios": {
+  "ran": {
+   "cells": [
+    {
+     "id": "b",
+     "type": "code",
+     "code": "df = make()"
+    },
+    {
+     "id": "m1",
+     "type": "code",
+     "code": "df['a'] = 1"
+    },
+    {
+     "id": "mid",
+     "type": "code",
+     "code": "n = len(df)"
+    },
+    {
+     "id": "m2",
+     "type": "code",
+     "code": "df.sort_values(\"a\", inplace=True)"
+    },
+    {
+     "id": "end",
+     "type": "code",
+     "code": "top = df.head()"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 5,
+    "nodes": [
+     {
+      "cell_id": "b",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3753dbd0f0d77dc8c2aac224cff79a6b27c4b37f58983f5eb23df50cedbab844",
+      "run_hash": "3753dbd0f0d77dc8c2aac224cff79a6b27c4b37f58983f5eb23df50cedbab844",
+      "run_output_variable": null,
+      "facts_hash": "3753dbd0f0d77dc8c2aac224cff79a6b27c4b37f58983f5eb23df50cedbab844",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "df"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "m1",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "6dc3a48f09e88d4535b7be82bac4cb8d1bbe54bf4f53fea8fc525259229359e9",
+      "run_hash": "6dc3a48f09e88d4535b7be82bac4cb8d1bbe54bf4f53fea8fc525259229359e9",
+      "run_output_variable": null,
+      "facts_hash": "6dc3a48f09e88d4535b7be82bac4cb8d1bbe54bf4f53fea8fc525259229359e9",
+      "facts_origin": "runtime",
+      "reads": [
+       "df"
+      ],
+      "writes": [
+       "df"
+      ],
+      "mutates": [
+       "df"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "mid",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "6a3400677a1fcb6e959a32e5cf5d9ba9c01d32001832baea9eb0ad2780751cb3",
+      "run_hash": "6a3400677a1fcb6e959a32e5cf5d9ba9c01d32001832baea9eb0ad2780751cb3",
+      "run_output_variable": null,
+      "facts_hash": "6a3400677a1fcb6e959a32e5cf5d9ba9c01d32001832baea9eb0ad2780751cb3",
+      "facts_origin": "runtime",
+      "reads": [
+       "df"
+      ],
+      "writes": [
+       "n"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "m2",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9851439ff405b47f3f79a9d4c8f0a2ba76a0c9011c0c65018da3413252205530",
+      "run_hash": "9851439ff405b47f3f79a9d4c8f0a2ba76a0c9011c0c65018da3413252205530",
+      "run_output_variable": null,
+      "facts_hash": "9851439ff405b47f3f79a9d4c8f0a2ba76a0c9011c0c65018da3413252205530",
+      "facts_origin": "runtime",
+      "reads": [
+       "df"
+      ],
+      "writes": [
+       "df"
+      ],
+      "mutates": [
+       "df"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "end",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "4e21e4e3cc5d00258d4d72fdaa3881ed3a893114192f5226644c54de0a027ada",
+      "run_hash": "4e21e4e3cc5d00258d4d72fdaa3881ed3a893114192f5226644c54de0a027ada",
+      "run_output_variable": null,
+      "facts_hash": "4e21e4e3cc5d00258d4d72fdaa3881ed3a893114192f5226644c54de0a027ada",
+      "facts_origin": "runtime",
+      "reads": [
+       "df"
+      ],
+      "writes": [
+       "top"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "b",
+      "to": "m1",
+      "var": "df",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "m1",
+      "to": "mid",
+      "var": "df",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "m1",
+      "to": "m2",
+      "var": "df",
+      "kind": "mutates",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "m2",
+      "to": "end",
+      "var": "df",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "m1",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "df",
+      "related": [
+       "b"
+      ],
+      "source": null,
+      "detail": "mutates df defined in cell b"
+     },
+     {
+      "cell_id": "m2",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "df",
+      "related": [
+       "m1"
+      ],
+      "source": null,
+      "detail": "mutates df defined in cell m1"
+     }
+    ],
+    "runtime": {
+     "clock": 5,
+     "vars": {
+      "df": {
+       "defined_by": "b",
+       "defined_at": 1,
+       "modified_by": [
+        "m1",
+        "m2"
+       ],
+       "last_cell": "m2",
+       "last_exec": 4
+      },
+      "n": {
+       "defined_by": "mid",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "mid",
+       "last_exec": 3
+      },
+      "top": {
+       "defined_by": "end",
+       "defined_at": 5,
+       "modified_by": [],
+       "last_cell": "end",
+       "last_exec": 5
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "90ee253b2b909531787051fd5bb54e1e056ab57412ae84f51458858174b62b65",
+    "runtime_hash": "fb992903c5532abdf190b458a957245fbf193a30b890d655e2da4e457dfa3728",
+    "runtime_version": 1
+   }
+  }
+ }
+}

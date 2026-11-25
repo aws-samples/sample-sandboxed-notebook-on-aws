@@ -1,0 +1,76 @@
+/* Cell list inside the "Delete cell" confirmation (CellDeleteConfirm.jsx).
+   Long cell text is clipped with an ellipsis; the full text is in the title tooltip. */
+.cell-delete-summary,
+.cell-delete-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+}
+.cell-delete-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cell-delete-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cell-delete-badge {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.cell-delete-item .cell-delete-text {
+  flex: 1 1 auto;
+}
+.cell-delete-more {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cell-delete-undo {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+/* Variables other live cells still read (deleted-cell-flag). Amber rule on the
+   left; the text itself uses the primary text colour for contrast. Names wrap
+   anywhere and are never cut. */
+.cell-delete-deps {
+  margin: var(--space-3) 0 0;
+  padding: 2px 0 2px var(--space-3);
+  border-left: 3px solid var(--accent-warning);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.cell-delete-deps p {
+  margin: 0;
+}
+.cell-delete-deps code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cell-delete-deps-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

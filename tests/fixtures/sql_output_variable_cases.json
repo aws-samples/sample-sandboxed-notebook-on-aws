@@ -1,0 +1,18 @@
+[
+ {"sql": "", "expected": "result"},
+ {"sql": "   \n ", "expected": "result"},
+ {"sql": "SELECT * FROM df", "expected": "result"},
+ {"sql": "SELECT * FROM products360 WHERE x > 1", "expected": "result"},
+ {"sql": "SELECT * FROM dynamodb.\"ecommerce-recommendations\"", "expected": "ecommerce_recommendations"},
+ {"sql": "select * from DynamoDB.orders limit 5", "expected": "orders"},
+ {"sql": "SELECT * FROM '/tmp/web_sessions.csv'", "expected": "web_sessions"},
+ {"sql": "SELECT * FROM '/tmp/parts/day-1.parquet'", "expected": "parts_day_1"},
+ {"sql": "SELECT * FROM read_csv('s3://bucket/samples/inventory_daily.csv')", "expected": "inventory_daily"},
+ {"sql": "SELECT * FROM read_parquet('/data/2024/sales.v2.parquet')", "expected": "sales_v2"},
+ {"sql": "SELECT * FROM read_json('x/1events.json')", "expected": "result"},
+ {"sql": "SELECT a, b FROM microvm_demo_db.orders o JOIN microvm_demo_db.items i ON o.id = i.oid", "expected": "orders"},
+ {"sql": "SELECT * FROM awsdatacatalog.microvm_demo_db.orders", "expected": "microvm_demo_db"},
+ {"sql": "-- comment\nSELECT count(*) FROM sales.daily_totals\n", "expected": "daily_totals"},
+ {"sql": "SELECT * FROM '/tmp/__x__.csv'", "expected": "x"},
+ {"sql": "SELECT 1", "expected": "result"}
+]

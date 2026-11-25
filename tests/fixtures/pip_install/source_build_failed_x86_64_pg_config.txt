@@ -1,0 +1,33 @@
+Collecting psycopg2==2.9.9
+  Downloading psycopg2-2.9.9.tar.gz (384 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'error'
+  error: subprocess-exited-with-error
+
+  × python setup.py egg_info did not run successfully.
+  │ exit code: 1
+  ╰─> [23 lines of output]
+      running egg_info
+      creating /tmp/pip-pip-egg-info-7h2k1x/psycopg2.egg-info
+      writing /tmp/pip-pip-egg-info-7h2k1x/psycopg2.egg-info/PKG-INFO
+
+      Error: pg_config executable not found.
+
+      pg_config is required to build psycopg2 from source.  Please add the directory
+      containing pg_config to the $PATH or specify the full executable path with the
+      option:
+
+          python setup.py build_ext --pg-config /path/to/pg_config build ...
+
+      If you prefer to avoid building psycopg2 from source, please install the PyPI
+      'psycopg2-binary' package instead.
+      [end of output]
+
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+error: metadata-generation-failed
+
+× Encountered error while generating package metadata.
+╰─> See above for output.
+
+note: This is an issue with the package mentioned above, not pip.
+hint: See above for details.

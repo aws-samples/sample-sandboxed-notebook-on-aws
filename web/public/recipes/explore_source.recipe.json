@@ -1,0 +1,26 @@
+{
+  "name": "Explore a data source",
+  "desc": "Discover tables, inspect a schema, then run your first query",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 🧭 Explore a data source\n\nThe \"what can I query, and how?\" starting point for a new dataset. Before writing SQL you usually need two things: **what tables exist**, and **what columns one has**. This recipe walks that path with the Athena helpers — list the tables, inspect one table's schema (column names + types), then run a first `LIMIT`ed query against it.\n\nThe same three-step shape works for any source in the **Data Sources** panel — swap the `athena_*` helpers for the matching reader (`read_s3_csv`, `read_dynamodb`, `read_aurora`, ...). Everything uses the VM's execution role; no credentials, nothing to install."
+    },
+    {
+      "type": "code",
+      "code": "# 0) The widest view first: list_datasources() returns EVERY source this session\n#    can reach — Athena/Iceberg tables, DynamoDB tables, S3 files/prefixes, Aurora,\n#    the Bedrock KB — in one DataFrame (the in-cell Data Sources panel). Filter by\n#    type to narrow, e.g. list_datasources('athena').\nlist_datasources()"
+    },
+    {
+      "type": "code",
+      "code": "# 1) What tables can I query? Lists the tables in the Athena/Glue database as a\n#    DataFrame (database, table). Also visible in the Data Sources panel.\nathena_tables()"
+    },
+    {
+      "type": "code",
+      "code": "# 2) What does one table look like? Column names + types — so you reference real\n#    columns in your query instead of guessing.\nathena_schema(\"<table_name>\")"
+    },
+    {
+      "type": "code",
+      "code": "# 3) Query it. Start small with a LIMIT while you explore, then widen once the shape\n#    is what you expect.\ndf = read_athena(\"SELECT * FROM <table_name> LIMIT 100\")\nprint(df.shape, \"rows × cols\")\ndf.head()"
+    }
+  ]
+}

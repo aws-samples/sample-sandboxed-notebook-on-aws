@@ -1,0 +1,64 @@
+# =============================================================================
+# AI Chat Assistant — SERVICE dependencies (uv-managed)
+# =============================================================================
+# Runtime deps for the extracted chat-agent service (agent/ai_assistant/Dockerfile),
+# started locally by local_install.sh as `python -m ai_assistant.agent_runtime`
+# and deployable to Amazon Bedrock AgentCore Runtime.
+#
+# DISTINCT from proxy/requirements.txt: NO fastapi/uvicorn (the AgentCore SDK's
+# BedrockAgentCoreApp provides the /invocations + /ping server), and none of the
+# proxy's data-catalog/format/crypto stack. Derived from what ai_assistant/*.py
+# actually imports.
+#
+# requires-python is ">=3.13" (NOT "==3.13.*"): the container runs on
+# python:3.13-slim but the SHARED local venv is Python 3.14.5 and must stay usable.
+[project]
+name = "ai-assistant"
+version = "0.1.0"
+description = "Sandboxed Notebook on AWS — AI chat agent (Strands + Bedrock AgentCore)."
+license = "MIT-0"
+requires-python = ">=3.13"
+dependencies = [
+    # Bedrock AgentCore SDK — BedrockAgentCoreApp (the agent server) + the
+    # AgentCore Memory Strands integration for the cloud path.
+    "bedrock-agentcore>=1.24.1",
+    # Agent framework (the Strands chat Agent + tools).
+    "strands-agents>=1.48.0",
+    # AWS SDK — Bedrock model calls, S3 attachment fetch, AgentCore Memory data plane.
+    "boto3",
+    # HTTP client — the agent's tools call BACK to the proxy over HTTP.
+    "httpx",
+    # PostgreSQL driver — the memory path imports proxy.storage (image COPYs proxy/);
+    # proxy/storage/postgres_db.py imports psycopg2 lazily on the Aurora path.
+    "psycopg2-binary>=2.9",
+]
+# NOTE on OpenTelemetry versions: this service does NOT pin an otel floor.
+#   • CONTAINER: installs the `tracing` group below (aws-opentelemetry-distro
+#     0.18.0, which pins opentelemetry-api==1.42.1). fastapi is NOT in this
+#     container (the AgentCore SDK provides the server), so there is no 1.44+
+#     requirement here — the distro's 1.42.1 governs and that is correct.
+#   • LOCAL shared venv: the distro is excluded (no --group tracing), and the
+#     proxy's requirements.txt supplies opentelemetry-api/-sdk>=1.44.0 to satisfy
+#     its fastapi. strands-agents accepts the wide range >=1.30,<2.0, so it is
+#     happy at either 1.42.1 (container) or 1.44+ (local). Pinning a floor HERE
+#     would conflict with the distro in the container build, so we deliberately
+#     don't.
+
+# Non-default dependency groups. `tracing` is CONTAINER-ONLY: the AgentCore
+# Runtime image runs the agent under `opentelemetry-instrument` (see Dockerfile
+# CMD), so the container's `uv sync` opts in with `--group tracing`. Local dev
+# does NOT use it — local_install.sh runs the agent as a plain
+# `python -m ai_assistant.agent_runtime` (no otel wrapper) and installs deps via
+# `uv export --no-dev` (which excludes non-default groups), so the distro stays
+# OUT of the shared repo .venv. Keeping it out lets opentelemetry-api float up to
+# satisfy fastapi (aws-opentelemetry-distro 0.18.0 pins api==1.42.1, but fastapi
+# wants api>=1.44.0) — the distro is dormant locally anyway (never invoked).
+[dependency-groups]
+tracing = [
+    # OpenTelemetry auto-instrumentation — the container CMD runs the agent under
+    # `opentelemetry-instrument` for AgentCore Runtime observability.
+    # 0.21.0 (not 0.18.0) pins opentelemetry-api==1.44.0, which matches the proxy's
+    # fastapi floor (>=1.44.0) — so container and local-shared venv agree on otel
+    # 1.44 instead of the old 0.18.0's ==1.42.1 that conflicted with fastapi.
+    "aws-opentelemetry-distro~=0.21.0",
+]

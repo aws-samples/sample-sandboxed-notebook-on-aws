@@ -1,0 +1,246 @@
+{
+  "name": "CloudWatch Logs: Analyze Your Notebook",
+  "description": "Query this notebook's own CloudWatch logs with no setup — tail/grep/Insights/plain-English (read_logs, grep_logs, tail_logs, ask_logs), chart log levels and an error trend, then go fleet-wide across every MicroVM log group to spot platform-wide error patterns.",
+  "savedAt": "2026-08-27T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🔎 CloudWatch Logs — Analyze Your Own Notebook\n\nEvery MicroVM ships its logs to **Amazon CloudWatch Logs**. This notebook queries **its own logs** — no log-group name to look up, no setup — and then charts what it finds.\n\nThe log helpers all take `log_group` as **optional**. Omit it and they default to **this notebook's own log group(s)** — every VM this session has run on, merged across rotations:\n\n| Helper | What it does |\n|---|---|\n| `tail_logs()` | the newest lines (the quick \"what just happened?\") |\n| `grep_logs(pattern)` | raw lines matching a pattern (no aggregation) |\n| `read_logs(insights_query)` | a CloudWatch Logs **Insights** query — aggregations, `stats`, `bin()` |\n| `ask_logs(question)` | plain English → the LLM writes the Insights query, runs it |\n| `notebook_log_groups()` | shows exactly which group(s) the above default to |\n| `log_groups(prefix)` | lists every queryable log group (go fleet-wide) |\n\n**Insights is NOT SQL** — it's a pipe language: `fields … | filter … | stats … by bin(1h) | sort … | limit …`. The time range is the `hours=`/`start=`/`end=` **argument**, never part of the query.\n\nAll access uses the MicroVM's **execution role** (scoped to `/aws/lambda-microvms/*`) — no credentials in the notebook. Run the cells top-to-bottom.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · Which logs are \"mine\"?\n\n`this_notebook()` is the session identity injected at VM launch; `notebook_log_groups()` resolves the CloudWatch log group(s) the readers default to. One notebook = one session, but it can be served by several VMs over its life (rotations / recovery) — each on a size tier with its own group — so this can list more than one.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import pandas as pd\n\nme = this_notebook()\nprint(f\"Notebook : {me.get('notebook_name')}  (session {str(me.get('session_id'))[:8]}…)\")\nprint(f\"MicroVM  : {me.get('microvm_id')}\")\n\n# The log group(s) read_logs()/ask_logs()/tail_logs()/grep_logs() default to\n# when you DON'T pass log_group — this notebook's own, across every VM it used.\ngroups = notebook_log_groups()\nprint(f\"\\nThis notebook's CloudWatch log group(s): {len(groups)}\")\nfor g in groups:\n    print(f\"  • {g}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · Simulate a realistic failure\n\nA brand-new notebook has barely logged anything, so we stage **one concrete, diagnosable failure** — a data-processing job that logs its progress, retries, then hits a real Python exception with a **full traceback**. We catch it (so this cell succeeds), but the error + traceback land in this VM's CloudWatch stream.\n\nThese exact lines become the **evidence** for the Bedrock diagnosis in Step 9 — so the whole notebook tells one story: *a failure happened → we find it in the logs → the LLM diagnoses it from the real traceback.*\n\n> CloudWatch ingestion lags a few seconds, so later cells use a comfortable `hours=` window; re-run them if the newest lines haven't landed yet.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import logging, time, traceback\nlog = logging.getLogger(\"orders_etl\")\n\n# Simulate a nightly ETL that parses an orders feed. It logs progress, warns on a\n# slow dependency, then fails on a real bug — a malformed row that breaks a numeric\n# cast. We log the FULL traceback (what you'd actually see in prod) so Step 9 has\n# genuine evidence to diagnose, not a one-line placeholder.\nlog.info(\"orders_etl: starting run, source=s3://feeds/orders/2026-10-05.csv\")\nlog.info(\"orders_etl: loaded 1,284 rows; validating\")\nlog.warning(\"orders_etl: pricing-service p99 latency 2.3s (SLO 1.0s) — proceeding\")\n\ndef parse_order_total(row):\n    # BUG: 'total' can be an empty string for cancelled orders; int() blows up.\n    return int(row[\"total\"]) * row[\"qty\"]\n\ntry:\n    bad_row = {\"order_id\": \"A-10492\", \"total\": \"\", \"qty\": 3}   # cancelled order\n    parse_order_total(bad_row)\nexcept Exception as e:\n    # Log the error AND the full traceback — exactly what a prod handler would emit.\n    log.error(f\"orders_etl: failed on order_id=A-10492 — {type(e).__name__}: {e}\")\n    log.error(\"orders_etl traceback:\\n\" + traceback.format_exc())\n\nprint(\"Simulated the ETL failure (progress + warning + error + traceback).\")\nprint(\"Giving CloudWatch a few seconds to ingest…\")\ntime.sleep(8)\nprint(\"Ready.\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · `tail_logs()` — the newest lines\n\nNo arguments needed — it tails **this notebook's own** logs. This is the everyday \"what just happened in my notebook?\" peek, like `aws logs tail` for the current VM.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Newest 25 lines from THIS notebook's log group (no log_group arg needed).\ntail_logs(lines=25)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · `grep_logs()` — find specific lines\n\nRaw substring/pattern grep over the events — no aggregation, just the matching lines. Here we pull back everything our demo emitted. `grep_logs` returns a tidy DataFrame (`timestamp`, `log_stream`, `message`), so it composes with pandas.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Grep this notebook's logs for the ETL job's lines over the last 2 hours.\nhits = grep_logs(\"orders_etl\", hours=2)\nprint(f\"{len(hits)} matching line(s)\")\nhits.tail(10)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · `read_logs()` — Insights aggregation + a chart\n\nNow the analytical path. A CloudWatch Logs **Insights** query classifies each line into a level (ERROR / WARN / INFO) with `parse`-style `case` logic and counts them. `read_logs()` returns the result as a DataFrame — which we chart as a **bar of log levels**.\n\n⚙️ *Slider:* how many hours back to scan.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 1, \"max\": 24, \"step\": 1, \"default\": 2, \"label\": \"Hours to scan\"}\nlookback_hours = 2\n\n# Insights is a PIPE language (NOT SQL) — classify each line into a level with\n# NESTED if() (Insights has no SQL CASE/WHEN), then count by that level. The time\n# range is the hours= ARG below — never inside the query.\nlevels = read_logs('''\n    fields @message\n    | stats count(*) as events by\n        if(@message like /ERROR/, 'ERROR',\n           if(@message like /WARNING/ or @message like /WARN/, 'WARN', 'INFO')) as level\n    | sort events desc\n''', hours=lookback_hours)\n\nlevels",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "levels"
+    },
+    {
+      "type": "code",
+      "code": "# Chart the level breakdown. Two views side-by-side: counts (bar) and share (pie).\nif len(levels):\n    plot_bar(levels, x='level', y='events', color='level',\n             title=f'Log lines by level — this notebook (last {lookback_hours}h)')\n    plot_pie(levels, names='level', values='events',\n             title='Share of log lines by level')\nelse:\n    print('No log lines yet in this window — re-run Step 2, wait a few seconds, then re-run.')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 6 · An error trend over time\n\nInsights `bin()` buckets events into time windows — the idiom for a trend line. We count all events and just the ERROR/WARN lines per 5-minute bucket, then draw an **area chart** of activity over time.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Events per 5-minute bucket, split into total vs problems (ERROR/WARN).\ntrend = read_logs('''\n    fields @timestamp, @message\n    | stats count(*) as events,\n            sum(if(@message like /ERROR/ or @message like /WARN/, 1, 0)) as problems\n        by bin(5m) as bucket\n    | sort bucket asc\n''', hours=lookback_hours)\n\nif len(trend):\n    # bin() returns the bucket as @timestamp-like text; read_logs parses it.\n    trend = trend.sort_values('bucket')\n    plot_area(trend, x='bucket', y='events',\n              title=f'Log volume over time — this notebook (last {lookback_hours}h)')\n    plot_line(trend, x='bucket', y='problems',\n              title='ERROR + WARN lines over time')\ntrend",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "trend"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 7 · `ask_logs()` — plain English, no Insights syntax\n\nDon't want to hand-write Insights? Describe what you want and an LLM writes the query, runs it against **this notebook's** logs, and returns the DataFrame. It prints the generated query (also on `df.attrs['insights_query']`) so you can see — and copy — exactly what ran.\n\nCloudWatch is **not** SQL, so this is a direct **English → Insights** translation (there's no SQL-to-Insights path).",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Plain-English question → the LLM writes + runs the Insights query on this notebook.\nanswer = ask_logs(\n    \"count log lines per minute over the window, newest first\",\n    hours=lookback_hours,\n)\nanswer.head(15)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "answer"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 8 · Zoom in to ONE VM — the `log_stream` filter\n\nA log group is shared **per size tier** — every VM on the 2048 tier writes to the same group, each in its own **log stream** (the stream name ends in the VM's `microvm_id`). To analyze just **one VM's** lines (not every notebook that shared the tier), pass `log_stream=\"<substring>\"` to any reader — a **contains** match on the stream name.\n\nHere we scope to **this** VM by its own `microvm_id`, so the counts below are exactly this notebook's current VM — nothing else on the tier.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# This VM's own id (injected at launch) — the stream name ends with it.\nmy_vm = this_notebook().get('microvm_id') or ''\nprint(f\"Scoping to this VM's stream: …{my_vm[-12:]}\")\n\n# SAME group, but log_stream narrows to just this VM's stream. Compare the two\n# counts: unscoped = everything on the shared tier; scoped = only this VM.\nunscoped = read_logs('stats count(*) as events', hours=lookback_hours)\nscoped   = read_logs('stats count(*) as events', hours=lookback_hours, log_stream=my_vm)\n\nn_all  = int(unscoped['events'].iloc[0]) if len(unscoped) else 0\nn_mine = int(scoped['events'].iloc[0])   if len(scoped)   else 0\nprint(f\"events on the shared tier group : {n_all}\")\nprint(f\"events from THIS vm only        : {n_mine}\")\n\n# grep_logs/tail_logs take log_stream too — e.g. tail only this VM:\ntail_logs(lines=10, log_stream=my_vm)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 9 · Diagnose the failure — logs + Bedrock\n\nThe real payoff: turn raw logs into a **diagnosis**. The `orders_etl` job we ran in Step 2 failed — instead of eyeballing lines, we (1) pull that job's lines for **this VM** (scoped with `log_stream`), including the full traceback, then (2) hand them to a **Bedrock LLM** (`invoke_llm`) as context and ask for the root cause and a fix.\n\nThe model reasons over *your actual log evidence* (the real `ValueError` + traceback from Step 2), not a guess — retrieval-augmented debugging. It should pinpoint the empty-string `total` on the cancelled order breaking `int()`, and suggest a guard. The exec role already allows Bedrock `InvokeModel`, so there's nothing to configure.\n\n⚙️ *Textbox:* the reported symptom to diagnose.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"text\", \"default\": \"The orders_etl job failed on tonight's run — what went wrong and how do I fix it?\", \"label\": \"Reported issue\"}\nreported_issue = \"The orders_etl job failed on tonight's run — what went wrong and how do I fix it?\"\n\n# 1) RETRIEVE the evidence: the orders_etl job's lines from THIS vm's stream — the\n#    exact progress + warning + error + traceback we staged in Step 2. Scoped with\n#    log_stream so we diagnose THIS VM, not a neighbour sharing the tier group.\nerr = grep_logs(\"orders_etl\", hours=lookback_hours, log_stream=my_vm)\nif not len(err):\n    # Fall back to the whole group if this VM's stream had nothing yet (ingest lag).\n    err = grep_logs(\"orders_etl\", hours=lookback_hours)\nprint(f\"Pulled {len(err)} orders_etl log line(s) as evidence.\")\n\n# Build a compact, chronological evidence block (cap the chars we send to the\n# model). This includes the full traceback Step 2 logged — the real root-cause clue.\nevidence = \"\\n\".join(err.sort_values('timestamp')['message'].tolist())[:6000]\nevidence = evidence or \"(no orders_etl lines found yet — re-run Step 2, wait a few seconds)\"\nprint(\"\\n--- evidence sent to the model ---\")\nprint(evidence[-1000:])",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "evidence"
+    },
+    {
+      "type": "code",
+      "code": "# 2) DIAGNOSE: give the log evidence to Bedrock and ask for a root-cause analysis.\nsystem = (\n    \"You are an SRE assistant. You are given raw CloudWatch log lines from a single \"\n    \"notebook MicroVM. Diagnose the REPORTED issue using ONLY the evidence. Be concise \"\n    \"and concrete. Respond in markdown with exactly these sections:\\n\"\n    \"**Root cause** — the specific error and why it happened (quote the key log line).\\n\"\n    \"**Fix** — the concrete change to make.\\n\"\n    \"**Confidence** — high/medium/low + what extra log line would raise it.\\n\"\n    \"If the evidence doesn't explain the issue, say so and name what to look for.\"\n)\nprompt = f\"REPORTED ISSUE:\\n{reported_issue}\\n\\nLOG EVIDENCE (newest last):\\n{evidence}\"\n\ndiagnosis = invoke_llm(prompt, system=system, max_tokens=700, temperature=0.0)\n\n# This runtime isn't Jupyter — there's no IPython.display.Markdown. Just print the\n# diagnosis text (the model already formats it as markdown-style sections).\nprint(diagnosis)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 10 · Go fleet-wide — every MicroVM's logs\n\nSo far: just *this* notebook. `log_groups('/aws/lambda-microvms/')` discovers **every** VM log group on the platform (each size tier is its own group). The exec role can query any `/aws/lambda-microvms/*` group, so you can analyze the **whole fleet** — e.g. where errors cluster across tiers.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Every VM log group this platform has created (one per arch/size tier).\nfleet = log_groups('/aws/lambda-microvms/')\nfleet",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "fleet"
+    },
+    {
+      "type": "markdown",
+      "code": "### Step 10b · Error counts across the whole fleet — chart\n\n`read_logs()` accepts a **list** of log groups and queries them together. We pass every VM group from the discovery above, count ERROR lines per group, and chart where problems concentrate. This is the platform-wide health view the per-notebook bottom **Logs panel** can't give you.\n\n⚙️ *Slider:* fleet lookback window.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 1, \"max\": 48, \"step\": 1, \"default\": 6, \"label\": \"Fleet lookback (hours)\"}\nfleet_hours = 6\n\nall_groups = fleet['log_group'].tolist()\nif all_groups:\n    # read_logs takes a LIST of groups — Insights queries them together. @log is the\n    # per-event source group; we shorten it to the tier for a readable axis.\n    fleet_errs = read_logs('''\n        fields @log, @message\n        | filter @message like /ERROR/ or @message like /\\u2717/\n        | stats count(*) as errors by @log\n        | sort errors desc\n    ''', log_group=all_groups, hours=fleet_hours)\n\n    if len(fleet_errs):\n        # @log looks like \"<acct>:/aws/lambda-microvms/notebook-microvm-arm64-2048\" —\n        # keep just the tier suffix for the chart.\n        fleet_errs['tier'] = fleet_errs['@log'].str.rsplit('-', n=2).str[-2:].str.join('-')\n        plot_bar(fleet_errs, x='tier', y='errors', color='tier',\n                 title=f'ERROR lines by VM tier — whole fleet (last {fleet_hours}h)')\n        display(fleet_errs[['tier', 'errors']])\n    else:\n        print(f'No ERROR lines across the fleet in the last {fleet_hours}h — a quiet, healthy platform. 🎉')\nelse:\n    print('No VM log groups discovered yet.')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Recap\n\nYou went from raw logs to a **diagnosis** without ever looking up a log-group name:\n\n- **`tail_logs()` / `grep_logs(pattern)`** — newest lines / pattern matches from *this* notebook\n- **`read_logs(insights_query)`** — Insights aggregations (`stats`, `if()`, `bin()`) → charts (bar, pie, area, line)\n- **`ask_logs(question)`** — plain English → Insights, run for you\n- **`log_stream=\"<substring>\"`** — narrow a shared tier group to ONE VM (or one day); a contains-match on the stream name, on any reader\n- **`invoke_llm(prompt, system=...)`** — feed the retrieved error lines + traceback to Bedrock for a root-cause **diagnosis** (logs → evidence → fix)\n- **`log_groups(prefix)` + `read_logs([...])`** — fleet-wide across every MicroVM group\n\n**Remember:** omit `log_group` for your own notebook; add `log_stream=` to pin to one VM; pass a group name (or list) from `log_groups()` to go wider. Insights is a pipe language, the time range is always an argument, and it bills per GB scanned — so keep the window tight and `filter` early. For a live, always-on tail of this notebook, use the **Logs** panel at the bottom of the screen.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    }
+  ]
+}

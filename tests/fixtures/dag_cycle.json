@@ -1,0 +1,181 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (proxy/notebook/dag.py builder output)",
+ "scenarios": {
+  "ran": {
+   "cells": [
+    {
+     "id": "a",
+     "type": "code",
+     "code": "y = x + 1"
+    },
+    {
+     "id": "b",
+     "type": "code",
+     "code": "x = y + 1"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 2,
+    "nodes": [
+     {
+      "cell_id": "a",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "8883f4cb443d1091beadcdcd95f9a3d8be5a921cf94ab66ac02ca021da6d7598",
+      "run_hash": "8883f4cb443d1091beadcdcd95f9a3d8be5a921cf94ab66ac02ca021da6d7598",
+      "run_output_variable": null,
+      "facts_hash": "8883f4cb443d1091beadcdcd95f9a3d8be5a921cf94ab66ac02ca021da6d7598",
+      "facts_origin": "runtime",
+      "reads": [
+       "x"
+      ],
+      "writes": [
+       "y"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "x"
+       ],
+       "via": [
+        "b"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "b",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "60a8ad62d3c4d26521b8b87f720ba19903cad085aec8fa2e4ab688cba3f9e7ed",
+      "run_hash": "60a8ad62d3c4d26521b8b87f720ba19903cad085aec8fa2e4ab688cba3f9e7ed",
+      "run_output_variable": null,
+      "facts_hash": "60a8ad62d3c4d26521b8b87f720ba19903cad085aec8fa2e4ab688cba3f9e7ed",
+      "facts_origin": "runtime",
+      "reads": [
+       "y"
+      ],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "a"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "b",
+      "to": "a",
+      "var": "x",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": true
+     },
+     {
+      "from": "a",
+      "to": "b",
+      "var": "y",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "a",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "b"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells b"
+     },
+     {
+      "cell_id": "a",
+      "code": "out_of_order",
+      "severity": "amber",
+      "var": "x",
+      "related": [
+       "b"
+      ],
+      "source": null,
+      "detail": "reads x from cell b, which comes after it in the notebook"
+     },
+     {
+      "cell_id": "b",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "a"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells a"
+     }
+    ],
+    "runtime": {
+     "clock": 2,
+     "vars": {
+      "x": {
+       "defined_by": "b",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "b",
+       "last_exec": 2
+      },
+      "y": {
+       "defined_by": "a",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "a",
+       "last_exec": 1
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "a21f991161f82f4c86307b00f5433f87a8de756e884f24c7a8dbd3d653fa24d1",
+    "runtime_hash": "ba95789c09f09fd5596618ead181ea52795229f80db3a79650b390b53a115e87",
+    "runtime_version": 1
+   }
+  }
+ }
+}

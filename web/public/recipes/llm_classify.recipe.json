@@ -1,0 +1,26 @@
+{
+  "name": "Classify a text column with an LLM",
+  "desc": "Label free text into fixed categories with no training data, then quantify it",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 🏷️ Classify a text column with an LLM\n\nTurn a column of free text — support tickets, reviews, feedback — into **structured labels** with no training data and no model to fit. You give the LLM a fixed set of categories and it assigns each row to one (or several). Great for triage, routing, and turning qualitative text into something you can `group_by` and chart.\n\n**Cost model:** this runs **one LLM call per row** (concurrently). So sample large tables first with `.head(...)` while you dial in your labels and instructions, then scale up once you're happy. Set `temperature=0` (the default) for deterministic labels, and use `instructions=` to nudge edge cases (e.g. \"treat refund questions as billing\").\n\nReturns a tidy DataFrame with `text` + `label` (a list of labels when `multi_label=True`)."
+    },
+    {
+      "type": "code",
+      "code": "# 1) Load the text rows. Sample large tables while iterating — one LLM call per row.\ndf = read_dynamodb(\"<your-table>\").head(100)\ndf.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 2) Classify each row into your fixed label set. instructions= steers edge cases;\n#    system= sets a persona if you want one. Returns a DataFrame with text + label.\nlabeled = llm_classify(\n    df[\"<text_column>\"],\n    labels=[\"billing\", \"technical\", \"account\", \"other\"],\n    instructions=\"Treat refund and payment questions as 'billing'.\",\n)\nlabeled.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 3) Quantify it — the point of labeling is to COUNT. Attach the labels back to the\n#    source rows and see the category mix at a glance.\ndf = df.assign(category=labeled[\"label\"].values)\ndf[\"category\"].value_counts()"
+    },
+    {
+      "type": "code",
+      "code": "# 4) Visualize the distribution (plot_bar is pre-loaded — no import). It takes a\n#    DataFrame with x/y columns, so turn the counts into one first.\ncounts = df[\"category\"].value_counts().rename_axis(\"category\").reset_index(name=\"count\")\nplot_bar(counts, x=\"category\", y=\"count\", title=\"Tickets by category\")"
+    }
+  ]
+}

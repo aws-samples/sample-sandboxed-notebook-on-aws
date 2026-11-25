@@ -1,0 +1,10 @@
+Collecting scikit-learn==0.24.2
+  Downloading scikit-learn-0.24.2.tar.gz (7.5 MB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: scikit-learn
+  Building wheel for scikit-learn (pyproject.toml): started

@@ -1,0 +1,1908 @@
+/* AI Chat Panel — right side */
+.ai-panel {
+  width: 320px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar-bg);
+  border-left: 1px solid var(--sidebar-border);
+  height: 100%;
+  animation: aiPanelSlideIn 0.2s ease-out;
+  position: relative;
+  /* Glide when expanding/collapsing — same easing/duration as the sidebar + peek
+     overlay. Only width animates; the RIGHT edge stays pinned, so it reads as the
+     panel sweeping leftward over the notebook and back. */
+  transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width;
+}
+
+/* Expanded (fullscreen) — leave the flex flow and OVERLAY the notebook (and the
+   left sidebar if it reaches it). Pinned to the right/top/bottom of the app body,
+   above app content, below modals (z-index:10000). Width is set inline. */
+.ai-panel-expanded {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  min-width: 0;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.38);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-panel { transition: none; }
+}
+/* While actively dragging the resize handle, suppress the width transition so
+   every mousemove's width update applies INSTANTLY (1:1 with the cursor) instead
+   of animating over 320ms — that animated queueing is what made resizing feel
+   laggy/delayed. The expand/collapse glide (not a drag) still animates normally
+   since this class is only added for the duration of the drag. */
+.ai-panel-dragging {
+  transition: none !important;
+}
+
+.ai-panel-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+
+.ai-panel-resize:hover,
+.ai-panel-resize:active {
+  background: var(--accent-primary);
+}
+
+@keyframes aiPanelSlideIn {
+  from { transform: translateX(10px); opacity: 0.8; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.ai-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.ai-panel-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.ai-panel-action {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.ai-panel-action:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.ai-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ai-export-wrapper {
+  position: relative;
+}
+
+.ai-export-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.ai-export-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 16px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-export-menu button:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+/* ── Model picker ─────────────────────────────────────────────────────────────
+   A Kiro-style model chooser in the header-actions row: a compact trigger button
+   showing the selected model's name + a caret, opening a dropdown whose rows carry
+   a bold name, a muted description, and a right-aligned cost badge. Uses the same
+   surface/border/shadow tokens the export menu uses so it reads as native. */
+.ai-model-picker {
+  position: relative;
+  margin-right: 2px;
+}
+
+.ai-model-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 150px;
+  padding: 2px 7px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ai-model-trigger:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.ai-model-trigger-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-model-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  /* Wider than the 320px AI panel so full model names (e.g. "Claude Sonnet 5.5"
+     + provider + DEFAULT tag + cost badge) fit on one line without ellipsis.
+     Absolutely positioned with right:0, so it can overhang the panel edge. */
+  width: 380px;
+  max-height: 68vh;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Tier group: an uppercase header above the rows of that cost tier. A subtle top
+   divider (on all but the first group) separates the tiers, and the label is tinted
+   to match its tier's row-stripe colour so header + rows read as one group. */
+.ai-model-group + .ai-model-group {
+  margin-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ai-model-group-head {
+  padding: 9px 10px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  /* Brighter than the old --text-muted (which was nearly invisible on the dark
+     menu); tier-specific colours below give each header its own tint. */
+  color: var(--text-secondary);
+}
+
+.ai-model-group[data-tier="economy"] .ai-model-group-head { color: var(--success, #3fb950); }
+.ai-model-group[data-tier="standard"] .ai-model-group-head { color: var(--accent-primary); }
+.ai-model-group[data-tier="premium"] .ai-model-group-head { color: var(--warning, #d29922); }
+
+.ai-model-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  background: none;
+  border: none;
+  /* Tier accent on the left edge; overridden per data-tier below. */
+  border-left: 3px solid transparent;
+  border-radius: 5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.ai-model-row:hover {
+  background: var(--surface-3);
+}
+
+.ai-model-row.selected {
+  background: var(--accent-primary-subtle);
+}
+
+.ai-model-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ai-model-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ai-model-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-model-provider {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ai-model-default-tag {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.ai-model-check {
+  flex-shrink: 0;
+  color: var(--accent-primary);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+/* Context + capability icon row. Brighter than the old --text-muted so it's
+   actually readable against the dark surface. */
+.ai-model-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--text-secondary);
+}
+
+.ai-model-ctx {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ai-model-caps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+}
+
+.ai-model-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ai-model-cap span[aria-hidden] {
+  color: var(--accent-primary);
+  font-size: 11px;
+}
+
+/* Cost badge — the primary at-a-glance signal, COLOUR-CODED by tier:
+   economy = green (cheap), standard = neutral, premium = amber (pricey). */
+.ai-model-badge {
+  flex-shrink: 0;
+  align-self: center;
+  min-width: 30px;
+  text-align: center;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+
+.ai-model-badge[data-cost-tier="economy"] {
+  color: var(--success, #3fb950);
+  border-color: color-mix(in srgb, var(--success, #3fb950) 45%, transparent);
+  background: color-mix(in srgb, var(--success, #3fb950) 14%, transparent);
+}
+
+.ai-model-badge[data-cost-tier="premium"] {
+  color: var(--warning, #d29922);
+  border-color: color-mix(in srgb, var(--warning, #d29922) 45%, transparent);
+  background: color-mix(in srgb, var(--warning, #d29922) 16%, transparent);
+}
+
+/* Tier accent colors (left edge of each row). Economy/standard/premium mirror the
+   cost tiers from top_models_for_agent; now paired with the labelled group header. */
+.ai-model-row[data-tier="economy"] { border-left-color: var(--success, #3fb950); }
+.ai-model-row[data-tier="standard"] { border-left-color: var(--accent-primary); }
+.ai-model-row[data-tier="premium"] { border-left-color: var(--warning, #d29922); }
+
+.ai-panel-scope {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.ai-panel-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-5) var(--space-3);
+  color: var(--text-muted);
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.ai-panel-empty-icon {
+  font-size: 28px;
+  opacity: 0.6;
+}
+
+.ai-panel-empty p {
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+.ai-panel-hints {
+  font-size: var(--font-size-xs) !important;
+  color: var(--text-tertiary) !important;
+  font-style: italic;
+}
+
+/* Context-aware starter prompts (empty state). A tidy column of clickable pills. */
+.ai-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 300px;
+  margin-top: var(--space-3);
+}
+
+.ai-suggestion-chip {
+  width: 100%;
+  text-align: left;
+  padding: 9px 13px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-3, rgba(255, 255, 255, 0.05));
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ai-suggestion-chip::before {
+  content: "✨ ";
+  opacity: 0.7;
+}
+
+.ai-suggestion-chip:hover:not(:disabled) {
+  background: var(--accent-primary-muted, rgba(91, 159, 255, 0.12));
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.ai-suggestion-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ai-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.ai-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.ai-msg-header:hover {
+  color: var(--text-secondary);
+}
+
+.ai-msg-toggle {
+  font-size: 10px;
+  width: 10px;
+}
+
+.ai-msg-role {
+  font-weight: 600;
+  font-size: 10px;
+}
+/* The "▾ AI" label row starts where the bubble's content (text, code blocks) starts. */
+.ai-msg-assistant .ai-msg-header { padding-left: 12px; }
+
+.ai-msg-time {
+  color: var(--text-muted);
+  font-size: 9px;
+  margin-left: auto;
+}
+
+.ai-msg-preview {
+  color: var(--text-muted);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.ai-msg-collapsed {
+  opacity: 0.7;
+}
+
+.ai-msg-user { align-self: flex-end; max-width: 85%; }
+.ai-msg-assistant { align-self: flex-start; max-width: 100%; }
+
+.ai-msg-content {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.ai-msg-user .ai-msg-content {
+  background: var(--chat-user-bubble-bg, var(--accent-primary));
+  color: var(--chat-user-bubble-fg, white);
+  border-bottom-right-radius: 3px;
+}
+
+.ai-msg-assistant .ai-msg-content {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-bottom-left-radius: 3px;
+}
+
+.ai-msg-error .ai-msg-content {
+  background: var(--accent-danger-subtle);
+  color: var(--accent-danger);
+}
+
+.ai-msg-md code {
+  background: var(--surface-4);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+/* Plain (non-fenced) inline <pre> fallback — keep the old simple style. */
+.ai-msg-md pre:not(.ai-code-pre) {
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin: 6px 0;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.ai-msg-md pre:not(.ai-code-pre) code {
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ai-msg-md strong { color: var(--text-primary); }
+
+/* ─── Generated code blocks = CODE CARDS ─────────────────────────────────────
+   A distinct, elevated card: raised surface, rounded border, an accent left edge,
+   and a header strip (language label + Copy/Insert) above a monospaced code body.
+   The header keeps the buttons off the first line of code. */
+.ai-code-block {
+  margin: 8px 0;
+  background: var(--surface-0);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 6px);
+  box-shadow:
+    inset 3px 0 0 0 var(--lang-python),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* Per-type identity — same language colors the NOTEBOOK CELLS use (theme.css
+   --lang-*): Python=blue, SQL=orange, Markdown=purple. Card gets a lang-colored
+   left edge + a faint body wash (mirrors the cell's color-mix bg), and the header
+   label picks up the lang color. Default (above) is the code/python blue. */
+.ai-code-block[data-lang="code"] {
+  background: color-mix(in srgb, var(--surface-0) 96%, var(--lang-python) 4%);
+  border-color: color-mix(in srgb, var(--lang-python) 22%, var(--border-default));
+  box-shadow: inset 3px 0 0 0 var(--lang-python), 0 1px 3px rgba(0,0,0,0.35);
+}
+.ai-code-block[data-lang="sql"] {
+  background: color-mix(in srgb, var(--surface-0) 96%, var(--lang-sql) 4%);
+  border-color: color-mix(in srgb, var(--lang-sql) 22%, var(--border-default));
+  box-shadow: inset 3px 0 0 0 var(--lang-sql), 0 1px 3px rgba(0,0,0,0.35);
+}
+.ai-code-block[data-lang="markdown"] {
+  background: color-mix(in srgb, var(--surface-0) 96%, var(--lang-markdown) 4%);
+  border-color: color-mix(in srgb, var(--lang-markdown) 22%, var(--border-default));
+  box-shadow: inset 3px 0 0 0 var(--lang-markdown), 0 1px 3px rgba(0,0,0,0.35);
+}
+
+/* Header strip: language label (left) + actions (right). Tinted per type. */
+.ai-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* Thinner, lower-contrast band than the Intel section headers (it sits below
+     them in the hierarchy); the type colour stays on the label and the left edge. */
+  padding: 3px 8px 3px 12px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ai-code-block[data-lang="code"] .ai-code-head { background: var(--ai-block-head-python); }
+.ai-code-block[data-lang="sql"] .ai-code-head { background: var(--ai-block-head-sql); }
+.ai-code-block[data-lang="markdown"] .ai-code-head { background: var(--ai-block-head-markdown); }
+/* The header strip is clickable to collapse/expand (the action buttons opt out
+   of the cursor so they still read as buttons). */
+.ai-code-head { cursor: pointer; }
+.ai-code-actions { cursor: default; }
+
+/* Collapse/expand caret at the far left of the header. */
+.ai-code-toggle {
+  font-size: 10px;
+  line-height: 1;
+  width: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.ai-code-toggle:hover { color: var(--text-primary); }
+
+/* Collapsed: hide the code body, keeping only the header strip visible. */
+.ai-code-block.ai-code-collapsed .ai-code-pre,
+.ai-code-block.ai-code-collapsed .ai-md-preview { display: none; }
+
+/* Markdown cards: rendered preview by default, raw source on toggle
+   (.ai-code-show-source). The source <pre> stays in the DOM either way —
+   Copy/Insert read its textContent. */
+.ai-code-block[data-lang="markdown"]:not(.ai-code-show-source) .ai-code-pre { display: none; }
+.ai-code-block.ai-code-show-source .ai-md-preview { display: none; }
+
+/* Rendered preview body. Carries .md-rendered (notebook markdown-cell typography,
+   Cell.css + theme-light.css) inside .ai-msg-md (chat table/code styles); these
+   card-scoped rules neutralize the cell's click-to-edit affordances and keep wide
+   content inside the panel. */
+.ai-code-block .ai-md-preview {
+  padding: 10px 12px;
+  min-height: 0;
+  cursor: auto;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.ai-code-block .ai-md-preview:hover { background: transparent; border-radius: 0; }
+.ai-code-block .ai-md-preview > :first-child { margin-top: 0; }
+.ai-code-block .ai-md-preview > :last-child { margin-bottom: 0; }
+/* Tables scroll horizontally inside the card instead of widening the panel. */
+.ai-code-block .ai-md-preview table {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.ai-code-block .ai-md-preview :is(h1, h2, h3) { margin: 10px 0 4px; line-height: 1.3; }
+.ai-code-block .ai-md-preview h1 { font-size: 1.15em; }
+.ai-code-block .ai-md-preview h2 { font-size: 1.05em; }
+.ai-code-block .ai-md-preview h3 { font-size: 1em; }
+.ai-code-block .ai-md-preview :is(th, td) {
+  padding: 4px 10px;
+  /* .ai-msg-content sets word-break:break-word, which collapses each cell's
+     min-content to ~1 char and splits words ("Evide|nce"). Break only between
+     words; a too-wide table scrolls (above) instead. */
+  word-break: normal;
+  overflow-wrap: normal;
+  vertical-align: top;
+}
+.ai-code-block .ai-md-preview pre { overflow-x: auto; max-width: 100%; }
+
+/* Brief "Copied ✓" confirmation state on the copy button. */
+.ai-code-copy-btn.ai-code-copied {
+  background: var(--accent-success-subtle, var(--accent-success));
+  border-color: var(--accent-success);
+  color: var(--accent-success);
+}
+
+.ai-code-lang {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  /* Sit flush-left next to the collapse caret; margin-right:auto pushes the
+     Copy/Insert actions to the far right (previously space-between centered it). */
+  margin-right: auto;
+}
+/* Language label in the type's identity color (matches the cell type badges). */
+.ai-code-block[data-lang="code"] .ai-code-lang { color: var(--lang-python); }
+.ai-code-block[data-lang="sql"] .ai-code-lang { color: var(--lang-sql); }
+.ai-code-block[data-lang="markdown"] .ai-code-lang { color: var(--lang-markdown); }
+.ai-code-actions { display: flex; gap: 4px; }
+.ai-code-copy-btn, .ai-code-insert-btn {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+/* Header text never breaks mid-word (.ai-msg-content's word-break:break-word is
+   inherited; with the extra Source/Preview button a narrow panel split labels
+   like "MARKDOW|N"). The label truncates instead; the buttons keep their size. */
+.ai-code-head { word-break: normal; white-space: nowrap; }
+.ai-code-lang { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ai-code-actions { flex: 0 0 auto; }
+.ai-code-view-btn {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.ai-code-view-btn:hover { background: var(--surface-3); color: var(--text-primary); }
+.ai-code-copy-btn:hover, .ai-code-insert-btn:hover { background: var(--surface-3); color: var(--text-primary); }
+.ai-code-insert-btn { border-color: var(--accent-primary-muted); color: var(--accent-primary); }
+.ai-code-insert-btn:hover { background: var(--accent-primary-subtle); }
+
+/* Code body: monospaced, comfortable line-height, horizontal scroll for long
+   lines (NEVER break mid-token — the old word-break:break-all mangled code). */
+.ai-code-pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.ai-code-pre code,
+.ai-msg-md .ai-code-pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+  color: var(--text-primary);
+}
+
+/* Basic syntax-highlight tokens emitted by services/basicHighlight.js. Mapped to
+   theme accent tokens so they adapt across dark/light/ember. Kept deliberately
+   minimal — comments, strings, numbers, keywords, function names. */
+.ai-code-pre .tok-keyword { color: var(--accent-purple); font-weight: 600; }
+.ai-code-pre .tok-string { color: var(--accent-success); }
+.ai-code-pre .tok-number { color: var(--accent-warning); }
+.ai-code-pre .tok-comment { color: var(--text-muted); font-style: italic; }
+.ai-code-pre .tok-function { color: var(--accent-primary); }
+
+/* Markdown source tinting (services/basicHighlight.js highlightMarkdown). Shows
+   the markdown SOURCE with syntax markers dimmed and emphasis text styled — the
+   markdown cards are purple (--lang-markdown), so headings pick that up. */
+.ai-code-pre .tok-md-heading-marker { color: var(--lang-markdown); opacity: 0.6; }
+.ai-code-pre .tok-md-heading { color: var(--lang-markdown); font-weight: 700; }
+.ai-code-pre .tok-md-list-marker { color: var(--accent-warning); font-weight: 700; }
+.ai-code-pre .tok-md-quote-marker { color: var(--text-muted); }
+.ai-code-pre .tok-md-quote { color: var(--text-secondary); font-style: italic; }
+.ai-code-pre .tok-md-code { color: var(--accent-success); }
+.ai-code-pre .tok-md-bold { color: var(--text-primary); font-weight: 700; }
+.ai-code-pre .tok-md-italic { color: var(--text-primary); font-style: italic; }
+.ai-code-pre .tok-md-link { color: var(--accent-primary); }
+.ai-code-pre .tok-md-link-url { color: var(--text-muted); }
+
+.ai-msg-md table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.ai-msg-md th, .ai-msg-md td {
+  border: 1px solid var(--border-subtle);
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.ai-msg-md th {
+  background: var(--surface-3);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ai-msg-md tr:nth-child(even) {
+  background: var(--surface-1);
+}
+
+.ai-msg-md h1, .ai-msg-md h2, .ai-msg-md h3 {
+  margin: 8px 0 4px;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.ai-msg-md h2 { font-size: 13px; }
+.ai-msg-md h3 { font-size: 12px; }
+
+.ai-msg-md p {
+  margin: 4px 0;
+}
+
+.ai-msg-md ul, .ai-msg-md ol {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.ai-msg-md li {
+  margin: 2px 0;
+}
+
+.ai-msg-md hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 8px 0;
+}
+
+.ai-msg-md a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.ai-msg-md a:hover {
+  text-decoration: underline;
+}
+
+.ai-msg-typing {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px !important;
+  align-items: center;
+}
+
+.ai-typing-cancel {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ai-typing-cancel:hover {
+  color: var(--accent-danger);
+  border-color: var(--accent-danger);
+}
+
+.ai-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: aiBounce 1.2s infinite;
+}
+
+.ai-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes aiBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.ai-panel-input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  flex-shrink: 0;
+}
+
+.ai-panel-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+/* Voice + send stacked vertically, beside the taller (2-row default) input. */
+.ai-panel-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Wraps the textarea so the attach icon can sit INSIDE the input box. */
+.ai-panel-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.ai-panel-input {
+  flex: 1;
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  /* Extra left padding leaves room for the in-box attach icon. */
+  padding: 10px 12px 10px 34px;
+  outline: none;
+  resize: none;
+  /* ~3 rows default (matches MIN_INPUT_ROWS; also aligns with the stacked
+     voice+send buttons). JS auto-grows to MAX_INPUT_ROWS then scrolls;
+     line-height must match the JS row math. */
+  min-height: 76px;
+  line-height: 1.4;
+  overflow-y: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.ai-panel-input:focus { border-color: var(--accent-primary); }
+.ai-panel-input::placeholder { color: var(--text-muted); }
+
+.ai-panel-mic {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  /* Accent-tinted resting state so voice input reads as ACTIONABLE — the old muted
+     grey on grey looked disabled. */
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: var(--accent-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.ai-panel-mic:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.ai-panel-mic-active {
+  background: var(--accent-danger) !important;
+  border-color: var(--accent-danger) !important;
+  color: white !important;
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+.ai-panel-mic:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.ai-speech-status {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  animation: fade-in 0.2s;
+}
+
+.ai-speech-listening {
+  background: var(--accent-success-subtle);
+  color: var(--accent-success);
+  border: 1px solid var(--accent-success-muted);
+}
+
+.ai-speech-listening-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-speech-waves {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.ai-wave-bar {
+  width: 3px;
+  height: 4px;
+  background: var(--accent-success);
+  border-radius: 2px;
+  animation: wave-bar 0.8s ease-in-out infinite;
+}
+
+.ai-wave-bar:nth-child(1) { animation-delay: 0s; }
+.ai-wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.ai-wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.ai-wave-bar:nth-child(4) { animation-delay: 0.3s; }
+.ai-wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes wave-bar {
+  0%, 100% { height: 4px; }
+  50% { height: 14px; }
+}
+
+.ai-speech-timer {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(74, 222, 128, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ai-speech-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: toolbar-spin 0.6s linear infinite;
+  margin-right: 4px;
+}
+
+.ai-speech-processing {
+  background: var(--accent-warning-subtle);
+  color: var(--accent-warning);
+  border: 1px solid var(--accent-warning);
+}
+
+.ai-speech-error {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-danger-subtle);
+  color: var(--accent-danger);
+  border: 1px solid var(--accent-danger-muted);
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.ai-panel-send {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.ai-panel-send:hover:not(:disabled) { opacity: 0.85; }
+.ai-panel-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+
+.ai-apply-code-btn {
+  display: inline-block;
+  margin-top: 6px;
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.ai-apply-code-btn:hover {
+  opacity: 0.9;
+  background: var(--accent-primary-hover);
+}
+
+.ai-apply-multi {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ai-apply-single {
+  background: var(--surface-4);
+  color: var(--text-secondary);
+}
+
+/* "Insert N Cells" at the end of a reply: an outline control (accent border +
+   text, no fill) so it can't be mistaken for the solid-accent user bubble. Same
+   box as the solid button: the 1px border comes out of the padding. */
+.ai-apply-code-btn.ai-apply-insert {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  padding: 5px 13px;
+}
+.ai-apply-code-btn.ai-apply-insert:hover:not(:disabled) { opacity: 1; background: var(--accent-primary-subtle); }
+.ai-apply-code-btn.ai-apply-insert:active:not(:disabled) { background: var(--accent-primary-muted); }
+.ai-apply-code-btn.ai-apply-insert:disabled {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+  background: transparent;
+  cursor: default;
+}
+/* The icon never makes the button taller than the text-only one. */
+.ai-apply-insert svg { flex: 0 0 auto; margin: -2px 0; }
+
+/* ─── Workbook Intel region (top of the AI panel) ─────────────────────────── */
+/* Expanded: takes ~70% of the panel height, scrolls internally. The chat's
+   .ai-panel-messages (flex:1) fills the remaining ~30%. */
+.ai-panel-intel {
+  /* Size to content, but never exceed 70% of the panel (then scroll internally).
+     So a collapsed accordion is short and the chat keeps the rest of the space. */
+  flex: 0 1 auto;
+  max-height: 70%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Level 1: a framed drawer above the chat — faint accent tint, a stronger bottom
+     edge and a soft shadow over the chat (z-index lifts it above the messages; the
+     header menus are z-index 100). */
+  position: relative;
+  z-index: 1;
+  border-bottom: 1px solid var(--intel-region-edge);
+  background: var(--intel-region-bg);
+  box-shadow: var(--intel-region-shadow);
+}
+
+/* Collapsed: a slim clickable strip with counts + alert badge. */
+.ai-panel-intel-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  /* Collapsed Intel region: just its framed header row. */
+  position: relative;
+  z-index: 1;
+  background: var(--intel-header-bg);
+  border: none;
+  border-bottom: 1px solid var(--intel-region-edge);
+  box-shadow: var(--intel-region-shadow);
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-size: 11px;
+  text-align: left;
+  transition: background 0.15s;
+}
+.ai-panel-intel-strip:hover { background: var(--intel-header-bg-hover); }
+@media (prefers-reduced-motion: reduce) {
+  .ai-panel-intel-strip, .ai-turn-header { transition: none; }
+}
+
+/* "Conversation" caption between the Intel region and the chat list. Outside the
+   scroll container, so it never interacts with the sticky turn headers. */
+.ai-panel-convo-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px var(--space-3) 2px;
+  background: var(--ai-panel-bg);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--chat-section-label-fg);
+}
+.ai-panel-convo-label::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--border-subtle);
+}
+.ai-intel-strip-label { font-size: 12px; font-weight: 600; color: var(--accent-primary); }
+
+/* "Generate Intel" action — lives on the RIGHT of the notebook scope bar when the
+   notebook has NO intel yet (and a live session exists), so the user can kick off
+   generation manually without a Run All. It's an action on the existing scope row,
+   NOT a second stacked header. */
+.ai-intel-generate-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ai-intel-generate-btn:hover {
+  background: var(--accent-primary);
+  color: var(--bg-primary, #0d0d0d);
+}
+.ai-intel-strip-count {
+  font-size: 10px;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+.ai-intel-strip-alert {
+  font-size: 10px;
+  color: var(--intel-count-on-status);
+  background: var(--accent-danger, #ff5c5c);
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+/* Full-report shortcut in the collapsed strip — must be VISUALLY IDENTICAL to the
+   expanded header's .intel-btn-report (same bordered box, padding, radius) so the
+   icon and the row height match between collapsed and expanded states. margin-left:
+   auto pushes it (and the chevron after it) to the far right. */
+.ai-intel-strip-report {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ai-intel-strip-report:hover { background: var(--accent-primary); color: #fff; }
+/* When the report icon is present it owns the margin-left:auto, so the chevron
+   just sits after it; when absent the chevron keeps its own auto margin. */
+.ai-intel-strip-report + .ai-intel-strip-chevron { margin-left: 6px; }
+.ai-intel-strip-chevron { margin-left: auto; color: var(--text-muted); flex-shrink: 0; }
+
+
+/* ── Chat attachments ─────────────────────────────────────────────────────── */
+/* Attach icon sits INSIDE the textbox, pinned bottom-left, aligned with the first
+   line of text. The textarea reserves left padding (see .ai-panel-input) so typed
+   text never overlaps it. Pinned to the BOTTOM so it stays put as the box grows. */
+.ai-panel-attach {
+  position: absolute;
+  left: 6px;
+  bottom: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #9aa0a6);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 6px;
+  z-index: 1;
+}
+.ai-panel-attach:hover:not(:disabled) { color: var(--text-primary, #e8eaed); background: rgba(255,255,255,0.08); }
+.ai-panel-attach:disabled { opacity: 0.4; cursor: default; }
+
+/* Staged (pre-send) chips row, above the input */
+.ai-attach-staged {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 4px 2px;
+}
+.ai-attach-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 220px;
+  background: rgba(123,97,255,0.14);
+  border: 1px solid rgba(123,97,255,0.35);
+  color: var(--text, #e8eaed);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ai-attach-icon { flex-shrink: 0; }
+.ai-attach-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-attach-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #9aa0a6);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.ai-attach-remove:hover:not(:disabled) { color: #ef5350; }
+.ai-attach-uploading { opacity: 0.7; font-style: italic; }
+.ai-attach-error { color: #ef5350; font-size: 12px; padding: 4px; }
+/* Subtle hint of what the current model accepts for attachments. Muted so it reads
+   as a quiet affordance, matching the .ai-attach-uploading/.ai-attach-error density. */
+.ai-attach-hint { color: var(--text-muted, #9aa0a6); font-size: 11px; padding: 2px 4px; }
+/* Ember's --text-muted (#5e584e) is only ~2.7:1 on the composer's --surface-1
+   (#111110) — barely readable. Its --text-tertiary (#8f877a) stays a quiet
+   secondary hint but clears WCAG AA (~5.3:1). Light/dark are styled in theme-light.css. */
+:root[data-theme="ember"] .ai-attach-hint { color: var(--text-tertiary); }
+
+/* Chips shown inside a sent user message bubble */
+.ai-msg-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ai-attach-chip-msg {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+}
+
+/* ─── H4 inline Approve/Reject card ──────────────────────────────────────────
+   Shown when the agent (confirm-before-execute) proposes an execute/install.
+   Reuses .ai-code-block/.ai-code-pre for the code/package body; the surrounding
+   card + button row are the only net-new styles. */
+.ai-action-card {
+  margin: 8px 0;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--border-default));
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-1);
+}
+.ai-action-head {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.ai-action-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ai-action-reject-btn {
+  background: var(--surface-4);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.ai-action-reject-btn:hover { opacity: 0.9; }
+.ai-action-status {
+  margin: 8px 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+/* Model fallback strip under the header (AiChatPanel.jsx). One line: CSS ellipsis
+   when the panel is narrow, full text in the title tooltip. Uses the warning tokens,
+   which every theme (light, dark, ember) defines. */
+.ai-model-fallback {
+  min-width: 0;
+  padding: 4px var(--space-3);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  color: var(--accent-warning);
+  background: var(--accent-warning-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Conversation turns (ChatTurn.jsx / ChatTurnRail.jsx) ───────────────────
+   Panel-scoped background token: anything that must look like the panel itself
+   (the pinned turn header, the rail column) uses it. Light/dark override it in
+   theme-light.css next to their .ai-panel background. */
+.ai-panel { --ai-panel-bg: var(--sidebar-bg); }
+
+.ai-panel-messages-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.ai-panel-messages {
+  min-height: 0;
+  /* offsetParent for the turn sections (rail jump / current-turn scan). */
+  position: relative;
+}
+/* Rail shown: content starts clear of the resize handle (4px) + rail (16px). */
+.ai-panel-messages.has-rail { padding-left: calc(4px + 16px + var(--space-2)); }
+
+.ai-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ai-turn-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Sticky question header: pinned to the top of the scroll container while its
+   turn is in view. The negative top equals the container's top padding, so no
+   content peeks above it. */
+.ai-turn-header {
+  position: sticky;
+  top: calc(-1 * var(--space-2));
+  z-index: 3;
+  background: var(--ai-panel-bg);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* Collapsed turn = a folded card: subtle surface, rounded, hover fill, chevron. The
+   whole card toggles (ChatTurn); the toggle button stays the keyboard control. */
+.ai-turn-collapsed .ai-turn-header {
+  background: var(--chat-turn-row-bg);
+  border: 1px solid var(--chat-turn-row-border);
+  border-radius: var(--radius-md, 6px);
+  padding: 4px 8px 4px 2px;
+  cursor: pointer;
+  transition: background var(--transition-fast, 120ms ease);
+}
+.ai-turn-collapsed .ai-turn-header:hover {
+  background: var(--chat-turn-row-bg-hover);
+  /* Meta text steps up a shade on the hover fill (keeps AA). */
+  --chat-turn-meta-fg: var(--text-secondary);
+}
+.ai-turn-collapsed .ai-turn-toggle:hover { background: none; }
+.ai-turn-collapsed .ai-turn-caret { font-size: 11px; color: var(--text-secondary); }
+/* Out of the AI context: the muting below plus a dashed edge (shape, not just colour). */
+.ai-turn-out.ai-turn-collapsed .ai-turn-header { border-style: dashed; border-color: var(--border-strong); }
+/* Turn boundaries: a small gap and a hairline wherever an open turn starts or ends. */
+.ai-turn:not(.ai-turn-collapsed) + .ai-turn,
+.ai-turn + .ai-turn:not(.ai-turn-collapsed) {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--chat-turn-divider);
+}
+.ai-turn-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.ai-turn-toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.ai-turn-toggle:hover { background: var(--surface-3); }
+.ai-turn-toggle[aria-disabled="true"] { cursor: default; }
+.ai-turn-toggle[aria-disabled="true"]:hover { background: none; }
+.ai-turn-toggle:focus-visible,
+.ai-turn-insert-all:focus-visible,
+.ai-turn-full-btn:focus-visible,
+.ai-steps-toggle:focus-visible,
+.ai-code-jump-btn:focus-visible,
+.ai-rail-item:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.ai-turn-caret {
+  flex: 0 0 auto;
+  width: 10px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.ai-turn-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-turn-counts,
+.ai-turn-time {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--chat-turn-meta-fg);
+}
+.ai-turn-sub { padding-left: 18px; }
+.ai-turn-question {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  color: var(--chat-turn-meta-fg);
+}
+.ai-turn-src {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+.ai-turn-insert-status {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--chat-turn-meta-fg);
+}
+.ai-turn-insert-all {
+  flex: 0 0 auto;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--accent-primary-muted);
+  background: var(--surface-2);
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+.ai-turn-insert-all:hover:not(:disabled) { background: var(--accent-primary-subtle); }
+.ai-turn-insert-all:disabled {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+  cursor: default;
+}
+
+/* Intel card question bubble: the card title, with the full prompt on demand. */
+.ai-turn-full-btn {
+  margin-top: 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-decoration: underline;
+  opacity: 0.85;
+  cursor: pointer;
+}
+.ai-turn-full-q {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  font-size: var(--font-size-xs);
+}
+
+/* Expanded turn: the question bubble is the sticky header. One sticky element
+   holds the collapse toggle, the bubble (attachments, question, card disclosure)
+   and the meta row (counts, time, Inserted X of N, Insert all). */
+.ai-turn { position: relative; }
+.ai-turn-sentinel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.ai-turn-header-open { gap: 4px; }
+.ai-turn-qrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.ai-turn-header-open .ai-turn-toggle {
+  flex: 0 0 auto;
+  min-width: 22px;
+  min-height: 22px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.ai-turn-header-open .ai-turn-caret { font-size: 12px; color: var(--text-tertiary); }
+.ai-turn-q {
+  align-self: auto;
+  margin-left: auto;
+  min-width: 0;
+}
+.ai-turn-q-none { flex: 1 1 auto; }
+.ai-turn-qtext {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Inside the (accent-coloured) bubble the source chip follows the bubble text. */
+.ai-turn-q .ai-turn-src {
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  opacity: 0.9;
+  vertical-align: 1px;
+}
+.ai-turn-meta {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+/* Pinned: compact, the question on one line (full text in the tooltip).
+   .ai-turn-measure applies the same compact rules for one synchronous measurement
+   (ChatTurn usePinGeometry); it is never painted. */
+.ai-turn-stuck .ai-turn-q .ai-msg-content,
+.ai-turn-measure .ai-turn-q .ai-msg-content { padding-top: 4px; padding-bottom: 4px; }
+.ai-turn-stuck .ai-turn-qtext,
+.ai-turn-measure .ai-turn-qtext {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-turn-stuck .ai-turn-header-open .ai-turn-toggle,
+.ai-turn-measure .ai-turn-header-open .ai-turn-toggle { margin-top: 0; }
+.ai-turn-stuck .ai-turn-qrow,
+.ai-turn-measure .ai-turn-qrow { align-items: center; }
+.ai-turn-stuck .ai-turn-q .ai-msg-attachments,
+.ai-turn-measure .ai-turn-q .ai-msg-attachments,
+.ai-turn-stuck .ai-turn-full,
+.ai-turn-measure .ai-turn-full { display: none; }
+/* Attachments-only question: its label shows only while pinned (chips hidden). */
+.ai-turn-qlabel { display: none; }
+.ai-turn-stuck .ai-turn-qlabel,
+.ai-turn-measure .ai-turn-qlabel { display: block; }
+/* Pin geometry without layout shift (values set by ChatTurn usePinGeometry):
+   the sticky top is pulled up by --pin-shift (full minus compact height), so a
+   tall bubble scrolls away normally until a compact-height strip is left; while
+   pinned the header keeps its full height (nothing below moves) and lays the
+   compact content out at its bottom, i.e. exactly in that visible strip. The
+   sentinel moves down by the same amount so "stuck" starts at that point. */
+.ai-turn-header-open { top: calc(-1 * var(--space-2) - var(--pin-shift, 0px)); }
+.ai-turn-sentinel { top: var(--pin-shift, 0px); }
+.ai-turn-stuck > .ai-turn-header-open {
+  min-height: var(--pin-full-h, 0px);
+  justify-content: flex-end;
+}
+
+/* Folded tool steps ("N steps"). */
+.ai-steps { align-self: flex-start; max-width: 100%; min-width: 0; }
+.ai-steps-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--text-tertiary);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.ai-steps-toggle:hover { color: var(--text-primary); background: var(--surface-3); }
+.ai-steps-caret { font-size: 9px; }
+.ai-steps-list {
+  margin: 6px 0 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+.ai-steps-list[hidden] { display: none; }
+.ai-step-note { font-style: italic; }
+.ai-step-decision { font-weight: 600; }
+.ai-step-approved { color: var(--accent-success); }
+.ai-step-rejected,
+.ai-step-declined { color: var(--text-secondary); }
+.ai-step-code {
+  margin-top: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-0);
+  max-height: 160px;
+  overflow: auto;
+}
+
+/* Inserted marker + Jump to cell on a code card. */
+/* The extra marker + link don't fit beside the label on a narrow panel: wrap the
+   actions onto a second header line instead of squeezing the language label. */
+.ai-code-block.ai-code-inserted .ai-code-head { flex-wrap: wrap; row-gap: 4px; }
+.ai-code-block.ai-code-inserted .ai-code-lang { flex: 0 0 auto; }
+.ai-code-block.ai-code-inserted .ai-code-actions { margin-left: auto; }
+.ai-code-inserted-mark {
+  align-self: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-success);
+}
+.ai-code-jump-btn {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-2);
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+.ai-code-jump-btn:hover { background: var(--surface-3); }
+.ai-code-jump-btn[aria-disabled="true"] { color: var(--text-muted); cursor: not-allowed; }
+
+/* Turn rail: a 16px column clear of the 4px resize handle. Closed: dots only
+   (labels visually hidden). Open (hover / keyboard focus): floats over the list as
+   a panel of turn titles, current one highlighted. */
+.ai-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 16px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  background: var(--ai-panel-bg);
+}
+.ai-rail::-webkit-scrollbar { display: none; }
+.ai-rail-list {
+  list-style: none;
+  margin: auto 0;          /* centred when it fits; scrolls from the top when not */
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ai-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 16px;
+  padding: 3px 4px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+.ai-rail-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.55;
+  transition: transform var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
+}
+.ai-rail-item:hover .ai-rail-dot { opacity: 1; }
+.ai-rail-current .ai-rail-dot {
+  background: var(--accent-primary);
+  opacity: 1;
+  transform: scale(1.25);
+}
+.ai-rail-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-rail:not(.ai-rail-open) .ai-rail-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+/* Open: the nav keeps its full height (a stable hover target) and the list itself
+   becomes the floating panel. */
+.ai-rail-open {
+  width: min(260px, 70%);
+  background: transparent;
+  padding: 8px 0;
+  /* Only the rail column (::before) and the list itself are hover/click targets;
+     the transparent rest of the nav is "outside", so leaving the list closes it
+     and clicks there reach the messages underneath. */
+  pointer-events: none;
+}
+.ai-rail-open::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16px;
+  pointer-events: auto;
+}
+.ai-rail-open .ai-rail-list { pointer-events: auto; position: relative; }
+.ai-rail-open .ai-rail-list {
+  padding: 6px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: var(--shadow-lg);
+}
+.ai-rail-open .ai-rail-item { padding: 5px 8px; }
+.ai-rail-open .ai-rail-item:hover { background: var(--surface-3); color: var(--text-primary); }
+.ai-rail-open .ai-rail-current { color: var(--accent-primary); font-weight: 600; background: var(--accent-primary-subtle); }
+/* AI context window: turns older than the agent's sliding window are muted (token
+   colours, not opacity, so text keeps AA contrast) and stay fully usable. The
+   bubble selector out-ranks the light/dark theme's .ai-msg-user bubble rule. */
+.ai-panel .ai-turn-out .ai-msg-user.ai-turn-q .ai-msg-content {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.ai-turn-out .ai-turn-toggle { color: var(--text-secondary); font-weight: 500; }
+.ai-context-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+.ai-context-divider::before,
+.ai-context-divider::after {
+  content: '';
+  flex: 1 1 12px;
+  height: 1px;
+  background: var(--border-strong);
+}
+.ai-context-divider-text { flex: 0 1 auto; text-align: center; }
+/* Rail: hollow dot for out-of-context turns (shape, not just colour). */
+.ai-rail-out .ai-rail-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--text-tertiary);
+  opacity: 1;
+}
+.ai-rail-out.ai-rail-current .ai-rail-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+  opacity: 1;
+}
+.ai-rail-open .ai-rail-out:not(.ai-rail-current):not(:hover) { color: var(--text-tertiary); }
+/* Separator between the out-of-context and in-context rows: a short tick while
+   closed, a labelled line in the open list. */
+.ai-rail-sep {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 3px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+.ai-rail-sep::before {
+  content: '';
+  flex: 0 0 10px;
+  height: 1px;
+  background: var(--text-muted);
+}
+.ai-rail:not(.ai-rail-open) .ai-rail-sep-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.ai-rail-open .ai-rail-sep { padding: 3px 8px; }
+.ai-rail-open .ai-rail-sep::before { flex: 0 0 14px; background: var(--border-strong); }
+.ai-rail-sep-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Workbook Intel finished banner (shared .action-banner look, Sidebar.css). Keep its
+   height in the panel's flex column. */
+.ai-panel-banner { flex-shrink: 0; }

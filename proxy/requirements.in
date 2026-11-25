@@ -1,0 +1,102 @@
+# =============================================================================
+# proxy/requirements.in — SOURCE for the hash-pinned host-side dependency lock
+# =============================================================================
+#
+# This .in file is the human-edited SOURCE. The installable artifact is the
+# GENERATED, fully hash-pinned lockfile proxy/requirements.txt — DO NOT hand-edit
+# that file. local_install.sh installs it with `--require-hashes`, so every
+# requirement (direct AND transitive) must be pinned to an exact version with
+# sha256 hashes. The merged lock also covers pool_manager (its deps are a strict
+# subset — see pool_manager/requirements.in).
+#
+# To regenerate the lock after editing this file (or pool_manager/requirements.in):
+#
+#   cd <repo root>
+#   (cd agent/ai_assistant && uv export --no-emit-project --no-dev --format requirements-txt) > /tmp/h5-agent-constraints.txt
+#   uv pip compile --generate-hashes -c /tmp/h5-agent-constraints.txt \
+#       proxy/requirements.in pool_manager/requirements.in -o proxy/requirements.txt
+#
+# The agent export is passed as a constraint so the shared .venv (proxy + the
+# ai_assistant agent leg install together) resolves to a jointly consistent set.
+# =============================================================================
+
+# Proxy server dependencies (runs on your machine, NOT inside the MicroVM)
+
+# Web framework
+fastapi>=0.139.0
+uvicorn>=0.51.0
+
+# OpenTelemetry floor — fastapi>=0.142 requires opentelemetry-api>=1.44.0, while
+# strands-agents allows the wide range >=1.30,<2.0. Without an explicit floor the
+# resolver can settle on the older 1.42.1 line (which some transitive pins still
+# reference), tripping fastapi's requirement in the SHARED venv (proxy + the
+# ai_assistant service install together). Pinning the floor here makes the merged
+# install land on 1.44+ cleanly. (The container-only aws-opentelemetry-distro,
+# which hard-pinned ==1.42.1, is isolated to ai_assistant's `tracing` group so it
+# no longer drags the local venv down — see agent/ai_assistant/pyproject.toml.)
+opentelemetry-api>=1.44.0
+opentelemetry-sdk>=1.44.0
+
+# HTTP client (for forwarding requests to MicroVMs)
+httpx>=0.28.1
+
+# AWS SDK (for Lambda MicroVM API, Bedrock, S3, DynamoDB, Athena, Glue)
+boto3>=1.43.51
+
+# AI Agent framework (Strands Agents SDK — powers the proxy's one-shot helpers:
+# fix_error/fix_error_agentic, annotate, and the Workbook Intel agent). The
+# interactive CHAT agent + its bedrock-agentcore dependency moved to the
+# agent/ai_assistant/ service (see agent/ai_assistant/pyproject.toml).
+strands-agents>=1.48.0
+
+# WebSocket relay for terminal access
+websockets>=13.0
+
+# Lightweight sample profiling for global data-source entity discovery
+# (batch/entity_discovery.py) — profiles small samples of S3/Athena/
+# DynamoDB sources directly in the proxy process, no MicroVM required.
+pandas>=2.0.0
+pyarrow>=14.0.0
+
+# Data Catalog MODEL-ARTIFACT schema reads (S3SchemaProvider._schema_from_* — runs in
+# the PROXY, not the VM). To show a saved model's input columns + classes in the panel:
+#   • onnx           — lightweight protobuf/schema reader for a .onnx graph's inputs +
+#                      class metadata (NOT onnxruntime; we only READ the graph, never
+#                      run it). 1.23.1 has a prebuilt wheel for the proxy host's Python.
+#   • scikit-learn   — to unpickle a saved sklearn model (.joblib) and read
+#     + joblib         feature_names_in_/classes_, and to load a SageMaker job's sibling
+#                      preprocessor.joblib (a fitted ColumnTransformer) for its feat_cols.
+# Kept in lock-step with the VM's requirements.txt sklearn pin (1.9.1) so a model
+# pickled in the VM unpickles cleanly here.
+onnx==1.23.1
+scikit-learn==1.9.1
+joblib==1.4.2
+
+# Inline notebook Format (runs proxy-side, NOT in the MicroVM). Format is a pure
+# text transform that needs no kernel/VM, so it lives on the proxy: it works even
+# when a notebook's VM is suspended/terminated, and it can be iterated with a proxy
+# restart (no image rebuild). ruff formats Python cells; sqlglot pretty-prints SQL
+# cells (duckdb dialect). NOTE: ruff + sqlglot ALSO remain in the MicroVM's
+# requirements.txt — the VM still needs them for the LINT feature (which is
+# namespace-aware and stays VM-side).
+ruff>=0.16.0
+sqlglot>=30.19.0
+
+# Envelope encryption of notebook ENV VAR values at rest (proxy.platform.env_crypto).
+# A master key in Secrets Manager (microvm-internal/env-master-key — outside the
+# microvm/* prefix so the VM exec role can't read it) derives a per-notebook subkey
+# (HKDF-SHA256, salt=notebook_id); each env var value is sealed with AES-256-GCM
+# before it's written to notebook_env. Secret REFERENCES are unaffected (never held
+# a value). Only the proxy holds the master key, so a DB reader sees ciphertext only.
+cryptography>=43.0.0
+
+# PostgreSQL driver — REQUIRED for the ECS/multi-task deploy. Locally the proxy
+# runs on SQLite (STORAGE_BACKEND=sqlite, the default), but on ECS behind an ALB
+# multiple proxy tasks must share ONE Aurora PostgreSQL store so the session
+# registry, locks (pg_try_advisory_lock), and recovery state are consistent
+# across tasks. proxy/storage/postgres_db.py imports psycopg2 lazily in
+# initialize() and raises a RuntimeError if the driver is absent, so without this
+# line the proxy cannot run with STORAGE_BACKEND=postgres at all. Same driver +
+# pin as pool_manager/requirements.txt (both share proxy.storage). Harmless on the
+# local SQLite path (imported only when the Postgres backend is selected).
+psycopg2-binary>=2.9

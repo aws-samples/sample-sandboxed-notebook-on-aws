@@ -1,0 +1,25 @@
+# Build context for proxy/Dockerfile and pool_manager/Dockerfile (context = repo root).
+# Those images copy only proxy/, pool_manager/, app/, batch/, modelcaps/ and the
+# proxy lockfile; keep everything else out of the context.
+.git
+.venv
+venv
+.agents
+.ash
+.protoshield
+.microvm
+presentation
+web
+tests
+scripts
+serving
+sync
+iam
+threatmodel
+agent
+**/__pycache__
+**/*.pyc
+**/node_modules
+/*.md
+proxy/data/*.db
+proxy/data/*.sqlite*

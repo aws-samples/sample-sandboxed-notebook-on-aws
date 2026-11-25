@@ -1,0 +1,81 @@
+{
+  "_comment": "MANUAL pricing overrides, merged over LiteLLM-derived prices by modelcaps/refresh.py (_build_pricing). Keyed by BASE model id (geo prefix stripped). Values are USD per 1,000 tokens (catalog unit) = the per-1M AWS rate / 1000. Source: AWS Bedrock model cards + the Bedrock pricing page (us-west-2 / US West Oregon, Standard tier). Where a model offers Global cross-region inference, use the GLOBAL CRIS column (that is the endpoint resolve_model_id prefers), NOT the +10% In-Region/US-CRIS column. Add an entry here when a model's LiteLLM price is wrong or missing (e.g. preview models) or drifts from the AWS-published rate; a refresh re-applies these so corrections survive regeneration. Models NOT listed here keep their LiteLLM-derived price. Fields: input_per_1k, output_per_1k (required); cache_read_per_1k, cache_write_per_1k (optional — default 0.0). verified_from/verified_on are documentation only, ignored by the merge.",
+
+  "overrides": {
+    "anthropic.claude-haiku-5-5": {
+      "input_per_1k": 0.0001, "output_per_1k": 0.0005,
+      "cache_read_per_1k": 0.00001, "cache_write_per_1k": 0.000125,
+      "verified_from": "bedrock pricing page us-west-2", "verified_on": "2026-10-21"
+    },
+    "anthropic.claude-sonnet-5-5": {
+      "input_per_1k": 0.002, "output_per_1k": 0.01,
+      "cache_read_per_1k": 0.0001, "cache_write_per_1k": 0.0025,
+      "verified_from": "bedrock pricing page us-west-2", "verified_on": "2026-10-21"
+    },
+    "amazon.nova-lite-v1:0": {
+      "input_per_1k": 0.00006, "output_per_1k": 0.00024,
+      "cache_read_per_1k": 0.000015, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock price list api us-west-2", "verified_on": "2026-10-21"
+    },
+    "amazon.nova-2-lite-v1:0": {
+      "input_per_1k": 0.0003, "output_per_1k": 0.0025,
+      "cache_read_per_1k": 0.000075, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock pricing page amazon nova us-west-2", "verified_on": "2026-10-21"
+    },
+    "moonshotai.kimi-k3": {
+      "input_per_1k": 0.003, "output_per_1k": 0.015,
+      "cache_read_per_1k": 0.0003, "cache_write_per_1k": 0.00375,
+      "verified_from": "bedrock model card Global CRIS", "verified_on": "2026-10-21"
+    },
+    "openai.gpt-5.6-luna": {
+      "input_per_1k": 0.0002, "output_per_1k": 0.0012,
+      "cache_read_per_1k": 0.00002, "cache_write_per_1k": 0.00025,
+      "verified_from": "bedrock model card Global CRIS short-context", "verified_on": "2026-10-21"
+    },
+    "mistral.mistral-large-3-675b-instruct": {
+      "input_per_1k": 0.0005, "output_per_1k": 0.0015,
+      "cache_read_per_1k": 0.0, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock price list api us-west-2", "verified_on": "2026-10-21"
+    },
+    "xai.grok-4.7": {
+      "input_per_1k": 0.002, "output_per_1k": 0.006,
+      "cache_read_per_1k": 0.0005, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock model card Global CRIS", "verified_on": "2026-10-21"
+    },
+    "moonshotai.kimi-k2.5": {
+      "input_per_1k": 0.0006, "output_per_1k": 0.003,
+      "cache_read_per_1k": 0.0, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock pricing page moonshot kimi-2 us-west-2", "verified_on": "2026-10-21"
+    },
+    "qwen.qwen3-vl-235b-a22b": {
+      "input_per_1k": 0.00053, "output_per_1k": 0.00266,
+      "cache_read_per_1k": 0.0, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock pricing page qwen us-west-2", "verified_on": "2026-10-21"
+    },
+    "anthropic.claude-opus-5-5": {
+      "input_per_1k": 0.004, "output_per_1k": 0.02,
+      "cache_read_per_1k": 0.0002, "cache_write_per_1k": 0.005,
+      "verified_from": "bedrock pricing page anthropic us-west-2", "verified_on": "2026-10-21"
+    },
+    "amazon.nova-pro-v1:0": {
+      "input_per_1k": 0.0008, "output_per_1k": 0.0032,
+      "cache_read_per_1k": 0.0002, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock pricing page amazon nova us-west-2", "verified_on": "2026-10-21"
+    },
+    "openai.gpt-6-luna": {
+      "input_per_1k": 0.0001, "output_per_1k": 0.0005,
+      "cache_read_per_1k": 0.00001, "cache_write_per_1k": 0.000125,
+      "verified_from": "bedrock model card Global CRIS short-context", "verified_on": "2026-10-21"
+    },
+    "openai.gpt-6.1-sol": {
+      "input_per_1k": 0.002, "output_per_1k": 0.01,
+      "cache_read_per_1k": 0.0001, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock model card Global CRIS (matches OpenAI direct $2/$10 per M)", "verified_on": "2026-10-21"
+    },
+    "zai.glm-5.3": {
+      "input_per_1k": 0.00168, "output_per_1k": 0.00528,
+      "cache_read_per_1k": 0.000312, "cache_write_per_1k": 0.0,
+      "verified_from": "bedrock pricing calculator Global CRIS us-west-2", "verified_on": "2026-10-21"
+    }
+  }
+}

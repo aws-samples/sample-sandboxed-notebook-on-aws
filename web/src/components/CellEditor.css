@@ -1,0 +1,275 @@
+/* CodeMirror 6 cell editor overrides */
+.cell-cm-editor {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  overflow: hidden;
+}
+
+.cell-cm-editor .cm-editor {
+  height: auto;
+}
+
+.cell-cm-editor .cm-scroller {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+/* Reserve space for the floating actions toolbar on first line */
+.cell-cm-editor .cm-content {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  padding-right: 160px !important;
+}
+
+/* Hide default CM6 gutter (we have our own cell gutter) */
+.cell-cm-editor .cm-gutters {
+  display: none !important;
+}
+
+/* ...but when an ERROR gutter is present, reveal the gutters container so the
+   error marker shows. The line-number sub-gutter stays hidden — only the error
+   gutter is visible — so cells get a compact error rail without line numbers. */
+.cell-cm-editor .cm-gutters:has(.cm-error-gutter) {
+  display: flex !important;
+  background: transparent;
+  border: none;
+}
+.cell-cm-editor .cm-gutters:has(.cm-error-gutter) .cm-lineNumbers {
+  display: none !important;
+}
+.cell-cm-editor .cm-error-gutter {
+  min-width: 14px;
+  display: flex;
+  align-items: stretch;
+}
+/* Red dot marker on the error line, vertically centered in the gutter cell. */
+.cell-cm-editor .cm-error-gutter-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  background: var(--accent-danger, #ff5c5c);
+  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--accent-danger, #ff5c5c) 60%, transparent);
+}
+.cell-cm-editor .cm-error-gutter-dot:hover {
+  transform: scale(1.25);
+}
+
+/* Full-line highlight for the error line (left accent bar + subtle red wash). */
+.cell-cm-editor .cm-error-line {
+  background: color-mix(in srgb, var(--accent-danger, #ff5c5c) 12%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--accent-danger, #ff5c5c);
+}
+
+/* Secondary call-chain lines: the cell lines that CALLED into the crash point (e.g.
+   the df.apply(...) row that invoked a helper which then failed). Fainter than the
+   primary error line — a thin amber-ish accent, no wash — so the deepest crash line
+   still reads as THE error while the path to it is still visible. */
+.cell-cm-editor .cm-error-chain-line {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent-danger, #ff5c5c) 45%, transparent);
+}
+
+/* Ruff lint squiggle — a wavy amber underline on the flagged range. Uses a
+   repeating linear-gradient background (works everywhere; text-decoration-style
+   wavy isn't applicable to a span-level mark). Amber = lint (distinct from the
+   red error-line highlight, which means a runtime/syntax failure). */
+.cell-cm-editor .cm-lint-squiggle {
+  background-image: linear-gradient(135deg, transparent 0%, transparent 40%, var(--accent-warning, #e2a03f) 40%, var(--accent-warning, #e2a03f) 60%, transparent 60%, transparent 100%);
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: 4px 2px;
+  padding-bottom: 1px;
+}
+
+/* Fix focus outline — we use cell-level focus styles */
+.cell-cm-editor .cm-focused {
+  outline: none !important;
+}
+
+/* ===== Autocomplete popup + info panel =====
+   Tooltips render into document.body (see tooltips({parent}) in CellEditor.jsx) to
+   escape the cell's overflow:hidden, so these selectors are GLOBAL (not scoped to
+   .cell-cm-editor). Themed to match the app surfaces. */
+.cm-tooltip.cm-tooltip-autocomplete {
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.4));
+  overflow: hidden;
+}
+.cm-tooltip-autocomplete > ul {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  max-height: 320px;
+  max-width: 340px;   /* keep the option list compact so the info panel has room */
+}
+.cm-tooltip-autocomplete > ul > li {
+  padding: 3px 8px;
+  color: var(--text-primary);   /* full-strength so options are legible on the dark popup */
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+/* Selected row — a SUBTLE accent-tinted background with a left accent bar and
+   PRIMARY text (not a solid accent fill with inverse text, which had poor
+   contrast in the ember theme where accent=orange). Text stays readable in every
+   theme; the accent shows through as a highlight, not a wash. */
+.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--accent-primary-subtle);
+  color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--accent-primary);
+}
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail {
+  color: var(--text-secondary);
+}
+/* The completion label + the accent-colored matched substring. */
+.cm-completionLabel { color: inherit; }
+.cm-completionMatchedText {
+  text-decoration: none;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+/* Keep the matched substring readable on the selected row too (accent-subtle bg,
+   so the accent-colored text still reads). */
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionMatchedText {
+  color: var(--accent-primary);
+}
+.cm-completionDetail {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-tertiary);   /* the signature tail — readable, not washed out */
+  white-space: nowrap;
+}
+/* Type icon (function/method/variable) — keep it subtle */
+.cm-completionIcon {
+  opacity: 0.7;
+  margin-right: 2px;
+}
+
+/* The docstring/signature INFO panel that pops beside the selected item. This is
+   what was overflowing — give it a bounded width, wrapping, and scroll. Uses the
+   lightest surface + primary text so the docstring is legible in every theme. */
+.cm-tooltip.cm-completionInfo {
+  background: var(--surface-4);
+  border: 1px solid var(--border-strong, var(--border-default));
+  border-radius: var(--radius-md, 6px);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.4));
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  max-width: 380px;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;   /* preserve docstring newlines */
+  word-break: break-word;
+}
+
+
+/* Search highlights inside CodeMirror */
+/* Non-active matches: soft amber wash — visible but not distracting. */
+.cell-cm-editor .cm-search-highlight,
+.cell-cm-editor .cm-searchMatch {
+  background: rgba(255, 213, 79, 0.5) !important;
+  border-radius: 2px;
+}
+
+/* Active match: high-contrast solid amber with dark text + a bright ring so
+   the current result stands out clearly against the dark editor. */
+.cell-cm-editor .cm-searchMatch-selected,
+.cell-cm-editor .cm-searchMatch.cm-searchMatch-selected {
+  background: #ffb300 !important;
+  color: #1a1a1a !important;
+  border-radius: 2px;
+  outline: 2px solid #ffd54f;
+  outline-offset: 0;
+  box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.35);
+}
+
+/* The current match is advanced to via findNext, which SELECTS it — so the active
+   match is actually drawn as the editor selection, not .cm-searchMatch-selected.
+   While a search is active, override the (muted) selection background with the
+   same high-contrast amber so the current result is obvious. Scoped to
+   .cm-searching so normal editing selection is unaffected. */
+.cell-cm-editor.cm-searching .cm-selectionBackground,
+.cell-cm-editor.cm-searching .cm-line ::selection,
+.cell-cm-editor.cm-searching ::selection {
+  background: #ffb300 !important;
+}
+
+/* ===== Ruff lint hover tooltip =====
+   Rendered into document.body via tooltips({parent}) in CellEditor.jsx (to escape
+   the cell's overflow:hidden), so these selectors are GLOBAL — not scoped to
+   .cell-cm-editor — matching the autocomplete tooltip styling above. */
+.cm-tooltip.cm-lint-tooltip,
+.cm-tooltip .cm-lint-tooltip {
+  padding: 6px 9px;
+  max-width: 380px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.cm-lint-tooltip-row {
+  display: block;
+}
+.cm-lint-tooltip-row + .cm-lint-tooltip-row {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-default);
+}
+.cm-lint-tooltip-code {
+  font-weight: 600;
+  color: var(--accent-warning, #e2a03f);
+}
+
+/* Signature help (parameter hints) — the tooltip shown while the caret is inside
+   a function call foo( … ), with the active parameter bolded. Rendered into
+   document.body via tooltips({parent}) so it escapes the cell's overflow:hidden,
+   hence GLOBAL selectors matching the autocomplete/lint tooltips above. */
+.cm-tooltip.cm-signature-tooltip,
+.cm-tooltip .cm-signature-tooltip {
+  padding: 5px 9px;
+  max-width: 460px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: normal;
+  word-break: break-word;
+}
+.cm-signature-name {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+.cm-signature-param {
+  color: var(--text-secondary);
+}
+/* Keyword-only params (rendered as `name=`) — tinted so it reads as "pass by
+   name", distinguishing them from positional params at a glance. */
+.cm-signature-param-kwonly {
+  color: var(--accent-purple, var(--accent-primary));
+}
+/* The parameter the caret is currently on — bright + bold, the whole point. */
+.cm-signature-param-active {
+  color: var(--text-primary);
+  font-weight: 700;
+  background: var(--accent-primary-subtle);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.cm-signature-return {
+  color: var(--text-muted);
+  font-style: italic;
+}
+/* "Explain this code" line-range highlight (focus-mode Explanation panel): a
+   theme-token tint plus a left marker. Not red, so it never reads as an error line. */
+.cell-cm-editor .cm-explain-range {
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--accent-primary);
+}

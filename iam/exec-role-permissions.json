@@ -1,0 +1,296 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "WriteLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda-microvms/*"
+    },
+    {
+      "Sid": "QueryLogsResourceScoped",
+      "Effect": "Allow",
+      "Action": [
+        "logs:StartQuery",
+        "logs:FilterLogEvents",
+        "logs:GetLogGroupFields",
+        "logs:GetLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/aws/lambda-microvms/*",
+        "arn:aws:logs:*:*:log-group:/aws/lambda-microvms/*:log-stream:*"
+      ]
+    },
+    {
+      "Sid": "QueryLogsAccountScoped",
+      "Effect": "Allow",
+      "Action": [
+        "logs:GetQueryResults",
+        "logs:StopQuery",
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "S3ReadAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": [
+        "arn:aws:s3:::microvm-sandbox-artifacts-*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/*"
+      ]
+    },
+    {
+      "Sid": "S3WriteNotebookPrefixes",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/sessions/*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/user-data/*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/models/*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/unload/*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/sagemaker/*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/attachments/*",
+        "arn:aws:s3:::microvm-sandbox-artifacts-*/athena-results/*"
+      ]
+    },
+    {
+      "Sid": "DynamoDBReadAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:Scan",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:PartiQLSelect"
+      ],
+      "Resource": ["arn:aws:dynamodb:*:*:table/microvm-demo-*", "arn:aws:dynamodb:*:*:table/ecommerce-*"]
+    },
+    {
+      "Sid": "DynamoDBListTables",
+      "Effect": "Allow",
+      "Action": "dynamodb:ListTables",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AthenaQueryAccess",
+      "Effect": "Allow",
+      "Action": [
+        "athena:StartQueryExecution",
+        "athena:StopQueryExecution",
+        "athena:GetQueryExecution",
+        "athena:GetQueryResults",
+        "athena:GetWorkGroup"
+      ],
+      "Resource": [
+        "arn:aws:athena:*:*:workgroup/microvm-demo"
+      ]
+    },
+    {
+      "Sid": "GlueCatalogAccess",
+      "Effect": "Allow",
+      "Action": [
+        "glue:GetDatabase",
+        "glue:GetDatabases",
+        "glue:GetTable",
+        "glue:GetTables",
+        "glue:GetPartition",
+        "glue:GetPartitions",
+        "glue:GetTableVersion",
+        "glue:GetTableVersions"
+      ],
+      "Resource": [
+        "arn:aws:glue:*:*:catalog",
+        "arn:aws:glue:*:*:catalog/s3tablescatalog",
+        "arn:aws:glue:*:*:catalog/s3tablescatalog/*",
+        "arn:aws:glue:*:*:database/microvm_demo_db",
+        "arn:aws:glue:*:*:table/microvm_demo_db/*",
+        "arn:aws:glue:*:*:database/s3tablescatalog/*",
+        "arn:aws:glue:*:*:table/s3tablescatalog/*",
+        "arn:aws:glue:*:*:database/microvm_demo_iceberg",
+        "arn:aws:glue:*:*:table/microvm_demo_iceberg/*"
+      ]
+    },
+    {
+      "Sid": "S3TablesReadAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3tables:GetTableBucket",
+        "s3tables:ListTableBuckets",
+        "s3tables:GetNamespace",
+        "s3tables:ListNamespaces",
+        "s3tables:GetTable",
+        "s3tables:ListTables",
+        "s3tables:GetTableData",
+        "s3tables:GetTableMetadataLocation"
+      ],
+      "Resource": [
+        "arn:aws:s3tables:*:*:bucket/microvm-tables-*",
+        "arn:aws:s3tables:*:*:bucket/microvm-tables-*/*"
+      ]
+    },
+    {
+      "Sid": "LakeFormationDataAccess",
+      "Effect": "Allow",
+      "Action": "lakeformation:GetDataAccess",
+      "Resource": "*"
+    },
+    {
+      "Sid": "STSIdentity",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecretsManagerGetValue",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:*:*:secret:microvm/*"
+    },
+    {
+      "Sid": "AuroraDataApiAccess",
+      "Effect": "Allow",
+      "Action": [
+        "rds-data:ExecuteStatement",
+        "rds-data:BatchExecuteStatement",
+        "rds-data:BeginTransaction",
+        "rds-data:CommitTransaction",
+        "rds-data:RollbackTransaction"
+      ],
+      "Resource": "arn:aws:rds:*:*:cluster:microvm-proxy-db"
+    },
+    {
+      "Sid": "BedrockKnowledgeBaseRetrieve",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:Retrieve",
+        "bedrock:RetrieveAndGenerate"
+      ],
+      "Resource": "arn:aws:bedrock:*:*:knowledge-base/*"
+    },
+    {
+      "Sid": "BedrockKnowledgeBaseGenerateModel",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:GetInferenceProfile"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:*:inference-profile/*"
+      ]
+    },
+    {
+      "Sid": "BedrockKnowledgeBaseDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:ListKnowledgeBases",
+        "bedrock:GetKnowledgeBase"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BedrockModelDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:ListFoundationModels",
+        "bedrock:ListInferenceProfiles"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SageMakerJobs",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:CreateTrainingJob",
+        "sagemaker:CreateTransformJob",
+        "sagemaker:CreateModel",
+        "sagemaker:StopTrainingJob",
+        "sagemaker:StopTransformJob",
+        "sagemaker:DeleteModel"
+      ],
+      "Resource": [
+        "arn:aws:sagemaker:*:*:training-job/microvm-*",
+        "arn:aws:sagemaker:*:*:transform-job/microvm-*",
+        "arn:aws:sagemaker:*:*:model/microvm-*"
+      ]
+    },
+    {
+      "Sid": "SageMakerDescribe",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:DescribeTrainingJob",
+        "sagemaker:DescribeTransformJob",
+        "sagemaker:DescribeModel",
+        "sagemaker:ListTrainingJobs",
+        "sagemaker:ListTransformJobs",
+        "sagemaker:ListModels"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SageMakerEndpointLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:CreateEndpointConfig",
+        "sagemaker:CreateEndpoint",
+        "sagemaker:DeleteEndpoint",
+        "sagemaker:DeleteEndpointConfig",
+        "sagemaker:UpdateEndpoint"
+      ],
+      "Resource": [
+        "arn:aws:sagemaker:*:*:endpoint/microvm-ep-*",
+        "arn:aws:sagemaker:*:*:endpoint-config/microvm-*"
+      ]
+    },
+    {
+      "Sid": "SageMakerEndpointDescribe",
+      "Effect": "Allow",
+      "Action": [
+        "sagemaker:DescribeEndpoint",
+        "sagemaker:DescribeEndpointConfig",
+        "sagemaker:ListEndpoints",
+        "sagemaker:ListEndpointConfigs"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SageMakerInvokeEndpoint",
+      "Effect": "Allow",
+      "Action": "sagemaker:InvokeEndpoint",
+      "Resource": "arn:aws:sagemaker:*:*:endpoint/microvm-ep-*"
+    },
+    {
+      "Sid": "SageMakerReadJobLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:GetLogEvents",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/sagemaker/*"
+    },
+    {
+      "Sid": "PassSageMakerExecutionRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/MicroVMSageMakerRole",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "sagemaker.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

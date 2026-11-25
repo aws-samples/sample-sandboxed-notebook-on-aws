@@ -1,0 +1,405 @@
+/* ============================================================
+   IntelPanel — Workbook Intelligence Cards
+   ============================================================ */
+
+.intel-meta { font-size: 10px; color: var(--text-muted); }
+.intel-alert-badge { font-size: 9px; background: var(--accent-danger, #ff5c5c); color: white; border-radius: 8px; padding: 1px 5px; font-weight: 600; }
+
+.intel-btn-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 3px; border-radius: 3px; display: flex; align-items: center; }
+.intel-btn-icon:hover:not(:disabled) { color: var(--text-primary); background: var(--surface-3); }
+.intel-btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Empty states */
+.intel-empty { padding: 12px 16px; color: var(--text-muted); font-size: 12px; }
+.intel-empty p { margin: 6px 0; }
+.intel-empty-hint { font-size: 11px; opacity: 0.7; }
+
+.intel-spinner { width: 20px; height: 20px; border: 2px solid var(--border-default); border-top-color: var(--accent-primary); border-radius: 50%; animation: intel-spin 0.8s linear infinite; margin: 0 auto 10px; }
+.intel-spinner-sm { width: 12px; height: 12px; border-width: 2px; margin: 0; flex-shrink: 0; }
+@keyframes intel-spin { to { transform: rotate(360deg); } }
+
+/* Thin banner shown at the top of the report while an incremental update (delta) runs */
+.intel-updating-strip { display: flex; align-items: center; gap: 8px; padding: 7px 12px; margin: 0; font-size: 11px; color: var(--accent-primary); background: var(--accent-primary-subtle); border-bottom: 1px solid var(--accent-primary-muted); }
+
+/* Cards container */
+.intel-cards { flex: 1; overflow-y: auto; padding: 10px 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; align-content: start; }
+.intel-cards::-webkit-scrollbar { width: 5px; }
+.intel-cards::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+
+/* Individual card */
+.intel-card { display: flex; align-items: flex-start; gap: 8px; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border-default); transition: all 0.15s; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.intel-card:hover { border-color: var(--accent-primary-muted); background: var(--surface-3); box-shadow: 0 2px 6px rgba(0,0,0,0.15); transform: translateY(-1px); }
+.intel-card-icon { font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+.intel-card-title { font-size: 12px; color: var(--text-secondary); flex: 1; min-width: 0; word-wrap: break-word; overflow-wrap: break-word; }
+.intel-card-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full, 10px); background: var(--accent-primary-subtle); color: var(--accent-primary); border: 1px solid var(--accent-primary-muted); letter-spacing: 0.2px; flex-shrink: 0; white-space: nowrap; }
+.intel-card-run { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--accent-primary-muted); background: var(--accent-primary-subtle); color: var(--accent-primary); cursor: pointer; flex-shrink: 0; font-weight: 500; white-space: nowrap; }
+.intel-card-run:hover { background: var(--accent-primary-muted); color: var(--text-primary); }
+
+/* Card with body (investigate, alerts) */
+.intel-card-investigate, .intel-card-alert { align-items: flex-start; flex-wrap: wrap; }
+.intel-card-alert .intel-card-title { white-space: normal; overflow: visible; text-overflow: unset; }
+.intel-card-body { flex: 1; min-width: 0; }
+.intel-card-reason { display: block; font-size: 11px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
+
+/* Alert severities */
+.intel-alert-high { border-left: 3px solid var(--accent-danger, #ff5c5c); grid-column: 1 / -1; }
+.intel-alert-medium { border-left: 3px solid var(--accent-warning); grid-column: 1 / -1; }
+.intel-alert-low { border-left: 3px solid var(--text-muted); grid-column: 1 / -1; }
+
+/* Full Report Modal */
+.intel-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+.intel-modal { width: 90vw; max-width: 1200px; max-height: 92vh; background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; }
+.intel-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--accent-primary-subtle); border-bottom: 1px solid var(--accent-primary-muted); }
+.intel-modal-header h3 { margin: 0; font-size: 14px; color: var(--accent-primary); }
+/* Title block: min-width:0 lets it shrink so a long notebook name ellipsizes
+   instead of wrapping the header or pushing the export/close buttons off. */
+.intel-modal-title { flex: 1; min-width: 0; margin-right: 12px; }
+.intel-modal-title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Notebook name: bold like the title, in primary text so it reads as part of the heading. */
+.intel-modal-nbname { font-weight: 700; color: var(--text-primary); }
+.intel-modal-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.intel-modal-header button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 3px; }
+.intel-modal-header button:hover { color: var(--text-primary); background: var(--surface-3); }
+.intel-export-wrapper { display: flex; align-items: center; gap: 4px; }
+.intel-header-action { display: flex; align-items: center; gap: 1px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 3px; }
+.intel-header-action:hover { color: var(--text-primary); background: var(--surface-3); }
+.intel-modal-body { flex: 1; overflow-y: auto; padding: 16px 20px; font-size: 13px; line-height: 1.7; color: var(--text-secondary); }
+.intel-modal-body h1 { font-size: 16px; color: var(--accent-primary); margin: 0 0 12px; }
+.intel-modal-body h2 { font-size: 13px; color: var(--accent-primary); margin: 16px 0 6px; text-transform: uppercase; }
+.intel-modal-body h3 { font-size: 12px; color: var(--accent-primary); margin: 14px 0 4px; }
+.intel-modal-body ul, .intel-modal-body ol { padding-left: 18px; }
+.intel-modal-body li { margin: 3px 0; }
+.intel-modal-body code { font-family: var(--font-mono); font-size: 11px; padding: 1px 4px; border-radius: 3px; background: var(--surface-3); color: var(--accent-success); }
+.intel-modal-body strong { color: var(--text-primary); }
+.intel-modal-body table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px; }
+.intel-modal-body th { text-align: left; padding: 6px 10px; background: var(--surface-3); color: var(--accent-primary); border: 1px solid var(--border-subtle); font-weight: 600; }
+.intel-modal-body td { padding: 5px 10px; border: 1px solid var(--border-subtle); }
+.intel-modal-body tr:nth-child(even) { background: var(--surface-2); }
+.intel-modal-body hr { border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0; }
+.intel-modal-date { font-size: 10px; color: var(--text-muted); display: block; margin-top: 2px; }
+/* Severity icon that replaced the [HIGH]/[MEDIUM]/[LOW] text tokens in the report.
+   Small nudge so it sits comfortably before the alert text. */
+.intel-modal-body .intel-sev-icon { margin-right: 4px; font-size: 12px; line-height: 1; }
+
+/* ─── Intel Accordion (hosted inside the AI Assistant panel) ──────────────── */
+/* Hierarchy (ai-panel-hierarchy; colours are theme tokens from theme.css):
+     level 1  the Intel region (.ai-panel-intel, AiChatPanel.css) is a framed drawer;
+              this topbar is the header of that frame (--intel-header-bg).
+     level 2  section headers: one structure for all four sections — Title Case label,
+              icon + 3px left stripe in the category colour (--intel-cat), count badge.
+              Open = lighter face + rotated chevron, joined to its card list as one group.
+     level 3  item cards: neutral face, severity / category stripe; done = muted. */
+.intel-acc {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.intel-acc-topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--intel-section-ring);
+  flex-shrink: 0;
+  color: var(--accent-primary);
+  background: var(--intel-header-bg);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.intel-acc-topbar:hover { background: var(--intel-header-bg-hover); }
+.intel-acc-title { font-size: 12px; font-weight: 600; color: var(--accent-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.intel-acc-topbar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; cursor: default; }
+.intel-acc-topbar-actions .intel-meta { margin-right: 4px; color: var(--text-tertiary); }
+.intel-acc-collapse-caret { color: var(--text-tertiary); flex-shrink: 0; }
+.intel-acc-topbar:hover .intel-acc-collapse-caret { color: var(--text-primary); }
+
+/* Full-report button — prominent, highlighted so it reads as the primary action. */
+.intel-btn-report {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.intel-btn-report:hover { background: var(--accent-primary); color: #fff; }
+
+/* Scrollable stack of sections */
+.intel-acc-sections {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.intel-acc-sections::-webkit-scrollbar { width: 6px; }
+.intel-acc-sections::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+
+/* Category colour per section (stripe, icon, open-group edge). */
+.intel-acc-section { --intel-cat: var(--intel-cat-analyses); margin: 7px 9px; border-radius: var(--radius-md, 6px); }
+.intel-acc-section + .intel-acc-section { margin-top: 0; }
+.intel-acc-cat-alerts { --intel-cat: var(--intel-cat-alerts); }
+.intel-acc-cat-investigate { --intel-cat: var(--intel-cat-investigate); }
+.intel-acc-cat-analyses { --intel-cat: var(--intel-cat-analyses); }
+.intel-acc-cat-viz { --intel-cat: var(--intel-cat-viz); }
+/* Open: the header and its card list share one container — a body surface and a
+   1px outer edge tinted by the category (outset ring, so no layout change). */
+.intel-acc-section-open {
+  background: var(--intel-section-body-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--intel-cat) 40%, var(--intel-section-ring));
+}
+
+/* Section header = a standalone bar when closed; the top of the group when open. */
+.intel-acc-header {
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--intel-section-bg);
+  border: 1px solid var(--intel-section-ring);
+  border-radius: var(--radius-md, 6px);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+  box-shadow: inset 3px 0 0 0 var(--intel-cat);
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.intel-acc-header:hover { background: var(--intel-section-bg-hover); }
+.intel-acc-header.open {
+  background: var(--intel-section-bg-open);
+  border-color: transparent transparent var(--intel-section-ring);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.intel-acc-header.open:hover { background: color-mix(in srgb, var(--text-primary) 4%, var(--intel-section-bg-open)); }
+/* Icon in the category colour (a meaningful glyph: ≥ 3:1 on the header). */
+.intel-acc-header > svg:not(.intel-acc-chevron) { color: var(--intel-cat); flex-shrink: 0; }
+
+/* Title: Title Case in every state (no case switch between open and closed). */
+.intel-acc-label { font-weight: 600; flex: 1; color: var(--accent-primary); text-transform: none; }  /* section header: highlight colour */
+
+/* Match the Data Sources side-panel count pill for consistency + visibility. */
+.intel-acc-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 8px);
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.2px;
+}
+.intel-acc-count-alert {
+  color: var(--intel-count-on-status);
+  background: var(--intel-cat-alerts);
+  border-color: var(--intel-cat-alerts);
+}
+.intel-acc-count-investigate {
+  color: var(--intel-count-on-status);
+  background: var(--intel-cat-investigate);
+  border-color: var(--intel-cat-investigate);
+}
+
+.intel-acc-chevron { color: var(--text-secondary); transition: transform 0.15s; flex-shrink: 0; }
+.intel-acc-chevron.open { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .intel-acc-topbar, .intel-acc-header, .intel-acc-chevron, .intel-card, .intel-card-del, .intel-section-del { transition: none; }
+}
+
+/* Inside the accordion, cards stack in a single column and DON'T grab flex:1
+   (each section sizes to its content; the .intel-acc-sections wrapper scrolls). */
+.intel-acc .intel-cards {
+  flex: none;
+  overflow: visible;
+  grid-template-columns: 1fr;
+  padding: 8px 10px 10px;
+}
+/* The open group's body: the container paints the surface. */
+.intel-acc-section-open .intel-cards { background: transparent; border: 0; }
+
+/* Make the sections wrapper a size container so the card grid can respond to the
+   PANEL width (narrow docked vs. expanded full-screen) rather than the viewport. */
+.intel-acc-sections { container-type: inline-size; container-name: intelacc; }
+
+/* When the panel is wide enough (expanded view), lay cards out 2-per-row so the
+   lists stop wasting horizontal space. Two thresholds because the sections differ
+   in text length:
+     • ≥480px — short-title Analyses/Visualizations pair up. Alerts/Investigate are
+       long-form (multi-line message/reason) so they still span the full width here.
+     • ≥720px — enough room that Alerts/Investigate pair up too (drop the full-width
+       span). */
+@container intelacc (min-width: 480px) {
+  .intel-acc .intel-cards { grid-template-columns: 1fr 1fr; }
+  .intel-acc .intel-card-alert,
+  .intel-acc .intel-card-investigate { grid-column: 1 / -1; }
+}
+@container intelacc (min-width: 720px) {
+  .intel-acc .intel-card-alert,
+  .intel-acc .intel-card-investigate { grid-column: auto; }
+}
+
+/* ─── Compact cards inside the AI-panel accordion ─────────────────────────── */
+.intel-acc .intel-card {
+  background: var(--intel-card-bg);
+  border: 1px solid var(--border-default);
+  box-shadow: none;
+}
+.intel-acc .intel-card:hover {
+  background: var(--intel-section-bg-hover);
+  border-color: var(--accent-primary-muted);
+  transform: none;
+}
+.intel-acc .intel-card-title { color: var(--text-primary); }
+/* Left stripe: alert severity, or the Investigate category colour. */
+.intel-acc .intel-alert-high { border-left: 3px solid var(--intel-sev-high); }
+.intel-acc .intel-alert-medium { border-left: 3px solid var(--intel-sev-medium); }
+.intel-acc .intel-alert-low { border-left: 3px solid var(--intel-sev-low); }
+.intel-acc .intel-card-investigate { border-left: 3px solid var(--intel-cat-investigate); }
+
+/* The ENTIRE card is clickable now; the run icon is just a non-interactive
+   affordance hint. Make it a muted square that lights up on card hover. */
+.intel-acc .intel-card-run {
+  padding: 4px;
+  gap: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  border-radius: 4px;
+  aspect-ratio: 1 / 1;
+  justify-content: center;
+  pointer-events: none;   /* clicks fall through to the card */
+  align-self: center;
+}
+/* On hover the overlaid trash takes the top-right corner; fade the (non-interactive)
+   play hint so the two don't visually collide on compact single-row cards. */
+.intel-acc .intel-card:hover .intel-card-run { opacity: 0; transition: opacity 0.12s; }
+
+/* Alerts are compact single-row rows (no secondary text) — center-align. */
+.intel-acc .intel-card-alert {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.intel-acc .intel-card-alert .intel-card-title { white-space: normal; }
+/* Investigate keeps its two-line body (title + reason) — top-align. */
+.intel-acc .intel-card-investigate { align-items: flex-start; flex-wrap: nowrap; }
+
+/* ─── Per-card ACTIONED + DELETE affordances (client-side card state) ─────── */
+
+/* Header row wrapper: the header button fills it; while the section is open the
+   section-level trash sits INSIDE the header bar, at its right end. */
+.intel-acc-header-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.intel-acc-header-row .intel-acc-header { flex: 1; min-width: 0; }
+.intel-acc-header-row-del .intel-acc-header { padding-right: 40px; }
+
+/* Section-level "hide all" trash — dim until hover. */
+.intel-section-del {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-md, 6px);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.intel-section-del:hover { color: var(--accent-danger, #ff5c5c); background: color-mix(in srgb, var(--accent-danger, #ff5c5c) 12%, transparent); }
+
+/* Per-card delete (trash) — OVERLAYS the card's top-right corner on hover instead
+   of taking a permanent layout slot (which was stealing horizontal space from the
+   card text). Absolutely positioned = zero flow impact; floats over the padding. */
+.intel-acc .intel-card { position: relative; }
+.intel-card-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  color: var(--text-tertiary);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+.intel-card:hover .intel-card-del { opacity: 1; }
+.intel-card-del:hover { color: var(--accent-danger, #ff5c5c); background: color-mix(in srgb, var(--accent-danger, #ff5c5c) 14%, transparent); }
+
+/* Actioned (done) card: MUTED, not highlighted — the same neutral card family
+   (no success fill), secondary text, and a success-coloured check icon (shape, so
+   "done" isn't carried by colour alone). Open cards stay the prominent ones. */
+.intel-card-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--intel-done-check);
+  background: transparent;
+  align-self: center;
+}
+/* Done (actioned) card: green-tinted background + green left stripe + filled
+   check, as before the hierarchy restyle (the user asked to keep it). The text
+   stays secondary so open cards still read first. */
+.intel-acc .intel-card.intel-card-actioned {
+  background: var(--intel-card-done-bg);
+  border-color: color-mix(in srgb, var(--accent-success) 45%, var(--border-default));
+  box-shadow: inset 3px 0 0 0 var(--accent-success);
+}
+.intel-acc .intel-card-actioned .intel-card-title { color: var(--intel-card-done-fg); }
+.intel-acc .intel-card-actioned .intel-card-reason { color: var(--text-secondary); }
+.intel-acc .intel-card.intel-card-actioned:hover {
+  background: color-mix(in srgb, var(--accent-success) 10%, var(--intel-card-done-bg));
+}
+.intel-acc .intel-card-actioned .intel-card-check {
+  color: var(--intel-count-on-status);
+  background: var(--accent-success);
+}
+
+/* "Show N hidden" restore toggle at the foot of a section's card list. */
+.intel-hidden-toggle {
+  align-self: flex-start;
+  margin: 2px 2px 0;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px dashed var(--border-default);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.intel-hidden-toggle:hover { color: var(--text-primary); border-color: var(--accent-primary-muted); background: var(--surface-2); }
+
+/* Topbar clear-all (rightmost action) — hint red on hover like other destructive
+   affordances, without shouting at rest. */
+.intel-acc-topbar-actions .intel-btn-clear:hover { color: var(--accent-danger, #ff5c5c); }

@@ -1,0 +1,100 @@
+{
+  "name": "Statistical Analysis",
+  "description": "Test a real business hypothesis on sandbox data \u2014 compare two groups (verified vs unverified reviews, or Premium vs Standard customers) with a two-sample t-test, effect size, and confidence intervals.",
+  "savedAt": "2026-09-20T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# \ud83d\udd2c Statistical Analysis\n\nIs a difference you can *see* in the data actually **real**, or just noise? This workbook takes a genuine business question, splits **real sandbox data** into two groups, and runs the classic significance toolkit: **distributions \u2192 two-sample t-test \u2192 effect size \u2192 confidence intervals**.\n\n**The question (pick one with the selector below):**\n- **Reviews:** do **verified** purchases rate products higher than **unverified** ones? (DynamoDB `ecommerce-reviews`)\n- **Customers:** do **Premium** customers have a higher **lifetime value** than **Standard** ones? (Athena `customers`)\n\n**What you'll do:** load the two real groups, visualize their spread, run a `scipy` two-sample t-test with Cohen's *d*, and read confidence intervals \u2014 the same technique whether the groups come from an A/B test or a segment cut. Everything runs on the MicroVM's **execution role**.\n\n```mermaid\ngraph LR\n  Q[\"Pick the question (selector)\"] --> G[\"Load two real groups\"]\n  G --> D[\"Distributions (visualize spread)\"]\n  D --> T[\"Two-sample t-test (scipy)\"]\n  T --> E[\"Effect size (Cohen's d)\"]\n  E --> C[\"Confidence intervals \u2192 verdict\"]\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 \u00b7 Choose the hypothesis & load the two real groups\n\nThe selector below picks which real comparison to run. The cell loads the relevant source (**DynamoDB reviews** or **Athena customers**), splits it into two labelled arrays \u2014 `group_a` (baseline) and `group_b` (the group we suspect is higher) \u2014 and prints the observed gap. Every downstream stat cell reads these two arrays, so switching the hypothesis re-runs the whole analysis (with **Reactive** on).",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"dropdown\", \"options\": [\"reviews: verified vs unverified rating\", \"customers: Premium vs Standard lifetime value\"], \"default\": \"reviews: verified vs unverified rating\", \"label\": \"Hypothesis to test\"}\nhypothesis = \"reviews: verified vs unverified rating\"\nimport numpy as np\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\nif hypothesis.startswith(\"reviews\"):\n    # Real product reviews from DynamoDB. H1: verified purchases rate higher.\n    reviews = read_dynamodb(\"ecommerce-reviews\")\n    reviews['rating'] = pd.to_numeric(reviews['rating'], errors='coerce')\n    verified = reviews['verified_purchase'].astype(str).str.lower().isin(['true', '1'])\n    group_a = reviews.loc[~verified, 'rating'].dropna().to_numpy()   # baseline: unverified\n    group_b = reviews.loc[verified, 'rating'].dropna().to_numpy()    # suspected higher: verified\n    # Coerce the OTHER numeric-meaningful fields so the downstream plot_corr\n    # has >=2 numeric columns (DynamoDB returns them as strings).\n    reviews['helpful_votes'] = pd.to_numeric(reviews['helpful_votes'], errors='coerce')\n    reviews['verified'] = verified.astype(int)  # 0/1 so it correlates\n    df = reviews  # unified source frame for downstream plot_corr (rating/helpful_votes/verified)\n    label_a, label_b, metric = 'Unverified', 'Verified', 'rating (1-5)'\nelse:\n    # Real customers from Athena. H1: Premium customers have higher lifetime value.\n    customers = read_athena(\"SELECT segment, lifetime_value, signup_date FROM microvm_demo_db.customers\")\n    customers['lifetime_value'] = pd.to_numeric(customers['lifetime_value'], errors='coerce')\n    group_a = customers.loc[customers['segment'] == 'Standard', 'lifetime_value'].dropna().to_numpy()\n    group_b = customers.loc[customers['segment'] == 'Premium',  'lifetime_value'].dropna().to_numpy()\n    # Derive a second numeric column (tenure in days) so plot_corr has >=2\n    # numeric columns \u2014 the 'spend vs tenure' relationship the viz describes.\n    customers['tenure_days'] = (pd.Timestamp('today').normalize() - pd.to_datetime(customers['signup_date'], errors='coerce')).dt.days\n    df = customers  # unified source frame for downstream plot_corr (lifetime_value/tenure_days)\n    label_a, label_b, metric = 'Standard', 'Premium', 'lifetime value ($)'\n\nprint(f\"Hypothesis: does {label_b} > {label_a} on {metric}?\")\nprint(f\"{label_a}: n={len(group_a)}, mean={group_a.mean():.2f}, std={group_a.std():.2f}\")\nprint(f\"{label_b}: n={len(group_b)}, mean={group_b.mean():.2f}, std={group_b.std():.2f}\")\nprint(f\"Observed difference ({label_b} - {label_a}): {group_b.mean() - group_a.mean():+.2f}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 \u00b7 Visualize the two distributions\n\nBefore any test, *look* at the data: overlaid histograms show the shape and overlap of the two groups, and a box plot shows medians and spread. If the distributions barely overlap, a significant result is unsurprising; if they sit on top of each other, be skeptical.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Visualize distributions of the two real groups\nfig, axes = plt.subplots(1, 2, figsize=(12, 4))\naxes[0].hist(group_a, bins=20, alpha=0.7, color='#89b4fa', label=label_a)\naxes[0].hist(group_b, bins=20, alpha=0.7, color='#a6e3a1', label=label_b)\naxes[0].set_title(f'Distribution \u2014 {metric}', color='white')\naxes[0].legend(); axes[0].set_xlabel(metric, color='#a6adc8'); axes[0].tick_params(colors='#a6adc8')\naxes[1].boxplot([group_a, group_b], labels=[label_a, label_b], patch_artist=True,\n                boxprops=dict(facecolor='#313244'), medianprops=dict(color='#f9e2af'))\naxes[1].set_title('Box plot', color='white'); axes[1].tick_params(colors='#a6adc8')\nplt.tight_layout(); plt.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 \u00b7 The two-sample t-test + effect size\n\nRun Welch's two-sample t-test (`scipy.stats.ttest_ind`) to get the **p-value**, and Cohen's *d* for the **effect size** \u2014 because with enough rows even a trivial gap turns \"significant\", so magnitude matters too. The verdict spells out what to conclude at \u03b1 = 0.05.\n\nWelch's t-statistic (unequal variances):\n\n$$ t = \\frac{\\bar{x}_b - \\bar{x}_a}{\\sqrt{\\dfrac{s_a^2}{n_a} + \\dfrac{s_b^2}{n_b}}} $$\n\nCohen's *d* (standardized effect size):\n\n$$ d = \\frac{\\bar{x}_b - \\bar{x}_a}{s_{\\text{pooled}}}, \\qquad s_{\\text{pooled}} = \\sqrt{\\frac{s_a^2 + s_b^2}{2}} $$\n\nRule of thumb: $|d| < 0.2$ negligible, $0.2\\text{\u2013}0.5$ small, $0.5\\text{\u2013}0.8$ medium, $> 0.8$ large.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "from scipy import stats\n\n# Welch's t-test (does not assume equal variance) \u2014 the safe default.\nt_stat, p_value = stats.ttest_ind(group_a, group_b, equal_var=False)\npooled_std = np.sqrt((group_a.std(ddof=1)**2 + group_b.std(ddof=1)**2) / 2)\neffect_size = (group_b.mean() - group_a.mean()) / pooled_std if pooled_std else float('nan')\n\nprint('Two-sample t-test (Welch)')\nprint('=' * 42)\nprint(f\"t-statistic:            {t_stat:.4f}\")\nprint(f\"p-value:                {p_value:.6f}\")\nprint(f\"Effect size (Cohen's d): {effect_size:.4f}\")\nmag = 'negligible' if abs(effect_size) < 0.2 else 'small' if abs(effect_size) < 0.5 else 'medium' if abs(effect_size) < 0.8 else 'large'\nprint(f\"Effect magnitude:        {mag}\")\nprint()\nif p_value < 0.05:\n    print(f\"\u2713 Significant (p < 0.05): {label_b} mean ({group_b.mean():.2f}) differs from \"\n          f\"{label_a} ({group_a.mean():.2f}) \u2014 unlikely to be chance.\")\nelse:\n    print(f\"\u2717 Not significant (p = {p_value:.3f}): the {label_b} vs {label_a} gap could be noise.\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 \u00b7 Confidence intervals\n\nA p-value says *whether* there's a difference; a **confidence interval** says *how big* and *how precisely* we know it. If the two intervals don't overlap, that's a strong visual companion to the test.\n\nThe interval for each group's mean:\n\n$$ \\bar{x} \\pm t_{\\alpha/2,\\,n-1} \\cdot \\frac{s}{\\sqrt{n}} $$\n\nwhere $t_{\\alpha/2,\\,n-1}$ is the critical value from Student's *t* distribution and $s/\\sqrt{n}$ is the standard error.\n\n\u2699\ufe0f *Slider:* the confidence level (90% / 95% / 99%).",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"dropdown\", \"options\": [\"0.90\", \"0.95\", \"0.99\"], \"default\": \"0.95\", \"label\": \"Confidence level\"}\nconfidence_str = \"0.95\"\nfrom scipy.stats import sem, t\nconfidence = float(confidence_str)\n\ndef confidence_interval(data, conf):\n    n = len(data); m = np.mean(data); se = sem(data)\n    h = se * t.ppf((1 + conf) / 2, n - 1)\n    return m, m - h, m + h\n\nmean_a, lo_a, hi_a = confidence_interval(group_a, confidence)\nmean_b, lo_b, hi_b = confidence_interval(group_b, confidence)\nprint(f\"{confidence*100:.0f}% Confidence Intervals \u2014 {metric}\")\nprint('=' * 42)\nprint(f\"{label_a}: {mean_a:.2f} [{lo_a:.2f}, {hi_a:.2f}]\")\nprint(f\"{label_b}: {mean_b:.2f} [{lo_b:.2f}, {hi_b:.2f}]\")\nprint((\"\\nIntervals do NOT overlap \u2014 a clear separation.\" if lo_b > hi_a or lo_a > hi_b\n       else \"\\nIntervals overlap \u2014 interpret the difference with caution.\"))\n\nfig, ax = plt.subplots(figsize=(8, 3))\nax.errorbar([mean_a], [0.5], xerr=[[mean_a - lo_a], [hi_a - mean_a]], fmt='o', color='#89b4fa', markersize=10, capsize=8, label=label_a)\nax.errorbar([mean_b], [1.0], xerr=[[mean_b - lo_b], [hi_b - mean_b]], fmt='o', color='#a6e3a1', markersize=10, capsize=8, label=label_b)\nax.set_yticks([0.5, 1.0]); ax.set_yticklabels([label_a, label_b], color='#a6adc8')\nax.set_xlabel(metric, color='#a6adc8'); ax.set_title(f'{confidence*100:.0f}% Confidence Intervals', color='white')\nax.legend(loc='upper right'); ax.grid(True, alpha=0.2)\nplt.tight_layout(); plt.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 \u00b7 The same views as helper one-liners \u2014 `plot_box`, `plot_corr`\n\nStep 2 drew the two-group distributions with hand-rolled matplotlib. The pre-loaded **`plot_box`** does the grouped box plot in one interactive line (median, quartiles, outliers), and **`plot_corr`** adds something the t-test can't: how ALL the numeric fields in the source frame move together \u2014 a quick scan for confounders before you trust a single-metric result."
+    },
+    {
+      "type": "code",
+      "code": "# plot_box: the two groups side by side, interactive, in one line. Build a tidy\n# frame (value + group label) from the two arrays the test used.\nimport pandas as pd\ngrp = pd.DataFrame({\n    metric: list(group_a) + list(group_b),\n    'group': [label_a] * len(group_a) + [label_b] * len(group_b),\n})\nplot_box(grp, y=metric, x='group', color='group', title=f'{metric} by group')"
+    },
+    {
+      "type": "code",
+      "code": "# plot_corr: correlation across the source frame's numeric columns \u2014 scan for\n# confounders (needs \u22652 numeric columns; auto-selected). On the reviews question\n# this relates rating/helpful_votes/verified; on customers, the spend/tenure fields.\nplot_corr(df, title='Numeric fields \u2014 correlation')"
+    }
+  ]
+}

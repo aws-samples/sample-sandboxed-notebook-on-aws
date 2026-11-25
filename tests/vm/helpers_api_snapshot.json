@@ -1,0 +1,621 @@
+{
+ "api": {
+  "SageMakerEndpoint": "(endpoint_name, model_name=None, config_name=None, kind=None, model_s3_uri=None, mode=None)",
+  "SageMakerJob": "(job_name, task, model_s3_uri, preprocessor, feat_cols, target, framework='sklearn')",
+  "UnloadResult": "(s3_uri, files, total_bytes, format, query_execution_id)",
+  "ask_bedrock_kb": "(query: str, kb_id: str = None, filter: dict = None, model_id: str = None) -> dict",
+  "ask_logs": "(question: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, show_query: bool = True, model: str = None, log_stream: str = None) -> pandas.DataFrame",
+  "athena_schema": "(table: str, database: str = None) -> pandas.DataFrame",
+  "athena_tables": "(database: str = None) -> pandas.DataFrame",
+  "aurora_schema": "(table: str, schema: str = 'public', database: str = None) -> pandas.DataFrame",
+  "aurora_tables": "(schema: str = 'public', database: str = None) -> pandas.DataFrame",
+  "compare_df": "(df1: pandas.DataFrame, df2: pandas.DataFrame, name1: str = 'df1', name2: str = 'df2') -> pandas.DataFrame",
+  "count_tokens": "(text, *, model: str = None) -> int",
+  "download_s3": "(bucket: str, key: str = None, local_path: str = None) -> str",
+  "dynamodb_schema": "(table_name: str, sample: int = 25) -> pandas.DataFrame",
+  "dynamodb_tables": "() -> pandas.DataFrame",
+  "embed_texts": "(texts, *, model: str = None, batch_size: int = 96, input_type: str = 'search_document')",
+  "estimate_session_cost": "(running_secs: float = 0.0, suspended_secs: float = 0.0, burst_mb_seconds: float = 0.0, memory_mib: int = None, architecture: str = None, resume_count: int = 0, suspend_count: int = 0) -> dict",
+  "evaluate_model": "(model, X, y, feature_cols=None, task: str = None) -> dict",
+  "get_env": "(name, default=UNSET, *, as_type=None, required=False)",
+  "get_secret": "(name, default=UNSET, *, as_type=None, required=False)",
+  "grep_logs": "(pattern: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, log_stream: str = None) -> pandas.DataFrame",
+  "head_s3": "(bucket: str, key: str = None, n: int = 5) -> pandas.DataFrame",
+  "helpers": "(query=None)",
+  "install_package": "(package: str) -> dict",
+  "invoke_llm": "(prompt: str, *, system: str = None, model: str = None, max_tokens: int = 1024, temperature: float = 0.0, json: bool = False)",
+  "list_bedrock_models": "(*, by_provider: str = None, text_only: bool = True) -> pandas.DataFrame",
+  "list_datasources": "(source_type: str = None) -> pandas.DataFrame",
+  "list_env": "(all: bool = False)",
+  "list_s3": "(bucket: str, prefix: str = '', max_keys: int = 100) -> pandas.DataFrame",
+  "list_secret": "()",
+  "llm_classify": "(texts, labels, *, system: str = None, instructions: str = None, model: str = None, temperature: float = 0.0, multi_label: bool = False) -> pandas.DataFrame",
+  "llm_extract": "(texts, schema: dict, *, system: str = None, instructions: str = None, model: str = None, temperature: float = 0.0) -> pandas.DataFrame",
+  "llm_map": "(df: pandas.DataFrame, prompt_template: str, *, output_column: str = 'llm_output', system: str = None, model: str = None, max_tokens: int = 512, temperature: float = 0.0, json: bool = False) -> pandas.DataFrame",
+  "llm_sentiment": "(texts, *, scale: str = 'label', system: str = None, model: str = None, temperature: float = 0.0) -> pandas.DataFrame",
+  "llm_summarize": "(texts, *, style: str = 'concise', max_words: int = None, system: str = None, model: str = None, temperature: float = 0.0)",
+  "llm_translate": "(texts, to, *, source: str = None, system: str = None, model: str = None, temperature: float = 0.0)",
+  "load_model": "(bucket: str, key: str = None)",
+  "load_model_local": "(path: str)",
+  "load_onnx": "(bucket: str, key: str = None)",
+  "log_groups": "(prefix: str = None, limit: int = 100) -> pandas.DataFrame",
+  "model_info": "(model) -> dict",
+  "notebook_log_groups": "() -> list[str]",
+  "onnx_predict": "(session, data, feature_cols=None, input_name: str = None)",
+  "plot_area": "(df: pandas.DataFrame, x: str, y: str, color: str = None, title: str = None)",
+  "plot_bar": "(df: pandas.DataFrame, x: str, y: str, color: str = None, title: str = None)",
+  "plot_box": "(df: pandas.DataFrame, y: str, x: str = None, color: str = None, title: str = None)",
+  "plot_confusion_matrix": "(model, X, y, feature_cols=None, labels=None, normalize: bool = False, title: str = None)",
+  "plot_corr": "(df: pandas.DataFrame, columns: list = None, method: str = 'pearson', title: str = None)",
+  "plot_heatmap": "(df: pandas.DataFrame, x: str, y: str, value: str, title: str = None)",
+  "plot_histogram": "(df: pandas.DataFrame, column: str, bins: int = 30, title: str = None)",
+  "plot_line": "(df: pandas.DataFrame, x: str, y: str, color: str = None, title: str = None)",
+  "plot_pie": "(df: pandas.DataFrame, names: str, values: str, title: str = None)",
+  "plot_scatter": "(df: pandas.DataFrame, x: str, y: str, size: str = None, color: str = None, title: str = None)",
+  "predict": "(model, data, feature_cols=None)",
+  "predict_batch": "(model, df: pandas.DataFrame, feature_cols=None, output_col: str = 'prediction', proba: bool = False) -> pandas.DataFrame",
+  "predict_proba": "(model, data, feature_cols=None)",
+  "profile": "(df: pandas.DataFrame) -> pandas.DataFrame",
+  "query_df": "(sql: str) -> pandas.DataFrame",
+  "read_athena": "(sql: str, database: str = None, catalog: str = None) -> pandas.DataFrame",
+  "read_aurora": "(sql: str, database: str = None, parameters: list = None) -> pandas.DataFrame",
+  "read_bedrock_kb": "(query: str, kb_id: str = None, top_k: int = 5, filter: dict = None, min_score: float = None) -> pandas.DataFrame",
+  "read_dynamodb": "(table_name: str, limit: int = None, filter: dict = None) -> pandas.DataFrame",
+  "read_dynamodb_query": "(table_name: str, key, value, sort_key: str = None, sort_value=None) -> pandas.DataFrame",
+  "read_local": "(path: str) -> pandas.DataFrame",
+  "read_local_prefix": "(path: str, format: str = None, max_files: int = 1000) -> pandas.DataFrame",
+  "read_logs": "(query: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, poll_timeout: float = 60.0, log_stream: str = None) -> pandas.DataFrame",
+  "read_s3": "(bucket: str, key: str = None) -> pandas.DataFrame",
+  "read_s3_csv": "(bucket: str, key: str = None, **kwargs) -> pandas.DataFrame",
+  "read_s3_excel": "(bucket: str, key: str = None, sheet=0, **kwargs) -> pandas.DataFrame",
+  "read_s3_json": "(bucket: str, key: str = None, lines: bool = True) -> pandas.DataFrame",
+  "read_s3_parquet": "(bucket: str, key: str = None) -> pandas.DataFrame",
+  "read_s3_prefix": "(bucket: str, prefix: str = None, format: str = None, max_files: int = 1000) -> pandas.DataFrame",
+  "read_url": "(url: str, format: str = 'csv', **kwargs) -> pandas.DataFrame",
+  "sample_data": "(name: str = None) -> pandas.DataFrame",
+  "save_model": "(model, bucket: str, key: str = None) -> str",
+  "save_model_local": "(model, path: str) -> str",
+  "semantic_search": "(query: str, corpus, *, corpus_vectors=None, top_k: int = 5, model: str = None) -> pandas.DataFrame",
+  "session_cost": "() -> dict",
+  "sm_delete_endpoint": "(endpoint) -> str",
+  "sm_deploy_instance": "(model, *, name: str = None, instance_type: str = 'ml.m5.large', instance_count: int = 1, tags: dict = None, wait: bool = True, timeout_s: int = 1200) -> 'SageMakerEndpoint'",
+  "sm_deploy_serverless": "(model, *, name: str = None, memory_mb: int = 2048, max_concurrency: int = 5, provisioned_concurrency: int = None, tags: dict = None, wait: bool = True, timeout_s: int = 1200) -> 'SageMakerEndpoint'",
+  "sm_endpoint_status": "(endpoint) -> str",
+  "sm_endpoints": "(max_results: int = 25) -> 'pd.DataFrame'",
+  "sm_jobs": "(max_results: int = 10, *, since=None) -> 'pd.DataFrame'",
+  "sm_load_model": "(job, *, timeout_s: int = 1800)",
+  "sm_predict": "(endpoint, data, *, proba: bool = False)",
+  "sm_predict_batch": "(target, df: 'pd.DataFrame', *, output_col: str = 'prediction', proba: bool = False, timeout_s: int = 1800) -> 'pd.DataFrame'",
+  "sm_start_endpoint": "(endpoint, *, wait: bool = True, timeout_s: int = 1200) -> 'SageMakerEndpoint'",
+  "sm_stop_endpoint": "(endpoint, *, wait: bool = False, timeout_s: int = 600) -> str",
+  "sm_train": "(df, target: str, *, features=None, task: str = None, framework: str = 'sklearn', estimator: str = 'random_forest', categorical=None, numeric=None, scale: bool = False, data_format: str = None, instance: str = None, max_depth: int = 6, n_estimators: int = 100, C: float = 1.0, alpha: float = 1.0, wait: bool = False) -> 'SageMakerJob'",
+  "sm_training_job_status": "(job) -> str",
+  "tail_logs": "(log_group=None, lines: int = 50, hours: float = 1, log_stream: str = None) -> pandas.DataFrame",
+  "this_notebook": "(session_id: str = None) -> dict",
+  "timer": "(func)",
+  "to_local": "(df: pandas.DataFrame, path: str, index: bool = False) -> str",
+  "to_local_prefix": "(df: pandas.DataFrame, path: str, parts: int = 4, format: str = 'parquet', index: bool = False) -> str",
+  "to_onnx": "(model, sample, target_opset: int = None)",
+  "to_s3_csv": "(df: pandas.DataFrame, bucket: str, key: str = None, index: bool = False) -> str",
+  "to_s3_excel": "(df: pandas.DataFrame, bucket: str, key: str = None, sheet: str = 'Sheet1', index: bool = False) -> str",
+  "to_s3_json": "(df: pandas.DataFrame, bucket: str, key: str = None, orient: str = 'records') -> str",
+  "to_s3_parquet": "(df: pandas.DataFrame, bucket: str, key: str = None) -> str",
+  "train_model": "(df: 'pd.DataFrame', target: str, *, features=None, task: str = None, estimator=None, categorical=None, numeric=None, test_size: float = 0.2, stratify: bool = True, scale: bool = False, cv: int = None, random_state: int = 42, return_report: bool = True, **estimator_kwargs)",
+  "uninstall_package": "(package: str) -> dict",
+  "unload_athena_to_s3": "(sql: str, dest: str = None, *, format: str = 'parquet', compression: str = None, partition_by: list = None, overwrite: bool = True) -> app.notebook.helpers.readers.UnloadResult",
+  "upload_s3": "(data, bucket: str, key: str = None) -> str",
+  "whoami": "() -> dict"
+ },
+ "meta": [
+  {
+   "category": "Generative AI",
+   "name": "ask_bedrock_kb",
+   "signature": "ask_bedrock_kb(query: str, kb_id: str = None, filter: dict = None, model_id: str = None) -> dict"
+  },
+  {
+   "category": "Data Loading",
+   "name": "ask_logs",
+   "signature": "ask_logs(question: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, show_query: bool = True, model: str = None, log_stream: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "athena_schema",
+   "signature": "athena_schema(table: str, database: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "athena_tables",
+   "signature": "athena_tables(database: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "aurora_schema",
+   "signature": "aurora_schema(table: str, schema: str = 'public', database: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "aurora_tables",
+   "signature": "aurora_tables(schema: str = 'public', database: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "compare_df",
+   "signature": "compare_df(df1: pandas.DataFrame, df2: pandas.DataFrame, name1: str = 'df1', name2: str = 'df2') -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "count_tokens",
+   "signature": "count_tokens(text, *, model: str = None) -> int"
+  },
+  {
+   "category": "Data Loading",
+   "name": "download_s3",
+   "signature": "download_s3(bucket: str, key: str = None, local_path: str = None) -> str"
+  },
+  {
+   "category": "Data Loading",
+   "name": "dynamodb_schema",
+   "signature": "dynamodb_schema(table_name: str, sample: int = 25) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "dynamodb_tables",
+   "signature": "dynamodb_tables() -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "embed_texts",
+   "signature": "embed_texts(texts, *, model: str = None, batch_size: int = 96, input_type: str = 'search_document')"
+  },
+  {
+   "category": "Utilities",
+   "name": "estimate_session_cost",
+   "signature": "estimate_session_cost(running_secs: float = 0.0, suspended_secs: float = 0.0, burst_mb_seconds: float = 0.0, memory_mib: int = None, architecture: str = None, resume_count: int = 0, suspend_count: int = 0) -> dict"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "evaluate_model",
+   "signature": "evaluate_model(model, X, y, feature_cols=None, task: str = None) -> dict"
+  },
+  {
+   "category": "Utilities",
+   "name": "get_env",
+   "signature": "get_env(name, default=UNSET, *, as_type=None, required=False)"
+  },
+  {
+   "category": "Utilities",
+   "name": "get_secret",
+   "signature": "get_secret(name, default=UNSET, *, as_type=None, required=False)"
+  },
+  {
+   "category": "Data Loading",
+   "name": "grep_logs",
+   "signature": "grep_logs(pattern: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, log_stream: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "head_s3",
+   "signature": "head_s3(bucket: str, key: str = None, n: int = 5) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "helpers",
+   "signature": "helpers(query=None)"
+  },
+  {
+   "category": "Utilities",
+   "name": "install_package",
+   "signature": "install_package(package: str) -> dict"
+  },
+  {
+   "category": "Generative AI",
+   "name": "invoke_llm",
+   "signature": "invoke_llm(prompt: str, *, system: str = None, model: str = None, max_tokens: int = 1024, temperature: float = 0.0, json: bool = False)"
+  },
+  {
+   "category": "Generative AI",
+   "name": "list_bedrock_models",
+   "signature": "list_bedrock_models(*, by_provider: str = None, text_only: bool = True) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "list_datasources",
+   "signature": "list_datasources(source_type: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "list_env",
+   "signature": "list_env(all: bool = False)"
+  },
+  {
+   "category": "Data Loading",
+   "name": "list_s3",
+   "signature": "list_s3(bucket: str, prefix: str = '', max_keys: int = 100) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "list_secret",
+   "signature": "list_secret()"
+  },
+  {
+   "category": "Generative AI",
+   "name": "llm_classify",
+   "signature": "llm_classify(texts, labels, *, system: str = None, instructions: str = None, model: str = None, temperature: float = 0.0, multi_label: bool = False) -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "llm_extract",
+   "signature": "llm_extract(texts, schema: dict, *, system: str = None, instructions: str = None, model: str = None, temperature: float = 0.0) -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "llm_map",
+   "signature": "llm_map(df: pandas.DataFrame, prompt_template: str, *, output_column: str = 'llm_output', system: str = None, model: str = None, max_tokens: int = 512, temperature: float = 0.0, json: bool = False) -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "llm_sentiment",
+   "signature": "llm_sentiment(texts, *, scale: str = 'label', system: str = None, model: str = None, temperature: float = 0.0) -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "llm_summarize",
+   "signature": "llm_summarize(texts, *, style: str = 'concise', max_words: int = None, system: str = None, model: str = None, temperature: float = 0.0)"
+  },
+  {
+   "category": "Generative AI",
+   "name": "llm_translate",
+   "signature": "llm_translate(texts, to, *, source: str = None, system: str = None, model: str = None, temperature: float = 0.0)"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "load_model",
+   "signature": "load_model(bucket: str, key: str = None)"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "load_model_local",
+   "signature": "load_model_local(path: str)"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "load_onnx",
+   "signature": "load_onnx(bucket: str, key: str = None)"
+  },
+  {
+   "category": "Data Loading",
+   "name": "log_groups",
+   "signature": "log_groups(prefix: str = None, limit: int = 100) -> pandas.DataFrame"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "model_info",
+   "signature": "model_info(model) -> dict"
+  },
+  {
+   "category": "Data Loading",
+   "name": "notebook_log_groups",
+   "signature": "notebook_log_groups() -> list[str]"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "onnx_predict",
+   "signature": "onnx_predict(session, data, feature_cols=None, input_name: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_area",
+   "signature": "plot_area(df: pandas.DataFrame, x: str, y: str, color: str = None, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_bar",
+   "signature": "plot_bar(df: pandas.DataFrame, x: str, y: str, color: str = None, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_box",
+   "signature": "plot_box(df: pandas.DataFrame, y: str, x: str = None, color: str = None, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_confusion_matrix",
+   "signature": "plot_confusion_matrix(model, X, y, feature_cols=None, labels=None, normalize: bool = False, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_corr",
+   "signature": "plot_corr(df: pandas.DataFrame, columns: list = None, method: str = 'pearson', title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_heatmap",
+   "signature": "plot_heatmap(df: pandas.DataFrame, x: str, y: str, value: str, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_histogram",
+   "signature": "plot_histogram(df: pandas.DataFrame, column: str, bins: int = 30, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_line",
+   "signature": "plot_line(df: pandas.DataFrame, x: str, y: str, color: str = None, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_pie",
+   "signature": "plot_pie(df: pandas.DataFrame, names: str, values: str, title: str = None)"
+  },
+  {
+   "category": "Visualization",
+   "name": "plot_scatter",
+   "signature": "plot_scatter(df: pandas.DataFrame, x: str, y: str, size: str = None, color: str = None, title: str = None)"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "predict",
+   "signature": "predict(model, data, feature_cols=None)"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "predict_batch",
+   "signature": "predict_batch(model, df: pandas.DataFrame, feature_cols=None, output_col: str = 'prediction', proba: bool = False) -> pandas.DataFrame"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "predict_proba",
+   "signature": "predict_proba(model, data, feature_cols=None)"
+  },
+  {
+   "category": "Utilities",
+   "name": "profile",
+   "signature": "profile(df: pandas.DataFrame) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "query_df",
+   "signature": "query_df(sql: str) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_athena",
+   "signature": "read_athena(sql: str, database: str = None, catalog: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_aurora",
+   "signature": "read_aurora(sql: str, database: str = None, parameters: list = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Generative AI",
+   "name": "read_bedrock_kb",
+   "signature": "read_bedrock_kb(query: str, kb_id: str = None, top_k: int = 5, filter: dict = None, min_score: float = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_dynamodb",
+   "signature": "read_dynamodb(table_name: str, limit: int = None, filter: dict = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_dynamodb_query",
+   "signature": "read_dynamodb_query(table_name: str, key, value, sort_key: str = None, sort_value=None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_local",
+   "signature": "read_local(path: str) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_local_prefix",
+   "signature": "read_local_prefix(path: str, format: str = None, max_files: int = 1000) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_logs",
+   "signature": "read_logs(query: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, poll_timeout: float = 60.0, log_stream: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_s3",
+   "signature": "read_s3(bucket: str, key: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_s3_csv",
+   "signature": "read_s3_csv(bucket: str, key: str = None, **kwargs) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_s3_excel",
+   "signature": "read_s3_excel(bucket: str, key: str = None, sheet=0, **kwargs) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_s3_json",
+   "signature": "read_s3_json(bucket: str, key: str = None, lines: bool = True) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_s3_parquet",
+   "signature": "read_s3_parquet(bucket: str, key: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_s3_prefix",
+   "signature": "read_s3_prefix(bucket: str, prefix: str = None, format: str = None, max_files: int = 1000) -> pandas.DataFrame"
+  },
+  {
+   "category": "Data Loading",
+   "name": "read_url",
+   "signature": "read_url(url: str, format: str = 'csv', **kwargs) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "sample_data",
+   "signature": "sample_data(name: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "save_model",
+   "signature": "save_model(model, bucket: str, key: str = None) -> str"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "save_model_local",
+   "signature": "save_model_local(model, path: str) -> str"
+  },
+  {
+   "category": "Generative AI",
+   "name": "semantic_search",
+   "signature": "semantic_search(query: str, corpus, *, corpus_vectors=None, top_k: int = 5, model: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "session_cost",
+   "signature": "session_cost() -> dict"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_delete_endpoint",
+   "signature": "sm_delete_endpoint(endpoint) -> str"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_deploy_instance",
+   "signature": "sm_deploy_instance(model, *, name: str = None, instance_type: str = 'ml.m5.large', instance_count: int = 1, tags: dict = None, wait: bool = True, timeout_s: int = 1200) -> 'SageMakerEndpoint'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_deploy_serverless",
+   "signature": "sm_deploy_serverless(model, *, name: str = None, memory_mb: int = 2048, max_concurrency: int = 5, provisioned_concurrency: int = None, tags: dict = None, wait: bool = True, timeout_s: int = 1200) -> 'SageMakerEndpoint'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_endpoint_status",
+   "signature": "sm_endpoint_status(endpoint) -> str"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_endpoints",
+   "signature": "sm_endpoints(max_results: int = 25) -> 'pd.DataFrame'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_jobs",
+   "signature": "sm_jobs(max_results: int = 10, *, since=None) -> 'pd.DataFrame'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_load_model",
+   "signature": "sm_load_model(job, *, timeout_s: int = 1800)"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_predict",
+   "signature": "sm_predict(endpoint, data, *, proba: bool = False)"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_predict_batch",
+   "signature": "sm_predict_batch(target, df: 'pd.DataFrame', *, output_col: str = 'prediction', proba: bool = False, timeout_s: int = 1800) -> 'pd.DataFrame'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_start_endpoint",
+   "signature": "sm_start_endpoint(endpoint, *, wait: bool = True, timeout_s: int = 1200) -> 'SageMakerEndpoint'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_stop_endpoint",
+   "signature": "sm_stop_endpoint(endpoint, *, wait: bool = False, timeout_s: int = 600) -> str"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_train",
+   "signature": "sm_train(df, target: str, *, features=None, task: str = None, framework: str = 'sklearn', estimator: str = 'random_forest', categorical=None, numeric=None, scale: bool = False, data_format: str = None, instance: str = None, max_depth: int = 6, n_estimators: int = 100, C: float = 1.0, alpha: float = 1.0, wait: bool = False) -> 'SageMakerJob'"
+  },
+  {
+   "category": "Machine Learning / SageMaker",
+   "name": "sm_training_job_status",
+   "signature": "sm_training_job_status(job) -> str"
+  },
+  {
+   "category": "Data Loading",
+   "name": "tail_logs",
+   "signature": "tail_logs(log_group=None, lines: int = 50, hours: float = 1, log_stream: str = None) -> pandas.DataFrame"
+  },
+  {
+   "category": "Utilities",
+   "name": "this_notebook",
+   "signature": "this_notebook(session_id: str = None) -> dict"
+  },
+  {
+   "category": "Utilities",
+   "name": "timer",
+   "signature": "timer(func)"
+  },
+  {
+   "category": "Data Export",
+   "name": "to_local",
+   "signature": "to_local(df: pandas.DataFrame, path: str, index: bool = False) -> str"
+  },
+  {
+   "category": "Data Export",
+   "name": "to_local_prefix",
+   "signature": "to_local_prefix(df: pandas.DataFrame, path: str, parts: int = 4, format: str = 'parquet', index: bool = False) -> str"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "to_onnx",
+   "signature": "to_onnx(model, sample, target_opset: int = None)"
+  },
+  {
+   "category": "Data Export",
+   "name": "to_s3_csv",
+   "signature": "to_s3_csv(df: pandas.DataFrame, bucket: str, key: str = None, index: bool = False) -> str"
+  },
+  {
+   "category": "Data Export",
+   "name": "to_s3_excel",
+   "signature": "to_s3_excel(df: pandas.DataFrame, bucket: str, key: str = None, sheet: str = 'Sheet1', index: bool = False) -> str"
+  },
+  {
+   "category": "Data Export",
+   "name": "to_s3_json",
+   "signature": "to_s3_json(df: pandas.DataFrame, bucket: str, key: str = None, orient: str = 'records') -> str"
+  },
+  {
+   "category": "Data Export",
+   "name": "to_s3_parquet",
+   "signature": "to_s3_parquet(df: pandas.DataFrame, bucket: str, key: str = None) -> str"
+  },
+  {
+   "category": "Machine Learning / Local",
+   "name": "train_model",
+   "signature": "train_model(df: 'pd.DataFrame', target: str, *, features=None, task: str = None, estimator=None, categorical=None, numeric=None, test_size: float = 0.2, stratify: bool = True, scale: bool = False, cv: int = None, random_state: int = 42, return_report: bool = True, **estimator_kwargs)"
+  },
+  {
+   "category": "Utilities",
+   "name": "uninstall_package",
+   "signature": "uninstall_package(package: str) -> dict"
+  },
+  {
+   "category": "Data Loading",
+   "name": "unload_athena_to_s3",
+   "signature": "unload_athena_to_s3(sql: str, dest: str = None, *, format: str = 'parquet', compression: str = None, partition_by: list = None, overwrite: bool = True) -> app.notebook.helpers.readers.UnloadResult"
+  },
+  {
+   "category": "Data Export",
+   "name": "upload_s3",
+   "signature": "upload_s3(data, bucket: str, key: str = None) -> str"
+  },
+  {
+   "category": "Utilities",
+   "name": "whoami",
+   "signature": "whoami() -> dict"
+  }
+ ]
+}

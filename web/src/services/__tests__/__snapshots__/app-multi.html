@@ -1,0 +1,101 @@
+<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Export Fixture</title><style>:root{color-scheme:dark;--surface-0:#2c2c2e;--surface-1:#1c1c1e;--surface-2:#1c1c1e;--text-primary:#f5f5f7;--text-secondary:#d1d1d6;--text-tertiary:#aeaeb2;--text-muted:#aeaeb2;--border-subtle:rgba(255, 255, 255, 0.08);--border-default:rgba(255, 255, 255, 0.12);--cell-output-bg:#202022;--console-bg:#2c2c2e;--accent-primary:#64aeff;--accent-danger:#ff8078;--accent-warning:#ff9f0a;--accent-success:#30d158;--accent-purple:#da8fff;--link:#64aeff;--font-sans:-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;--font-mono:ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;--cm-text:#f5f5f7;--cm-keyword:#ff7ab2;--cm-keyword-weight:600;--cm-string:#ff8170;--cm-number:#d9c97c;--cm-comment:#98ae9f;--cm-comment-style:normal;--cm-definition:#6bb3ff;--lang-python:#64aeff;--lang-sql:#ff9f0a;--lang-markdown:#da8fff;--ai-block-head-python:color-mix(in srgb, #64aeff 8%, #202022);--ai-block-head-sql:color-mix(in srgb, #ff9f0a 8%, #202022);--ai-block-head-markdown:color-mix(in srgb, #da8fff 8%, #202022)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-1);color:var(--text-primary);font-family:var(--font-sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.x-doc{max-width:960px;margin:0 auto;padding:32px 28px 64px}
+h1{font-size:24px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:600;margin:28px 0 10px}
+h3{font-size:15px;font-weight:600;margin:20px 0 8px}
+a{color:var(--link)}
+.x-desc{color:var(--text-secondary);margin:0 0 8px}
+.x-meta{color:var(--text-tertiary);font-size:12px;margin:0 0 24px}
+code{font-family:var(--font-mono);font-size:.92em}
+:not(pre)>code{background:var(--surface-0);border:1px solid var(--border-subtle);border-radius:4px;padding:0 4px}
+pre{margin:0;font-family:var(--font-mono);font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;max-width:100%}
+pre code{background:none;border:0;padding:0;font-size:inherit}
+.x-code{margin:10px 0;border:1px solid var(--border-default);border-radius:8px;background:var(--cell-output-bg);overflow:hidden;box-shadow:inset 3px 0 0 0 var(--lang-python)}
+.x-code-lang{display:block;padding:4px 12px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-tertiary);border-bottom:1px solid var(--border-subtle);box-shadow:inset 3px 0 0 0 var(--lang-python)}
+.x-code pre{padding:10px 12px 10px 14px;color:var(--cm-text)}
+.x-code[data-lang="code"]{box-shadow:inset 3px 0 0 0 var(--lang-python)}
+.x-code[data-lang="sql"]{box-shadow:inset 3px 0 0 0 var(--lang-sql)}
+.x-code[data-lang="markdown"]{box-shadow:inset 3px 0 0 0 var(--lang-markdown)}
+.x-code[data-lang="code"] .x-code-lang{color:var(--lang-python);background:var(--ai-block-head-python);box-shadow:inset 3px 0 0 0 var(--lang-python)}
+.x-code[data-lang="sql"] .x-code-lang{color:var(--lang-sql);background:var(--ai-block-head-sql);box-shadow:inset 3px 0 0 0 var(--lang-sql)}
+.x-code[data-lang="markdown"] .x-code-lang{color:var(--lang-markdown);background:var(--ai-block-head-markdown);box-shadow:inset 3px 0 0 0 var(--lang-markdown)}
+.x-code .tok-keyword{color:var(--cm-keyword);font-weight:var(--cm-keyword-weight)}
+.x-code .tok-string{color:var(--cm-string)}
+.x-code .tok-number{color:var(--cm-number)}
+.x-code .tok-comment{color:var(--cm-comment);font-style:var(--cm-comment-style)}
+.x-code .tok-function{color:var(--cm-definition)}
+.x-code .tok-md-heading,.x-code .tok-md-heading-marker{color:var(--text-primary);font-weight:600}
+.x-code .tok-md-list-marker{color:var(--text-tertiary)}
+.x-code .tok-md-quote-marker{color:var(--text-tertiary)}
+.x-code .tok-md-quote{color:var(--text-secondary)}
+.x-code .tok-md-code{color:var(--cm-string)}
+.x-code .tok-md-bold{color:var(--text-primary);font-weight:700}
+.x-code .tok-md-italic{color:var(--text-primary);font-style:italic}
+.x-code .tok-md-link{color:var(--link)}
+.x-code .tok-md-link-url{color:var(--text-tertiary)}
+table{border-collapse:collapse;margin:8px 0;font-size:13px}
+th,td{border:1px solid var(--border-default);padding:5px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-0);font-weight:600}
+.table-scroll{max-height:440px;overflow:auto;border:1px solid var(--border-default);border-radius:8px;margin:8px 0}
+.table-scroll table{margin:0}
+.table-scroll thead th{position:sticky;top:0;z-index:1}
+.df-truncation-note{color:var(--text-tertiary);font-size:12px;padding:6px 10px}
+img{max-width:100%}
+blockquote{margin:8px 0;padding:2px 12px;border-left:3px solid var(--border-default);color:var(--text-secondary)}
+hr{border:0;border-top:1px solid var(--border-subtle);margin:24px 0}
+.x-mermaid{margin:10px 0;padding:12px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--surface-1);overflow-x:auto;text-align:center}
+.x-mermaid svg{max-width:100%;height:auto}
+.x-note{color:var(--text-tertiary);font-size:12px;margin:4px 0}
+.x-badge{display:inline-block;font-family:var(--font-mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:5px;border:1px solid var(--border-default);color:var(--text-secondary)}
+.x-badge[data-lang="code"]{color:var(--lang-python)}
+.x-badge[data-lang="sql"]{color:var(--lang-sql)}
+.x-badge[data-lang="markdown"]{color:var(--lang-markdown)}
+.x-trust{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid currentColor}
+.x-trust-green{color:var(--accent-success)}
+.x-trust-amber{color:var(--accent-warning)}
+.x-trust-red{color:var(--accent-danger)}
+.x-plotly .modebar-container,.x-plotly .modebar{display:none!important}
+.x-plotly-offline{color:var(--text-tertiary);font-size:12px;font-style:italic}
+@media print{body{background:#fff}.x-doc{max-width:none;padding:0}.x-code,.x-cell,.x-turn{break-inside:avoid}}
+
+:root{--accent:#5b9fff;--accent-soft:rgba(91,159,255,.14);--accent-border:rgba(91,159,255,.38);--bg:#0f1017;--panel:#16161c;--text:#f2f4ff;--text-dim:#bfc4dc;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55}
+.app-doc{max-width:920px;margin:0 auto;padding:32px 28px 80px}
+h1{font-size:26px;margin:0 0 6px}
+.desc{color:var(--text-dim);margin:0 0 24px;font-size:14px}
+.gen-meta{color:#5c6280;font-size:12px;margin:0 0 22px}
+.inputs{background:linear-gradient(180deg,var(--accent-soft),transparent 62%),var(--panel);border:1px solid var(--accent-border);border-radius:12px;padding:16px 18px;margin-bottom:26px;box-shadow:0 0 22px rgba(91,159,255,.16),0 12px 30px rgba(0,0,0,.4)}
+.inputs-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.inputs-title::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px 1px rgba(91,159,255,.7)}
+.inputs-grid{display:flex;flex-wrap:wrap;gap:12px}
+.input{display:flex;flex-direction:column;gap:3px;background:rgba(91,159,255,.06);border:1px solid var(--accent-border);border-radius:8px;padding:8px 13px;min-width:120px}
+.input-label{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;color:var(--text-dim);letter-spacing:.02em}
+.input-value{font-size:17px;font-weight:700;color:var(--accent);line-height:1.1}
+.block{margin:0 0 26px}
+.block.md{color:var(--text)}
+.var{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;margin-bottom:10px;box-shadow:0 0 12px rgba(91,159,255,.16)}
+h2{border-bottom:1px solid var(--accent-border);padding-bottom:6px}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:4px 0}
+th,td{border:1px solid var(--border);padding:6px 10px;text-align:left}
+th{background:rgba(255,255,255,.04);color:var(--text)}
+.table-scroll{max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin:4px 0}
+.table-scroll table{margin:0}
+.table-scroll thead th{position:sticky;top:0;z-index:1;background:#1c1d26;box-shadow:inset 0 -1px 0 var(--border)}
+.out-text{background:#0b0c12;border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px;color:var(--text)}
+.out-img img{max-width:100%;border-radius:8px}
+img{max-width:100%}
+.x-mermaid{margin:10px 0;overflow-x:auto;text-align:center}
+.x-mermaid svg{max-width:100%;height:auto}
+.x-note{color:var(--text-dim);font-size:12px}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--border);color:#5c6280;font-size:12px;text-align:center}
+</style></head><body><div class="app-doc"><h1>Export Fixture</h1><p class="desc">Fixture notebook for the export tests</p><p class="gen-meta">Generated: 11/13/2026, 4:00:00 AM</p><div class="block md"><h1>Multiple outputs</h1>
+<p>One cell, several outputs.</p>
+</div><div class="block"><div class="var">direct</div><pre class="out-text">loading orders…
+</pre><p class="x-note">Table 1 · direct — 2 rows × 2 cols</p><div class="table-scroll"><table class="df-table"><thead><tr><th>region</th><th>orders</th></tr></thead><tbody><tr><td>us-east-1</td><td>120</td></tr><tr><td>eu-west-1</td><td>80</td></tr></tbody></table></div><pre class="out-text">and the upstream view
+</pre><p class="x-note">Table 2 · upstream — 12 rows × 1 col</p><div class="table-scroll"><table class="df-table"><thead><tr><th>region</th></tr></thead><tbody><tr><td>us-east-1</td></tr><tr><td>eu-west-1</td></tr></tbody></table><div class="df-truncation-note">Showing first 2 of 12 rows.</div></div><p class="x-note">Table 3 — 3 rows × 3 cols</p><div class="table-scroll"><table class="df-table"><thead><tr><th>a</th><th>b</th><th>c</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>3</td></tr></tbody></table><div class="df-truncation-note">Showing first 1 of 3 rows.</div></div><p class="x-note">Chart 1 · fig1 · Plotly</p><div class="plotly-chart" data-plotly="true"><div><script type="text/javascript">window.PlotlyConfig = {MathJaxConfig: 'local'};</script><script charset="utf-8" src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script><div id="fig-m1" class="plotly-graph-div" style="height:100%; width:100%;"></div><script type="text/javascript">window.PLOTLYENV=window.PLOTLYENV || {};if (document.getElementById("fig-m1")) { Plotly.newPlot("fig-m1", [{"type":"bar","x":["a","b"],"y":[1,2]}], {}, {"responsive": true}) };</script></div></div><p class="x-note">Chart 2 · Plotly</p><div class="plotly-chart" data-plotly="true"><div><script type="text/javascript">window.PlotlyConfig = {MathJaxConfig: 'local'};</script><script charset="utf-8" src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script><div id="fig-m2" class="plotly-graph-div" style="height:100%; width:100%;"></div><script type="text/javascript">window.PLOTLYENV=window.PLOTLYENV || {};if (document.getElementById("fig-m2")) { Plotly.newPlot("fig-m2", [{"type":"bar","x":["a","b"],"y":[1,2]}], {}, {"responsive": true}) };</script></div></div><p class="x-note">Image 1</p><div class="out-img"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Image 1"/></div><p class="x-note">Image 2</p><div class="out-img"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Image 2"/></div><p class="x-note">Image 3</p><div class="out-img"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Image 3"/></div><pre class="out-text">done
+</pre></div><div class="block"><div class="var">direct</div><pre class="out-text">loading orders…
+</pre><p class="x-note">Table 1 · direct — 2 rows × 2 cols</p><div class="table-scroll"><table class="df-table"><thead><tr><th>region</th><th>orders</th></tr></thead><tbody><tr><td>us-east-1</td><td>120</td></tr><tr><td>eu-west-1</td><td>80</td></tr></tbody></table></div><pre class="out-text">and the upstream view
+</pre><p class="x-note">Table 2 · upstream — 12 rows × 1 col</p><div class="table-scroll"><table class="df-table"><thead><tr><th>region</th></tr></thead><tbody><tr><td>us-east-1</td></tr><tr><td>eu-west-1</td></tr></tbody></table><div class="df-truncation-note">Showing first 2 of 12 rows.</div></div></div><footer><strong>Sandboxed Notebook on AWS</strong><br>Developed by the AWS Startup SA Team<br>&copy; 2026 Amazon Web Services, Inc.</footer></div></body></html>

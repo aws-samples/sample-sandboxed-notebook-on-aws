@@ -1,0 +1,326 @@
+/* ExecutionHud — transient bottom-center pill showing live CPU/MEM/DISK
+   while cells execute. Floats above the notebook body, independent of the
+   sidebar, and fades out shortly after a run ends.
+
+   Design: frosted-glass pill (backdrop blur + translucent fill + luminous
+   accent border) lifted off the dark canvas by a COLORED glow rather than a
+   black drop shadow, with the glow gently breathing while a run is active. */
+
+.exec-hud {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+
+  /* Brighter, slightly more saturated glass so it lifts off the canvas. */
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--surface-4) 96%, var(--accent-primary) 4%),
+      color-mix(in srgb, var(--surface-3) 96%, transparent));
+  /* Luminous accent-tinted edge + a soft top highlight (the "glass" rim). */
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent-primary) 18%, transparent),
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 22px color-mix(in srgb, var(--accent-primary) 32%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  user-select: none;
+  /* Grabbable so the user can drag it anywhere; the gauges inside are inert. */
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+
+  animation:
+    exec-hud-in 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    exec-hud-attention 2.4s ease-out 200ms 2;  /* brief attention pulse on appear */
+}
+
+/* Local scrim: a soft, blurred dark halo BEHIND the pill that dims the busy
+   notebook content immediately around it, so the HUD separates from code/tables
+   instead of blending in. Larger than the pill, feathered to transparent at the
+   edges. Sits behind the pill's own content (z-index -1) and is click-through. */
+.exec-hud::before {
+  content: '';
+  position: absolute;
+  inset: -22px -34px;
+  z-index: -1;
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.34) 45%,
+    transparent 78%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Once repositioned by the user we pin via left/top (inline) and must cancel
+   the centering transform + the translate-based entrance/settle/glow anims,
+   otherwise they'd yank it back toward the old anchor. */
+.exec-hud-moved,
+.exec-hud-moved.exec-hud-running,
+.exec-hud-moved.exec-hud-settling {
+  transform: none !important;
+  animation: none;
+}
+.exec-hud-dragging {
+  cursor: grabbing;
+  animation: none;
+}
+
+/* While actively running, the accent glow gently breathes so the pill reads as
+   "live". The border/shadow color pulses between calm and bright. */
+.exec-hud-running {
+  animation:
+    exec-hud-in 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    exec-hud-attention 2.4s ease-out 200ms 2,
+    exec-hud-glow 1.8s ease-in-out 5s infinite;  /* settle into gentle breathing after the attention pulses */
+}
+
+/* Fade + settle when the run ends (during the linger window). */
+.exec-hud-settling {
+  animation: exec-hud-fade-out 1200ms ease-in forwards;
+}
+
+@keyframes exec-hud-in {
+  from { opacity: 0; transform: translate(-50%, 10px) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes exec-hud-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-primary) 18%, transparent),
+      0 10px 30px rgba(0, 0, 0, 0.45),
+      0 0 20px color-mix(in srgb, var(--accent-primary) 28%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-primary) 30%, transparent),
+      0 10px 34px rgba(0, 0, 0, 0.5),
+      0 0 40px color-mix(in srgb, var(--accent-primary) 55%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+}
+
+@keyframes exec-hud-fade-out {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 6px) scale(0.98); }
+}
+
+/* Attention pulse played a couple of times when the HUD first appears — a
+   brighter, larger glow ring that draws the eye, then relaxes. Keeps the
+   centering transform intact (pill is bottom-center). */
+@keyframes exec-hud-attention {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-primary) 18%, transparent),
+      0 10px 30px rgba(0, 0, 0, 0.45),
+      0 0 22px color-mix(in srgb, var(--accent-primary) 32%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+  35% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent-primary) 55%, transparent),
+      0 12px 36px rgba(0, 0, 0, 0.5),
+      0 0 46px color-mix(in srgb, var(--accent-primary) 75%, transparent),
+      0 0 90px color-mix(in srgb, var(--accent-primary) 40%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+}
+
+/* Leading title group: pulse icon + small-caps label naming the pill. */
+.exec-hud-title-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.exec-hud-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* Thin vertical rule separating the title from the gauges. */
+.exec-hud-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: -2px 2px;
+  background: linear-gradient(180deg,
+    transparent,
+    color-mix(in srgb, var(--accent-primary) 40%, transparent),
+    transparent);
+}
+
+/* Activity pulse icon — animates only while actively running. */
+.exec-hud-pulse {
+  display: inline-flex;
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent-primary) 70%, transparent));
+}
+
+.exec-hud-running .exec-hud-pulse {
+  animation: exec-hud-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes exec-hud-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.92); }
+  50%      { opacity: 1;   transform: scale(1.08); }
+}
+
+/* One metric group: LABEL [====bar====] 42% */
+.exec-hud-metric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exec-hud-label {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  min-width: 32px;
+}
+
+.exec-hud-bar {
+  position: relative;
+  width: 60px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface-0) 80%, black);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.exec-hud-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 400ms ease-out;
+  box-shadow: 0 0 8px 0 currentColor;  /* fill glows in its own color */
+}
+
+/* A slow shimmer sweeps across the fills while running — subtle sign of life. */
+.exec-hud-running .exec-hud-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%);
+  transform: translateX(-100%);
+  animation: exec-hud-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes exec-hud-shimmer {
+  0%   { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(200%); }
+}
+
+/* Reuse the exact gradients from the side-panel gauges for visual consistency.
+   color: set so the currentColor glow (box-shadow above) matches the fill. */
+.exec-hud-fill.vm-metric-cpu {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-purple, #b48cff));
+  color: var(--accent-primary);
+}
+.exec-hud-fill.vm-metric-mem {
+  background: linear-gradient(90deg, var(--entity-data), var(--entity-number));
+  color: var(--entity-data);
+}
+.exec-hud-fill.vm-metric-disk {
+  background: linear-gradient(90deg, var(--entity-number), var(--entity-bool));
+  color: var(--entity-number);
+}
+
+.exec-hud-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 34px;
+  text-align: right;
+}
+
+.exec-hud-burst {
+  margin-left: 3px;
+  font-size: 10px;
+  filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.7));
+}
+
+/* Respect users who prefer reduced motion: keep the glow static, drop the
+   breathing/shimmer/pulse animations. */
+@media (prefers-reduced-motion: reduce) {
+  .exec-hud,
+  .exec-hud-running,
+  .exec-hud-running .exec-hud-pulse,
+  .exec-hud-running .exec-hud-fill::after {
+    animation: none;
+  }
+  /* Keep the static scrim + a steady stronger glow so it's still prominent
+     without motion. */
+  .exec-hud::before { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+}
+
+/* ============================================================
+   Light theme overrides
+   The default HUD is "dark glass": a near-white --surface-4/3 fill plus a DARK
+   radial scrim (::before) — great on dark canvases, but in light mode the fill
+   blends into the white page and the dark scrim reads as a murky smudge. In light
+   mode we instead render a crisp, solid white chip with a strong accent border and
+   a real (soft, neutral) drop shadow so it clearly floats above the notebook.
+   ============================================================ */
+[data-theme="light"] .exec-hud {
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  /* Equals the lt-hud-* keyframe 0%/100% frame (theme-light.css), so the
+     attention/glow animations start and end seamlessly. */
+  box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.18), 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--text-secondary);
+}
+
+/* Swap the dark halo for a soft neutral shadow-ring suited to a light background
+   (a faint cool-gray blur), so the chip separates from busy content without the
+   dark smudge. */
+[data-theme="light"] .exec-hud::before {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(17, 24, 39, 0.10) 0%,
+    rgba(17, 24, 39, 0.05) 50%,
+    transparent 78%);
+}
+
+/* Reinforce text contrast on the white chip. */
+[data-theme="light"] .exec-hud-title { color: var(--text-primary); }
+[data-theme="light"] .exec-hud-label { color: var(--text-tertiary); }
+[data-theme="light"] .exec-hud-divider {
+  background: linear-gradient(180deg, transparent, var(--border-strong), transparent);
+}
+
+/* Bar track: a light, clearly-bordered groove instead of the near-black mix, so
+   empty gauges are visible on white and the colored fills pop. */
+[data-theme="light"] .exec-hud-bar {
+  background: var(--surface-3);
+  box-shadow: none;
+}

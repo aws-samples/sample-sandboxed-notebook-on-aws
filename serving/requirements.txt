@@ -1,0 +1,18 @@
+# Serving container deps — kept minimal so the image stays well under SageMaker
+# Serverless's 10GB limit. Versions pinned to match what the notebook VM produces.
+numpy>=1.26,<3
+pandas>=2.0
+scikit-learn==1.9.1
+onnxruntime>=1.17
+joblib>=1.3
+# Gradient-boosting estimators: a .joblib Pipeline from sm_train(estimator='xgboost'
+# | 'lightgbm') embeds an XGB/LGBM estimator, so unpickling it here needs the library
+# importable. Use the CPU-ONLY xgboost distribution (xgboost-cpu) — the default
+# `xgboost` wheel bundles CUDA/GPU support (pulls nvidia-nccl-cu12, ~350MB), dead
+# weight for CPU serverless inference. xgboost-cpu ships the SAME importable `xgboost`
+# module without the GPU algos. Both are PINNED to the training container's major(.minor)
+# so the serving reader matches the writer's pickle format family.
+xgboost-cpu==3.2.*
+lightgbm==4.*
+flask>=3.0
+gunicorn>=21.2

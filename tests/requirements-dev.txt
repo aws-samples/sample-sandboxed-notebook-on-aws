@@ -1,0 +1,24 @@
+# Test-only dependencies (NOT installed by local_install.sh; the runtime lockfile
+# is proxy/requirements.txt). Install into the repo venv before running tests:
+#   uv pip install --python .venv/bin/python -r tests/requirements-dev.txt
+# Every other third-party import in the offline tests (httpx, requests, fastapi, strands,
+# boto3, pandas, numpy, psycopg2, websockets) comes from the proxy/app venv
+# (proxy/requirements.txt, app/requirements.txt). pytest stays optional: 3 files import
+# it only inside test_* wrappers.
+#
+# nbformat: tests/web/test_ipynb_nbformat.py validates the web app's .ipynb export
+# with the official Jupyter validator (it ships the nbformat JSON schema, so the
+# repo doesn't vendor a third-party schema file).
+nbformat==5.10.4
+
+# matplotlib: tests/vm/test_multi_output_executor.py (multi-figure capture cases)
+matplotlib
+# duckdb: offline tests that import the real VM app (app.server imports it at
+# module level), e.g. tests/vm/test_vm_status_endpoint.py. The VM pins
+# duckdb==1.2.2 in app/requirements.txt; that release has no wheel for the
+# venv's newer Python, so this is left unpinned.
+duckdb
+# dill, plotly: checkpoint/delta tests pickle with dill; prompt-helper and rollup tests
+# import plotly. Same pins as app/requirements.txt (the VM image).
+dill==0.4.0
+plotly==6.9.0

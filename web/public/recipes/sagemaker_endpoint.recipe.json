@@ -1,0 +1,34 @@
+{
+  "name": "Deploy a real-time endpoint (SageMaker)",
+  "desc": "Stand up a serverless endpoint, invoke it live, then clean up — with the instance + stop/start variant",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## ☁️ Deploy a real-time endpoint\n\nEverything else in the ML recipes is **batch**: train a model, score a table. Some consumers instead need **real-time** inference — a standing HTTPS model they can call one row at a time, from anywhere, by name, without loading scikit-learn or the model file themselves. That's a SageMaker **endpoint**.\n\nDeploy **serverless by default**: it **scales to zero, costs $0 while idle**, and you pay only per request — no instance to babysit. The same custom serving container handles a `train_model` Pipeline, an ONNX export, or a SageMaker-trained model, all taking RAW rows.\n\n```mermaid\ngraph LR\n  M[\"trained model\"] --> D[\"sm_deploy_serverless (wait=False)\"]\n  D --> PK[\"model.tar.gz → S3\"]\n  D --> EP[\"endpoint: Creating…\"]\n  EP -->|sm_endpoint_status| IS{\"InService?\"}\n  IS -->|no · wait ~30s · re-run| IS\n  IS -->|yes| INV[\"sm_predict / predict(ep, rows)\"]\n  INV --> R[\"live predictions\"]\n  EP -. $0 idle, pay per request .-> COST[\"serverless\"]\n  IS ==>|when done| DEL[\"sm_delete_endpoint\"]\n```\n\n**⚠️ An endpoint is a STANDING resource** — unlike the rest of the recipes, it persists until you delete it. `sm_deploy_serverless(wait=False)` returns a handle immediately (like `sm_train`); you then **poll `sm_endpoint_status` until InService** (a serverless cold start is a few minutes). The last cell deletes it — that step is **not optional**.\n\n### Serverless vs instance\n\n| | `sm_deploy_serverless` (default) | `sm_deploy_instance` |\n|---|---|---|\n| Compute | scales to zero | dedicated, always-warm (incl. GPU types) |\n| Cost | **$0 idle**, pay per request | **bills continuously** while running |\n| Bring-up (deploy → InService) | a few min, **variable** (managed-pool cold pull) | a few min, **predictable** — often **faster** |\n| First-invoke cold start | yes, after idle (auto-retried) | none once InService |\n| Pause | n/a (already $0 idle) | `sm_stop_endpoint` → `sm_start_endpoint` |\n\n**Don't be surprised if the instance endpoint reaches `InService` faster.** It's counterintuitive, but the slow part of either deploy is pulling our serving container image; serverless does that against a managed pool whose first-activation is slower and more variable, while an instance does a direct pull onto dedicated hardware. Serverless then *also* cold-starts on the first invoke after idling (why `sm_predict` auto-retries that), whereas an instance has no per-invoke cold start once warm. The payoff for serverless is **$0 idle**, not fast bring-up.\n\nReach for `sm_deploy_instance` when you truly need always-warm/GPU latency or fast, repeatable bring-up (e.g. a tight test loop) — and remember to **stop it** when idle."
+    },
+    {
+      "type": "code",
+      "code": "# 1) Start from a trained model. Any of these work — the serving container dispatches\n#    on the artifact:\n#      • a train_model Pipeline (shown here)\n#      • an ONNX export:            ep = sm_deploy_serverless(to_onnx(model, df.head(1)))\n#      • a SageMaker-trained model: ep = sm_deploy_serverless(sm_load_model(job))\n#    Reach for an endpoint only when a STANDING, callable-from-anywhere model is\n#    actually needed (otherwise predict_batch in the VM is simpler and free).\nmodel = train_model(\n    read_athena(\"SELECT * FROM <your_table> LIMIT 5000\"),\n    target=\"<target_column>\",\n)"
+    },
+    {
+      "type": "code",
+      "code": "# 2) Deploy SERVERLESS (the default). wait=False returns a handle immediately so the\n#    cell doesn't block on the few-minute cold start — poll it in the next cell.\nep = sm_deploy_serverless(model, name=\"<endpoint-name>\", wait=False)\nprint(\"deploying:\", ep.name, \"·\", ep.status())"
+    },
+    {
+      "type": "code",
+      "code": "# 3) POLL until InService — RE-RUN this cell every ~30s ('Creating' → 'InService',\n#    or 'Failed: <reason>'). Only invoke once it reads InService.\nprint(sm_endpoint_status(ep))"
+    },
+    {
+      "type": "code",
+      "code": "# 4) Invoke it LIVE on raw rows. Two equivalent ways:\nrows = read_athena(\"SELECT * FROM <your_table> LIMIT 10\")\n\n# a) predict() auto-routes a SageMakerEndpoint handle to the remote call — identical\n#    code to scoring a local model.\nlabels = predict(ep, rows)\nprint(\"labels:\", labels)\n\n# b) sm_predict() is the explicit remote call (handle OR 'microvm-ep-...' name string).\n#    proba=True returns class probabilities for ranking by likelihood.\nprobs = sm_predict(ep, rows, proba=True)\nprint(\"probabilities:\", probs)"
+    },
+    {
+      "type": "code",
+      "code": "# 5) CLEAN UP — an endpoint is the one standing resource here. Delete it when done;\n#    this removes the endpoint, its config, and the model in one call. Serverless is\n#    $0 idle, but don't leave resources lying around.\nprint(sm_delete_endpoint(ep))"
+    },
+    {
+      "type": "markdown",
+      "code": "### Want always-warm instead? (instance endpoint)\n\nSwap step 2 for `sm_deploy_instance` when you need no cold start or a specific/GPU instance type. It **bills continuously while running**, so it gains a stop/start lifecycle:\n\n```python\nep = sm_deploy_instance(model, instance_type=\"ml.m5.large\")  # dedicated, always-warm\npredict(ep, rows)                                            # same invoke contract\nsm_stop_endpoint(ep)    # tear down the running endpoint → $0, KEEP config + model\nsm_start_endpoint(ep)   # recreate it from the retained config (a few min to InService)\nsm_delete_endpoint(ep)  # PERMANENT teardown when you're truly done\n```\n\nIn the **Data Sources** panel, an instance endpoint shows an **Instance** badge (serverless shows **Serverless**) with **Stop/Start** buttons; a stopped one shows a grey **Stopped** dot until you start it. `sm_stop_endpoint` is a no-op on a serverless endpoint (nothing to stop — it's already $0 idle)."
+    }
+  ]
+}

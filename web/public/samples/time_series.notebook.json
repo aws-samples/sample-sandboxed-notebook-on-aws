@@ -1,0 +1,127 @@
+{
+  "name": "Time Series Forecasting",
+  "description": "Build a daily traffic & purchase series from real clickstream data (S3), analyze weekday/seasonal patterns with SQL, and forecast the next N days with confidence intervals.",
+  "savedAt": "2026-09-20T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 📈 Time Series Forecasting\n\nHow busy will the site be next month, and which days of the week carry the load? This workbook turns **real 2024 clickstream events** (10k rows in **S3**) into a **daily time series**, decomposes its pattern, and projects it forward.\n\n**What you'll do**\n- Aggregate raw web events into a clean **daily series** of visits and purchases\n- Use **SQL** for monthly, day-of-week, and momentum summaries\n- Visualize with an interactive **Plotly range-slider** line and a weekday × week **heatmap**\n- Build a **trend forecast with a confidence band** for the next N days\n\nEverything runs on the MicroVM's **execution role**. Turn on **Reactive** and drag the forecast sliders to reproject live.\n\n```mermaid\ngraph LR\n  C[\"S3: clickstream_events.csv (10k rows)\"] --> D[\"Daily series (visits + purchases)\"]\n  D --> P[\"SQL patterns (monthly, day-of-week, momentum)\"]\n  D --> V[\"Plotly range-slider + weekday heatmap\"]\n  P --> F[\"Trend forecast + confidence band\"]\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 0 · Connect & build the daily series — S3 clickstream\n\nFirst we resolve identity + the S3 bucket, then load `clickstream_events.csv` with **`read_s3_csv`** and roll ~10,000 raw events up into **one row per day** — total visits and purchases — using the events' real 2024 timestamps. The resulting `ts` DataFrame (with `year`/`month`/`day_of_week` helper columns) is what every cell below analyzes.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import os\nimport numpy as np\nimport pandas as pd\nimport plotly.express as px\nimport plotly.graph_objects as go\nimport matplotlib.pyplot as plt\n\ninfo = whoami()\naccount, region = info['account'], info['region']\nbucket = f\"microvm-sandbox-artifacts-{account}-{region}\"\n\n# Real web events from S3 — one row per raw event (page_view, add_to_cart, purchase, ...)\nclickstream = read_s3_csv(bucket, 'samples/clickstream_events.csv')\nclickstream['ts'] = pd.to_datetime(clickstream['timestamp'])\nclickstream['date'] = clickstream['ts'].dt.normalize()\n\n# Aggregate into a DAILY series: total visits + purchases per calendar day.\ndaily = (clickstream.groupby('date')\n         .agg(visitors=('event_id', 'count'),\n              purchases=('action', lambda s: (s == 'purchase').sum()))\n         .reset_index()\n         .sort_values('date'))\n# Fill any gap days so the series is continuous (forecasting likes a regular index).\nfull_idx = pd.date_range(daily['date'].min(), daily['date'].max(), freq='D')\nts = (daily.set_index('date').reindex(full_idx).fillna(0).rename_axis('date').reset_index())\nts['visitors'] = ts['visitors'].astype(int)\nts['purchases'] = ts['purchases'].astype(int)\nts['year'] = ts['date'].dt.year\nts['month'] = ts['date'].dt.month\nts['day_of_week'] = ts['date'].dt.day_name()\nprint(f\"Daily series: {len(ts)} days from {ts['date'].min().date()} to {ts['date'].max().date()} \"\n      f\"({clickstream.shape[0]:,} raw events)\")\nts.head(10)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · See the whole series — interactive Plotly\n\nA line chart of daily visitors with a **range slider** so you can zoom into any stretch of the year and eyeball the trend and the weekly ripple.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive: full daily series with a range slider to zoom\nfig = px.line(\n    ts, x='date', y='visitors',\n    title='Daily Site Visitors (2024) — drag the slider to zoom',\n    labels={'visitors': 'Daily visitors', 'date': ''},\n)\nfig.update_traces(line_color='#89b4fa', line_width=1.0)\nfig.update_xaxes(rangeslider_visible=True)\nfig.update_layout(height=400)\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · Patterns with SQL (DuckDB)\n\nQuery the daily DataFrame with SQL for three views: the **monthly** shape of traffic, the **day-of-week** pattern (which weekdays are busiest), and **month-over-month** growth. These are the seasonality signals a forecast should respect.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- Monthly traffic + purchase summary\nSELECT\n    year, month,\n    ROUND(AVG(visitors), 0)  AS avg_daily_visitors,\n    SUM(visitors)            AS total_visitors,\n    SUM(purchases)           AS total_purchases,\n    MIN(visitors)            AS quietest_day,\n    MAX(visitors)            AS busiest_day\nFROM ts\nGROUP BY year, month\nORDER BY year, month",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "ts_monthly"
+    },
+    {
+      "type": "sql",
+      "code": "-- Day-of-week pattern: which weekdays draw the most traffic?\nSELECT\n    day_of_week,\n    ROUND(AVG(visitors), 0)  AS avg_visitors,\n    ROUND(AVG(purchases), 1) AS avg_purchases,\n    COUNT(*)                 AS days_counted\nFROM ts\nGROUP BY day_of_week\nORDER BY avg_visitors DESC",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "ts_dow"
+    },
+    {
+      "type": "sql",
+      "code": "-- Month-over-month growth in average daily traffic\nSELECT\n    year, month,\n    ROUND(AVG(visitors), 0) AS avg_daily_visitors,\n    ROUND(100.0 * (AVG(visitors) - LAG(AVG(visitors)) OVER (ORDER BY year, month))\n          / NULLIF(LAG(AVG(visitors)) OVER (ORDER BY year, month), 0), 1) AS mom_growth_pct\nFROM ts\nGROUP BY year, month\nORDER BY year, month",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "ts_mom"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Seasonality heatmap\n\nA weekday × week-of-year heatmap makes the pattern pop: horizontal bands are busy/quiet weekdays, vertical streaks are busy/quiet weeks. This is the seasonality the forecast leans on.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive: day-of-week vs week-of-year heatmap of average visitors\nhm = ts.copy()\nhm['week'] = hm['date'].dt.isocalendar().week.astype(int)\nhm['dow'] = hm['date'].dt.dayofweek\npivot = hm.pivot_table(values='visitors', index='dow', columns='week', aggfunc='mean')\nfig = px.imshow(\n    pivot.values,\n    labels=dict(x='Week of year', y='Day of week', color='Avg visitors'),\n    y=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],\n    title='Traffic heatmap — day of week vs week of year',\n    color_continuous_scale='Viridis', aspect='auto',\n)\nfig.update_layout(height=300)\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · Forecast the next N days — with a confidence band\n\nProject demand forward off the recent trend (a 30-day moving average and its slope), and draw a **±2σ confidence band** from recent volatility. This is a transparent baseline forecast — the kind you sanity-check before reaching for ARIMA/Prophet.\n\nThe 30-day moving average (recent level):\n\n$$ \\mathrm{MA}_{30}(t) = \\frac{1}{30} \\sum_{i=0}^{29} y_{t-i} $$\n\nThe forecast projects that level forward at the recent slope, with a band from the residual volatility $\\sigma$:\n\n$$ \\hat{y}_{t+h} = \\mathrm{MA}_{30}(t) + h \\cdot \\text{slope}, \\qquad \\hat{y}_{t+h} \\pm 2\\sigma $$\n\n⚙️ *Sliders:* the **forecast horizon** ($h$, days ahead) and a **model stance** — conservative / linear / optimistic — that scales the projected growth rate.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 14, \"max\": 120, \"step\": 7, \"default\": 60, \"label\": \"Forecast horizon (days)\"}\nforecast_days = 60\n# @param {\"type\": \"dropdown\", \"options\": [\"conservative\", \"linear\", \"optimistic\"], \"default\": \"linear\", \"label\": \"Forecast stance\"}\nforecast_model = \"linear\"\n\n# Recent level + slope from a 30-day moving average of the real daily series.\nma_30 = ts.set_index('date')['visitors'].rolling(30).mean()\nlast_30_avg = ts['visitors'].tail(30).mean()\nlookback = min(90, len(ma_30.dropna()) - 1)\ngrowth_rate = (ma_30.iloc[-1] - ma_30.iloc[-lookback]) / lookback if lookback > 0 else 0.0\nif forecast_model == 'conservative':\n    growth_rate *= 0.5\nelif forecast_model == 'optimistic':\n    growth_rate *= 1.5\n\nforecast_dates = pd.date_range(ts['date'].iloc[-1] + pd.Timedelta(days=1), periods=forecast_days, freq='D')\nforecast_values = last_30_avg + growth_rate * np.arange(1, forecast_days + 1)\nband = 2 * ts['visitors'].tail(90).std()\nforecast_upper = forecast_values + band\nforecast_lower = (forecast_values - band).clip(min=0)\n\nfig = go.Figure()\nfig.add_trace(go.Scatter(x=ts['date'].tail(120), y=ts['visitors'].tail(120), mode='lines', name='Actual', line=dict(color='#89b4fa')))\nfig.add_trace(go.Scatter(x=forecast_dates, y=forecast_values, mode='lines', name=f'Forecast ({forecast_model})', line=dict(color='#a6e3a1', dash='dash')))\nfig.add_trace(go.Scatter(x=forecast_dates, y=forecast_upper, mode='lines', line=dict(width=0), showlegend=False))\nfig.add_trace(go.Scatter(x=forecast_dates, y=forecast_lower, mode='lines', line=dict(width=0), fill='tonexty', fillcolor='rgba(166,227,161,0.15)', name='95% CI'))\nfig.update_layout(template='plotly_dark', title=f'{forecast_days}-Day Visitor Forecast ({forecast_model})', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=420)\nfig.show()\nprint(f\"Projecting {forecast_days} days at ~{last_30_avg:,.0f} visitors/day, slope {growth_rate:+.1f}/day ({forecast_model}).\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    }
+  ]
+}

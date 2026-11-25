@@ -1,0 +1,65 @@
+[
+  {
+    "id": "train_model",
+    "name": "Train a model from a DataFrame",
+    "icon": "🎯",
+    "file": "train_model.recipe.json",
+    "desc": "Fit → inspect → score → evaluate → save an ML model in the VM, end-to-end with train_model"
+  },
+  {
+    "id": "query_df",
+    "name": "Join DataFrames with SQL (query_df)",
+    "icon": "🦆",
+    "file": "query_df.recipe.json",
+    "desc": "Combine frames you've already loaded with in-process DuckDB SQL — joins, group-bys, windows — no re-query, no pandas merge chains"
+  },
+  {
+    "id": "sagemaker_train",
+    "name": "Train on SageMaker (managed compute)",
+    "icon": "🛰️",
+    "file": "sagemaker_train.recipe.json",
+    "desc": "Submit a non-blocking managed training job from a DataFrame, poll it, load the model, then score — scale out when training needs a bigger machine or GPU"
+  },
+  {
+    "id": "sagemaker_s3_train",
+    "name": "Train on SageMaker from S3 (big data, VM-free)",
+    "icon": "📦",
+    "file": "sagemaker_s3_train.recipe.json",
+    "desc": "UNLOAD a huge Athena result to S3, train sm_train straight off the S3 pointer, then load + score — for data too big to pull into the VM"
+  },
+  {
+    "id": "sagemaker_endpoint",
+    "name": "Deploy a real-time endpoint (SageMaker)",
+    "icon": "☁️",
+    "file": "sagemaker_endpoint.recipe.json",
+    "desc": "Stand up a serverless endpoint, invoke it live, then clean up — with the instance + stop/start variant"
+  },
+  {
+    "id": "semantic_search",
+    "name": "Semantic search over a column",
+    "icon": "🔎",
+    "file": "semantic_search.recipe.json",
+    "desc": "Embed a text column once with Titan, then rank rows by meaning for any query"
+  },
+  {
+    "id": "rag_kb",
+    "name": "RAG: retrieve + cited answer",
+    "icon": "📚",
+    "file": "rag_kb.recipe.json",
+    "desc": "Ground an LLM answer in a Bedrock Knowledge Base, with sources"
+  },
+  {
+    "id": "llm_classify",
+    "name": "Classify a text column with an LLM",
+    "icon": "🏷️",
+    "file": "llm_classify.recipe.json",
+    "desc": "Label free text into fixed categories with no training data, then quantify it"
+  },
+  {
+    "id": "explore_source",
+    "name": "Explore a data source",
+    "icon": "🧭",
+    "file": "explore_source.recipe.json",
+    "desc": "List every source with list_datasources(), discover tables, inspect a schema, then run your first query"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "_comment": "Least-privilege policy for the PROXY when it runs under a dedicated IAM role (e.g. on EC2/ECS/Fargate) rather than a developer's local AWS credentials. Today the proxy runs locally under your own creds, so this file is NOT applied by setup_iam.sh — it documents the exact grant to attach when you move the proxy to a hosted role. The ONE privilege here is read access to the env-var encryption master key. That secret lives OUTSIDE the microvm/* prefix precisely so the VM exec role cannot read it; the proxy is the only component that seals/unseals env var values, so it is the only principal that needs this. A hosted proxy will ALSO need the permissions it currently inherits from local admin creds (lambda-microvms control plane, S3 artifacts, rds-data on the cluster, secretsmanager on microvm/*, bedrock, etc.) — add those alongside this statement; they are intentionally out of scope for this file, which covers only the new master-key grant.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadEnvMasterKey",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:*:*:secret:microvm-internal/env-master-key*"
+    }
+  ]
+}

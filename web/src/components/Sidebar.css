@@ -1,0 +1,6305 @@
+/* ===== Sidebar Container ===== */
+.sidebar {
+  display: flex;
+  flex-direction: row;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  flex-shrink: 0;
+  height: 100%;
+  position: relative;  /* anchor for the peek overlay (.sidebar-panel-peek) */
+}
+
+.sidebar-collapsed {
+  width: auto;
+  min-width: auto;
+}
+
+/* ===== Activity Bar (icon strip) ===== */
+.activity-bar {
+  width: 44px;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) 0;
+  gap: 2px;
+  background: var(--surface-1);
+  border-right: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  transition: width var(--transition-normal), min-width var(--transition-normal);
+  /* Sit above the peek overlay (z-index: 20) so icons are never covered or dimmed
+     by the overlay or its shadow. */
+  position: relative;
+  z-index: 30;
+}
+
+/* Hover-grow is done by the ICONS only (below), not the rail: the rail stays a fixed
+   44px. Widening the rail either pushed the panel/notebook right (narrowing the
+   notebook and reflowing every cell) or, with a negative margin, drew over the left
+   edge of the panel next to it. 40px icons fit inside the 44px rail. */
+
+.activity-bar-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border-left: 2px solid transparent;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+/* Grow the icons slightly on rail hover (bigger hit targets), within the 44px rail. */
+.activity-bar:hover .activity-bar-item {
+  width: 40px;
+  height: 40px;
+}
+.activity-bar:hover .activity-bar-item svg {
+  transform: scale(1.12);
+}
+.activity-bar-item svg {
+  transition: transform var(--transition-fast);
+}
+
+.activity-bar-item:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.activity-bar-item-active {
+  color: var(--text-primary);
+  background: var(--accent-primary-subtle);
+  border-left-color: currentColor;
+}
+
+.activity-bar-spacer {
+  flex: 1;
+}
+
+/* Separator between activity-bar groups (workspace / inspect / runtime / content).
+   The generous vertical margin creates the whitespace that actually reads as grouping;
+   the line reinforces it. */
+.activity-bar-divider {
+  height: 0;
+  width: 24px;
+  margin: 12px auto;
+  /* --text-tertiary is a solid mid-gray (visible on the near-black activity bar,
+     unlike the translucent --border-* vars which vanish at 1px). */
+  border-top: 1px solid var(--text-tertiary);
+  opacity: 0.5;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.activity-bar-item-bottom {
+  color: var(--text-muted);
+}
+
+.activity-bar-item-bottom:hover {
+  color: var(--accent-primary);
+}
+
+.activity-bar-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-success);
+  color: var(--surface-1);
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Informational count variant (open-notebook count on the Notebooks icon). Uses the
+   accent color (NOT the green VM-running badge, NOT red alert) so it reads as a
+   neutral tally while still being clearly visible on the dark rail. Nudged into the
+   top-right corner with a ring in the rail background so it lifts off the glyph.
+   Becomes a pill for 2+ digits. */
+.activity-bar-badge-count {
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  width: auto;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: 1.5px solid var(--sidebar-bg, var(--surface-0));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.activity-bar-item-warning {
+  color: var(--accent-danger) !important;
+}
+
+.activity-bar-item-critical {
+  color: var(--accent-danger) !important;
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+/* Run All status on the Outline icon: pulsing green while executing, persistent red on error. */
+.activity-bar-item-run-active {
+  color: var(--accent-success) !important;
+  animation: pulse-green 1.1s ease-in-out infinite;
+}
+
+.activity-bar-item-run-error {
+  color: var(--accent-danger) !important;
+}
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* ===== Panel Content ===== */
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  border-right: 1px solid var(--sidebar-border);
+  /* Glide when expanding/collapsing. Same easing/duration as the peek overlay so
+     the whole app shares one motion vocabulary. Only width animates (the left edge
+     stays pinned to the activity-bar edge), which reads as the panel sweeping out
+     over the notebook and back. */
+  transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width;
+}
+
+/* Expanded (fullscreen) — leave the flex flow and OVERLAY the notebook + anything
+   to the right. Anchored to the right edge of the 44px activity bar, full height,
+   above app content (below modals at z-index:10000). The width itself is set inline
+   (min(1100px,70vw)); this rule provides the overlay position + depth. */
+.sidebar-panel-expanded {
+  position: absolute;
+  top: 0;
+  left: 44px;              /* just past the activity-bar icon rail */
+  bottom: 0;
+  z-index: 45;             /* over the notebook + right AI panel; under modals */
+  min-width: 0;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.38);
+  background: var(--sidebar-bg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-panel { transition: none; }
+}
+/* While actively dragging the resize handle, suppress the width transition so
+   every mousemove's width update applies INSTANTLY (1:1 with the cursor) instead
+   of animating over 320ms — that animated queueing is what made shrinking the
+   panel feel laggy/delayed. The expand/collapse glide (not a drag) still animates
+   normally since this class is only added for the duration of the drag. */
+.sidebar-panel-dragging {
+  transition: none !important;
+}
+
+/* Peek overlay — the transient hover panel. Sits over the committed panel, anchored
+   to the right edge of the 44px activity bar, full height. Slides in from the left
+   and casts a shadow so it reads as floating above the committed content. */
+.sidebar-panel-peek {
+  position: absolute;
+  top: 0;
+  left: 44px;            /* flush with the 44px activity bar, like the committed panel */
+  bottom: 0;
+  z-index: 20;           /* above committed panel; below modals (z-index: 10000) */
+  background: var(--sidebar-bg);
+  /* No left border: the activity bar's own right border is the divider — a second
+     one here drew a double line (with a gutter) between the icons and the panel. */
+  border-right: 1px solid var(--sidebar-border);
+  /* Slide in/out from the left. Starts slid-out (fully off to the left, hidden behind
+     the activity bar which is z-index:30) and transitions to open when the -open class
+     is added. Both directions animate because this is a transition, not a keyframe. */
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 320ms ease;
+  will-change: transform;
+}
+
+.sidebar-panel-peek-open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* The overlay itself provides the slide motion, so suppress the per-mount content
+   swipe inside it (avoids a double animation). */
+.sidebar-panel-peek .sidebar-panel-content {
+  animation: none;
+}
+
+/* Respect reduced-motion: no slide, just show/hide instantly. */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-panel-peek {
+    transition: none;
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* While a peek overlay covers it, hide the committed panel's content so no sliver of
+   it shows around the overlay. Keep the box (layout/width/resize) but blank its paint. */
+.sidebar-panel-under-peek {
+  visibility: hidden;
+}
+/* The resize handle lives on the committed panel; keep it interactive even while the
+   committed content is hidden under a peek (so the user can still resize). */
+.sidebar-panel-under-peek .sidebar-resize-handle {
+  visibility: visible;
+}
+
+/* Right-only shadow: a thin gradient just past the panel's right edge. Because it
+   sits at left:100% it can never overlap the icons on the panel's left. */
+.sidebar-panel-peek::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 12px;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0));
+}
+
+.sidebar-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  animation: panelSwipeIn 0.15s ease-out;
+}
+
+.sidebar-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-panel-close:hover {
+  color: var(--text-primary);
+  background: var(--surface-4);
+}
+
+@keyframes panelSwipeIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 10;
+}
+
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:active {
+  background: var(--accent-primary);
+}
+
+.sidebar-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.sidebar-panel-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.sidebar-panel-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 8px);
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.2px;
+}
+
+.sidebar-panel-action {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.sidebar-panel-action:hover {
+  color: var(--text-primary);
+  background: var(--surface-4);
+}
+
+.sidebar-scope-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sidebar-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-1) 0;
+}
+
+/* ===== Cell Outline ===== */
+.outline-search {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  position: relative;           /* anchor for the clear (✕) button */
+}
+
+.outline-search-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.outline-search-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+
+.outline-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Clear (✕) button — sits inside the input's right edge, shown only while there's
+   text. Reserve right padding on the input so typed text never runs under it.
+   Shared by the Outline search and the Packages filter (same wrapper padding). */
+.outline-search:has(.outline-search-clear) .outline-search-input,
+.pkg-sidebar-filter:has(.outline-search-clear) .outline-search-input {
+  padding-right: 26px;
+}
+.outline-search-clear {
+  position: absolute;
+  top: 50%;
+  /* Offset by the wrapper's horizontal padding (--space-3) so the button hugs the
+     input's inner right edge, not the panel edge. */
+  right: calc(var(--space-3) + 5px);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.outline-search-clear:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.outline-list {
+  padding: var(--space-1) 0;
+}
+
+.outline-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+  border-left: 2px solid transparent;
+  position: relative;
+}
+
+/* Vertical indent guide rails — connect nested items visually */
+.outline-indent-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px solid var(--border-subtle);
+  pointer-events: none;
+}
+.outline-item:hover .outline-indent-guide {
+  border-left-color: var(--border-default);
+}
+
+/* Chevron spacer keeps non-section (code/sql) icons aligned under section titles */
+.outline-chevron-spacer {
+  width: 12px;
+  margin-right: 2px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.outline-item:hover {
+  background: var(--accent-primary-subtle);
+  color: var(--text-primary);
+}
+
+.outline-item-dragover {
+  border-top: 2px solid var(--accent-primary);
+  padding-top: 3px;
+}
+
+.outline-item[draggable="true"] {
+  cursor: grab;
+}
+
+.outline-item[draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.6;
+}
+
+.outline-item-icon {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Fixed blue (matches the in-cell PY badge) so PY stays distinct from the SQL
+   orange in every theme — otherwise in the Ember theme both use the orange accent. */
+.outline-icon-code {
+  background: var(--lang-python-subtle);
+  color: var(--lang-python);
+}
+
+.outline-icon-markdown {
+  background: var(--lang-markdown-subtle);
+  color: var(--lang-markdown);
+}
+
+/* SQL cells — match the in-cell .cell-type-sql orange badge. */
+.outline-icon-sql {
+  background: var(--lang-sql-subtle);
+  color: var(--lang-sql);
+}
+
+/* Label wrapper. Column stack so an optional search snippet sits UNDER the title.
+   min-width:0 lets it shrink in the flex row so the children can ellipsis-truncate. */
+.outline-item-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  font-size: var(--font-size-sm);
+}
+
+/* Title — ALWAYS a single truncated line (never wraps), whether or not a snippet
+   is shown below it. This is what keeps long headings tidy. */
+.outline-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.outline-item-markdown .outline-item-title {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Matched-source snippet under the label — a quiet mono line showing the specific
+   code line (or AI note) that matched the query, with an L<n> / note tag. */
+.outline-item-snippet {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+}
+.outline-snippet-line,
+.outline-snippet-tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.outline-snippet-tag {
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.outline-snippet-text {
+  font-family: var(--font-mono, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Highlighted match — shared by label + snippet. Uses the accent tint, no default
+   yellow <mark> background (which would clash with the dark rail). */
+.outline-search-hit {
+  background: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  color: var(--text-primary);
+  border-radius: 2px;
+  padding: 0 1px;
+  font-weight: 600;
+}
+
+.outline-item-status {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.outline-status-success { color: var(--accent-success); }
+.outline-status-error { color: var(--accent-danger); }
+.outline-status-interrupted { color: var(--accent-warning); font-size: 15px; line-height: 1; }
+.outline-status-stale { color: var(--accent-warning); font-size: 14px; }
+/* Identical to .outline-status-stale so dataflow-staleness reads as the same
+   amber dot as edit-staleness (tooltip conveys which kind). */
+.outline-status-dataflow-stale { color: var(--accent-warning); font-size: 14px; }
+.outline-status-running { color: var(--accent-primary); flex-shrink: 0; }
+/* Queued in a batch (Run All / run-from): waiting its turn, not yet running. */
+.outline-status-queued { color: var(--text-muted); font-size: 11px; line-height: 1; }
+/* The cell being executed: a soft pulse over the whole row in the cell's own type
+   colour (Python blue, SQL orange), so the running cell is easy to spot in a long
+   list. Opacity-only animation on an overlay (no layout, no repaint of the row);
+   the overlay never intercepts clicks. Only one cell runs at a time in a batch. */
+.outline-item-code { --outline-run-color: var(--lang-python, #4f8bff); }
+.outline-item-sql { --outline-run-color: var(--lang-sql, #e06c1d); }
+.outline-item-markdown { --outline-run-color: var(--lang-markdown, #cba6f7); }
+.outline-item.outline-item-running::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--outline-run-color) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--outline-run-color);
+  animation: outline-run-pulse 1.6s ease-in-out infinite;
+}
+@keyframes outline-run-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Same cue without motion: a steady, faint tint. */
+  .outline-item.outline-item-running::after { animation: none; opacity: 0.6; }
+}
+/* Lint issue indicator — amber warning triangle + count, matching the in-cell
+   badge and the inline squiggle color. */
+.outline-status-lint {
+  color: var(--accent-warning, #e2a03f);
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.outline-lint-count { font-size: 9px; font-weight: 600; }
+
+.outline-exec-time {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-left: 3px;
+  font-family: var(--font-mono);
+}
+
+.outline-error-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-danger);
+  background: var(--accent-danger-subtle);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  margin-left: 4px;
+}
+
+.outline-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Section (markdown heading) rows: bold. Left padding comes from the inline
+   depth-based style (paddingLeft: 10 + depth*14) so headings nest by level.
+   Do NOT set padding-left here — an !important rule would flatten the tree. */
+.outline-item-section {
+  font-weight: 600;
+}
+
+.outline-section-chevron {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-right: 2px;
+  width: 12px;
+  display: inline-block;
+}
+
+.outline-run-from {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.outline-item:hover .outline-run-from {
+  opacity: 1;
+}
+
+.outline-run-from:hover {
+  color: var(--accent-success);
+  background: var(--accent-success-subtle);
+}
+
+/* Hover actions container */
+.outline-hover-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.outline-item:hover .outline-hover-actions { opacity: 1; }
+/* The Lineage button lives in this group. Keep the group shown while its focus is on
+   the row (keyboard focus, or the focused cell's button) so the button stays visible. */
+.outline-hover-actions:focus-within,
+.outline-item:has(.outline-lineage-btn.active) .outline-hover-actions { opacity: 1; pointer-events: auto; }
+
+.outline-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1;
+}
+.outline-action-btn:hover { background: var(--surface-3); color: var(--text-primary); }
+.outline-delete-btn:hover { color: var(--accent-danger); background: var(--accent-danger-subtle); }
+
+/* Expand / collapse all sections */
+.outline-expand-toggle {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.outline-expand-toggle:hover { color: var(--text-primary); background: var(--surface-3); border-color: var(--text-muted); }
+
+/* Multi-select mode */
+.outline-select-toggle {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+.outline-select-toggle:hover { color: var(--text-primary); background: var(--surface-3); border-color: var(--text-muted); }
+.outline-select-toggle.active { color: var(--accent-primary); background: var(--accent-primary-subtle); border-color: var(--accent-primary-muted); }
+
+.outline-checkbox {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.outline-item-selected {
+  background: var(--accent-primary-subtle) !important;
+  border-left-color: var(--accent-primary) !important;
+}
+
+/* Active cell (scroll-sync) — the cell currently in view */
+.outline-item-active {
+  background: var(--surface-3);
+  border-left-color: var(--accent-primary);
+  font-weight: 600;
+}
+.outline-item-active .outline-item-label { color: var(--text-primary); }
+
+/* Flash a just-inserted (AI-assistant) row. Deliberately subtle — a Stack-Overflow
+   style decaying highlight: a leading accent bar plus a faint tint that fades out,
+   rather than a loud full-row fill. The bar rides on ::before so it never fights
+   the row's own border-left (used by the active/selected states). */
+.outline-item.outline-item-flash::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-primary);
+  animation: outlineFlashBar 3s ease-out forwards;
+  pointer-events: none;
+}
+.outline-item.outline-item-flash {
+  animation: outlineFlashTint 3s ease-out forwards;
+}
+@keyframes outlineFlashBar {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes outlineFlashTint {
+  0%   { background: color-mix(in srgb, var(--accent-primary) 12%, transparent); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .outline-item.outline-item-flash,
+  .outline-item.outline-item-flash::before { animation: none; }
+}
+
+/* ===== Header toggles (lineage #1, heatmap #8) ===== */
+/* Same shape as .outline-select-toggle but sized as compact icon buttons and
+   NOT pushed to the right (they sit inline before the select toggle). */
+.outline-header-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.outline-header-toggle:hover { color: var(--text-primary); background: var(--surface-3); border-color: var(--text-muted); }
+.outline-header-toggle.active { color: var(--accent-primary); background: var(--accent-primary-subtle); border-color: var(--accent-primary-muted); }
+
+/* ===== Fix it button (#7) — error-cell hover action ===== */
+/* Extends .outline-action-btn but is wider (has a label) and danger-accented so it
+   reads as the remedy for the row's error. */
+.outline-fix-btn {
+  width: auto;
+  padding: 0 6px;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-warning, #e0a341);
+  white-space: nowrap;
+}
+.outline-fix-btn:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-warning, #e0a341) 22%, transparent);
+}
+
+/* ===== Body layout: list + minimap side by side (#3) ===== */
+.outline-body-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  /* Keep the minimap clear of the sidebar's right-edge resize grab-handle:
+     reserve a gutter on the right of the whole body so the map floats inboard. */
+  padding-right: 8px;
+}
+/* The list keeps its own scroll; it must shrink to leave room for the minimap. */
+.outline-body-wrap > .outline-list {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== Cell map (#3) =====
+   A strip that mirrors the notebook: one tick per cell, sized like the cell in the
+   notebook (OutlineMap.jsx + services/outlineMap.js position every tick), headings as
+   wide section bands, a thin status lane on the right for exceptions only, and an
+   outlined window for the part of the notebook on screen. Neutral chrome; colour
+   comes only from the cell-type identity tokens and the status lane. */
+/* Wrapper: positioning context for the floating hover label + flex child of the
+   outline body row. */
+.outline-minimap-wrap {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  margin: var(--space-2) 0 var(--space-2) 6px;
+  /* Status lane colours; light/dark override in theme-light.css. */
+  --map-err: var(--accent-danger);
+  --map-stale: var(--accent-warning);
+  --map-run: var(--accent-success);
+}
+.outline-minimap {
+  flex: 0 0 auto;
+  position: relative;
+  width: 26px;                /* narrow so Outline rows keep their room */
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  touch-action: none;          /* drags scroll the notebook, not the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.outline-minimap.dragging { cursor: grabbing; }
+/* Track: the measured area the ticks are laid out in (strip minus a small inset). */
+.outline-minimap-track {
+  position: absolute;
+  inset: 4px 0;
+}
+.outline-minimap-tick {
+  position: absolute;
+  margin: 0;
+  border: none;
+  padding: 0;
+  border-radius: 1.5px;
+  cursor: inherit;
+  opacity: 0.9;
+  background: var(--text-muted);
+  transition: opacity var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+/* Section band: a markdown heading spans the full tick column. */
+.outline-minimap-band { left: 2px; width: 14px; opacity: 1; }
+/* Every other cell: a narrower tick indented under its band. */
+.outline-minimap-cell { left: 5px; width: 11px; }
+.outline-minimap-tick:hover {
+  opacity: 1;
+  filter: brightness(1.12);
+  box-shadow: 0 0 0 1px var(--surface-1), 0 0 5px 1px color-mix(in srgb, currentColor 60%, transparent);
+  z-index: 2;
+}
+.outline-minimap-tick:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; z-index: 3; }
+/* Tick colour = cell TYPE, the same constant identity tokens as the PY/SQL/MD badges.
+   `color` is set too so the hover glow (currentColor) matches the hue. */
+.outline-minimap-code     { background: var(--lang-python, #4f8bff); color: var(--lang-python, #4f8bff); }
+.outline-minimap-sql      { background: var(--lang-sql, #e06c1d); color: var(--lang-sql, #e06c1d); }
+.outline-minimap-markdown { background: var(--lang-markdown, #cba6f7); color: var(--lang-markdown, #cba6f7); }
+/* Code/SQL cells that have not run yet are dimmed but keep their type colour. */
+.outline-minimap-unrun { opacity: 0.45; }
+
+/* Status lane: exceptions only (error, stale, running). Success and not-run leave
+   it empty so a problem stands out. */
+.outline-minimap-status {
+  position: absolute;
+  right: 2px;
+  width: 4px;
+  min-height: 3px;
+  border-radius: 1.5px;
+  pointer-events: none;
+}
+.outline-minimap-status-err   { background: var(--map-err); }
+.outline-minimap-status-stale { background: var(--map-stale); }
+.outline-minimap-status-run   { background: var(--map-run); animation: outlineMinimapPulse 1.2s ease-in-out infinite; }
+
+/* Active cell: an accent ring around its tick ("you are here"). */
+.outline-minimap-tick.active {
+  opacity: 1;
+  box-shadow: 0 0 0 1px var(--surface-1), 0 0 0 2.5px var(--accent-primary);
+  z-index: 1;
+}
+
+/* Viewport window: the part of the NOTEBOOK on screen. Neutral outline + light
+   shade; JS sets its translateY/height from the notebook's scroll. pointer-events
+   off so ticks under it keep their hover label; the strip handles press/drag. */
+.outline-minimap-window {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  right: 1px;
+  border: 1.5px solid color-mix(in srgb, var(--text-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--text-primary) 9%, transparent);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 4;
+  will-change: transform;
+}
+.outline-minimap.dragging .outline-minimap-window {
+  border-color: color-mix(in srgb, var(--text-primary) 75%, transparent);
+}
+@keyframes outlineMinimapPulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .outline-minimap-status-run { animation: none; }
+}
+
+/* (C) Floating hover label — badge + title + status, beside the hovered tick.
+   Absolutely positioned within .outline-minimap-wrap at the tick's vertical center
+   (JS sets `top`), floated to the LEFT of the rail so it doesn't overflow the panel
+   edge. pointer-events:none so it never intercepts the hover from the ticks. */
+.outline-minimap-label {
+  position: absolute;
+  right: calc(100% + 8px);     /* sit just left of the rail */
+  transform: translateY(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: outlineMinimapLabelIn 0.1s ease-out;
+}
+.outline-minimap-label .outline-item-icon { flex: 0 0 auto; }
+.outline-minimap-label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+.outline-minimap-label-status {
+  flex: 0 0 auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--surface-4);
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+.outline-minimap-label-error { color: var(--accent-danger); background: color-mix(in srgb, var(--accent-danger) 15%, transparent); }
+.outline-minimap-label-running { color: var(--accent-primary); background: var(--accent-primary-subtle); }
+.outline-minimap-label-stale { color: var(--accent-warning); background: color-mix(in srgb, var(--accent-warning) 15%, transparent); }
+.outline-minimap-label-not-run { color: var(--text-muted); }
+@keyframes outlineMinimapLabelIn { from { opacity: 0; transform: translateY(-50%) translateX(4px); } to { opacity: 1; transform: translateY(-50%) translateX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .outline-minimap-label { animation: none; }
+}
+
+/* ===== Lineage focus (#1) ===== */
+/* A focused cell (its row Lineage button, or the output-header trigger) colours its
+   transitive upstream and downstream rows. Direct = solid, indirect = faded, the
+   focused row is ringed and unrelated rows dim. */
+.outline-item-lineage-dim { opacity: 0.32; }
+.outline-item-lineage-focus {
+  background: var(--accent-primary-subtle);
+  border-left-color: var(--accent-primary);
+  outline: 1px solid var(--accent-primary);
+  outline-offset: -1px;
+  font-weight: 600;
+}
+/* Upstream (inputs) — teal/blue accent with a left marker.
+   Downstream (dependents) — amber accent. Both keep full opacity when direct. */
+.outline-item-lineage-upstream {
+  background: color-mix(in srgb, var(--entity-string, #6ea8fe) 16%, transparent);
+  border-left-color: var(--entity-string, #6ea8fe);
+  opacity: 1;
+}
+.outline-item-lineage-downstream {
+  background: color-mix(in srgb, var(--accent-warning, #e0a341) 16%, transparent);
+  border-left-color: var(--accent-warning, #e0a341);
+  opacity: 1;
+}
+/* Indirect (two or more steps away): declared after the direct rules so it wins. */
+.outline-item-lineage-indirect { opacity: 0.55; }
+
+/* Row Lineage button. Always laid out (no shift on hover); faded until the row is
+   hovered, keyboard-focused, or it is the focused cell. */
+.outline-lineage-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+.outline-item:hover .outline-lineage-btn,
+.outline-lineage-btn:focus-visible,
+.outline-lineage-btn.active { opacity: 1; }
+.outline-lineage-btn:hover { background: var(--surface-3); color: var(--text-primary); }
+.outline-lineage-btn:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.outline-lineage-btn.active {
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary-muted);
+}
+
+/* Lineage focus on the cell map: related ticks take the relation colour, indirect
+   ones are fainter, unrelated ones dim. Ticks stay clickable. */
+.outline-minimap-tick.outline-minimap-rel-none { opacity: 0.32; }
+.outline-minimap-tick.outline-minimap-rel-upstream {
+  background: var(--entity-string, #6ea8fe);
+  color: var(--entity-string, #6ea8fe);
+  opacity: 1;
+}
+.outline-minimap-tick.outline-minimap-rel-downstream {
+  background: var(--accent-warning, #e0a341);
+  color: var(--accent-warning, #e0a341);
+  opacity: 1;
+}
+.outline-minimap-tick.outline-minimap-rel-indirect { opacity: 0.4; }
+.outline-minimap-tick.outline-minimap-rel-focus {
+  background: var(--accent-primary);
+  color: var(--accent-primary);
+  opacity: 1;
+}
+
+/* ===== Execution-time heatmap (#8) ===== */
+/* Five buckets green→amber→red, applied as a subtle row tint via box-shadow inset
+   so it composes with hover/active backgrounds instead of replacing them. */
+.outline-heat-0 { box-shadow: inset 3px 0 0 color-mix(in srgb, #3fb950 70%, transparent); }
+.outline-heat-1 { box-shadow: inset 3px 0 0 color-mix(in srgb, #9ccf3f 75%, transparent); }
+.outline-heat-2 { box-shadow: inset 3px 0 0 color-mix(in srgb, #e0c341 80%, transparent); }
+.outline-heat-3 { box-shadow: inset 3px 0 0 color-mix(in srgb, #e08a41 85%, transparent); }
+.outline-heat-4 { box-shadow: inset 3px 0 0 color-mix(in srgb, #e0503f 90%, transparent); }
+
+/* Nested heading hierarchy */
+.outline-section-number {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 4px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.outline-item-h1 .outline-item-title { font-weight: 600; }
+.outline-item-h2 .outline-item-title { font-weight: 500; }
+/* Markdown-heading section titles in the highlight colour (colour only, see
+   .sidebar-subheader). The active / selected row keeps its own state colours. */
+.outline-item-section:not(.outline-item-active):not(.outline-item-selected) .outline-item-title { color: var(--accent-primary); }
+.outline-item-h1 .outline-section-number { color: var(--accent-primary); }
+
+/* Type/status filter chips */
+.outline-filter-chips {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.outline-filter-chip {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.outline-filter-chip:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+  border-color: var(--text-muted);
+}
+.outline-filter-chip.active {
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary-muted);
+  font-weight: 600;
+}
+.outline-filter-chip.has-errors {
+  color: var(--danger, #e5484d);
+  border-color: var(--danger, #e5484d);
+}
+.outline-filter-chip.has-errors.active {
+  background: var(--danger-subtle, rgba(229, 72, 77, 0.15));
+}
+
+/* Bulk action bar */
+.outline-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+.outline-bulk-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  margin-right: 4px;
+}
+.outline-bulk-btn {
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.outline-bulk-btn:hover:not(:disabled) { background: var(--surface-4, var(--surface-3)); color: var(--text-primary); }
+.outline-bulk-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Icon-only bulk buttons — square, consistent with the notebook toolbar. */
+.outline-bulk-btn.outline-bulk-icon {
+  padding: 4px;
+  justify-content: center;
+}
+.outline-bulk-delete { border-color: var(--accent-danger-muted, rgba(255,92,92,0.3)); color: var(--accent-danger); }
+.outline-bulk-delete:hover { background: var(--accent-danger-subtle); }
+.outline-bulk-run { border-color: var(--accent-success-muted, rgba(0,201,167,0.3)); color: var(--accent-success); }
+.outline-bulk-run:hover { background: var(--accent-success-subtle); }
+
+/* ===== Existing sidebar styles (items, files, etc.) ===== */
+
+.sidebar-chevron {
+  font-size: 9px;
+  color: var(--text-muted);
+  width: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Colored section icons */
+
+.sidebar-icon-s3 { color: var(--ds-s3); }
+.sidebar-icon-dynamodb { color: var(--ds-dynamodb); }
+.sidebar-icon-athena { color: var(--ds-athena); }
+.sidebar-icon-aurora { color: var(--ds-aurora); }
+/* SageMaker endpoints — a "live/serving" green so a deployed, callable model reads
+   distinctly from the storage/table sources (it's compute, not data at rest). */
+.sidebar-icon-sagemaker-endpoint { color: var(--ds-sagemaker-endpoint, #16a34a); }
+/* SageMaker endpoint status dot — a small colored dot on the endpoint's server
+   glyph reflecting the control-plane EndpointStatus. */
+.sm-ep-icon-wrap { position: relative; display: inline-flex; }
+.sm-ep-status-dot {
+  position: absolute; right: -2px; bottom: -1px;
+  width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--bg-secondary, #1a1a1a);  /* ring so it reads on any row bg */
+  box-sizing: content-box;
+}
+.sm-ep-dot-active  { background: #16a34a; }                 /* InService — green */
+.sm-ep-dot-pending { background: #f59e0b; animation: sm-ep-pulse 1.4s ease-in-out infinite; }  /* provisioning — amber, pulsing */
+.sm-ep-dot-failed  { background: #dc2626; }                 /* Failed/OutOfService — red */
+.sm-ep-dot-stopped { background: #9ca3af; box-shadow: 0 0 0 1.5px color-mix(in srgb, #9ca3af 45%, transparent); }  /* Stopped (resumable) — hollow-ish grey, no pulse */
+.sm-ep-dot-gone    { background: #6b7280; }                 /* Deleting/unknown — gray */
+@keyframes sm-ep-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* S3 Tables (Apache Iceberg) — an "ice" cyan so the row glyph reads distinctly
+   from plain Athena/Glue tables even though both share the Athena source_type. */
+.sidebar-icon-iceberg { color: var(--ds-iceberg, #38bdf8); }
+
+.sidebar-icon-file-csv { color: var(--entity-data); }
+
+/* Notebook items */
+.sidebar-item {
+  display: flex;
+  /* Top-align so the leading dot/toggle and the trailing status/tag/close controls
+     sit on the NOTEBOOK NAME's line (the title row), not the vertical center of the
+     multi-line block (name + run subline + VM subline). Without this, adding the VM
+     subline pushed the status ✓ down toward the bottom line. */
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 6px var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+  border-left: 2px solid transparent;
+  margin: 1px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Tag groups */
+.nb-tag-group {
+  margin-bottom: var(--space-2);
+}
+
+.nb-tag-group > .sidebar-item {
+  padding-left: 32px;
+}
+
+.nb-tag-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.nb-tag-header:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.nb-tag-icon {
+  color: var(--accent-primary);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.nb-tag-chevron {
+  font-size: 9px;
+  color: var(--text-muted);
+  width: 10px;
+  flex-shrink: 0;
+}
+
+.nb-tag-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-primary);  /* section header: highlight colour (see .sidebar-subheader) */
+  flex: 1;
+}
+
+.nb-tag-header:hover .nb-tag-name {
+  color: var(--accent-primary);
+}
+
+.nb-tag-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 8px);
+  font-weight: 600;
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.2px;
+}
+
+.nb-tag-autotag-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.nb-tag-autotag-btn:hover {
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.sidebar-tag-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  padding: 1px 4px;
+  margin-top: 2px;   /* center on the name's first line (row is top-aligned) */
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.sidebar-item:hover .sidebar-tag-btn {
+  opacity: 1;
+}
+
+.sidebar-tag-btn:hover {
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.sidebar-tag-input {
+  width: 90px;
+  background: var(--input-bg);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  padding: 3px 6px;
+  outline: none;
+}
+
+.sidebar-item:hover {
+  background: var(--accent-primary-subtle);
+  color: var(--text-primary);
+}
+
+.sidebar-item-active {
+  background: var(--accent-primary-subtle);
+  color: var(--text-primary);
+  border-left-color: var(--accent-primary);
+}
+
+.sidebar-item-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  /* Row is top-aligned (flex-start); nudge the small dot down so it centers on the
+     notebook name's first line rather than hugging the top edge. */
+  margin-top: 6px;
+}
+
+.sidebar-dot-disconnected { background: var(--text-muted); }
+.sidebar-dot-launching {
+  background: var(--accent-warning);
+  box-shadow: 0 0 6px var(--accent-warning-subtle);
+  animation: glow 1.5s infinite;
+}
+.sidebar-dot-connecting {
+  background: var(--accent-warning);
+  animation: glow 1.5s infinite;
+}
+.sidebar-dot-connected {
+  background: var(--accent-success);
+  box-shadow: 0 0 4px var(--accent-success-muted);
+}
+
+/* Per-notebook execution status shown in the notebook list.
+   Sits between the notebook name and the tag/close controls. */
+.nb-exec-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  margin-top: 3px;   /* center on the name's first line (row is top-aligned) */
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.nb-exec-success { color: var(--accent-success); }
+.nb-exec-error { color: var(--accent-danger); }
+.nb-exec-interrupted { color: var(--accent-warning); font-size: 15px; line-height: 1; }
+
+/* Run history disclosure chevron on each notebook row — matches the tag-group
+   chevron (16px filled triangle, path swaps for open/closed). */
+.nb-history-toggle {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;   /* center on the name's first line (row is top-aligned) */
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+.sidebar-item:hover .nb-history-toggle { color: var(--text-secondary); }
+.nb-history-toggle:hover { color: var(--accent-primary); }
+
+/* Run history — a card matching the VM detail panel's card language
+   (surface-2 background, rounded, subtle border, icon + colored uppercase title). */
+.rh-card {
+  /* Left edge aligns with the notebook's status dot (a child of that notebook).
+     Rows inside a tag group have padding-left:32px (see .nb-tag-group > .sidebar-item)
+     + 2px border + 16px chevron + 8px gap = 58px. */
+  margin: 4px 10px 10px 58px;
+  padding: var(--space-2) var(--space-3);
+  cursor: default;
+  /* Neutral raised section of the selected notebook (one step above the panel),
+     same idea as the lineage drawer's Lineage card. */
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+}
+.rh-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.rh-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-primary);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rh-card-title svg { opacity: 0.85; }
+
+/* "Run All" filter pill reuses .outline-filter-chip for identical look; this
+   modifier only positions it at the right edge and cancels the parent
+   .rh-card-title's uppercase/letter-spacing so the label renders normally. */
+.rh-filter-pill {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Cell-scope selector — pushes itself + the Run All pill to the right edge. */
+.rh-scope-select {
+  margin-left: auto;
+  max-width: 110px;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  background: var(--surface-0);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.rh-scope-select:hover { border-color: var(--accent-primary-muted); }
+
+/* Cell-scope label chip in the summary strip. */
+.rh-summary-scope {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-right: 2px;
+}
+
+/* Sparkline of recent run durations — small, muted, low-contrast. */
+/* Sparkline layout: the plot (bars + overlays) on the left, an optional trend
+   badge pinned at the right end. */
+.rh-sparkline-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rh-spark-plot {
+  position: relative;
+  flex: 1 1 auto;
+  height: 22px;
+  /* #7 fast/slow gradient hint — implicit y-scale: near-transparent at the bottom
+     (fast) fading to a faint warm wash at the top (slow). Sits behind the bars. */
+  background: linear-gradient(
+    to top,
+    transparent 0%,
+    transparent 45%,
+    color-mix(in srgb, var(--accent-warning, #e0a341) 9%, transparent) 100%);
+  border-radius: 2px;
+}
+.rh-sparkline {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 3px;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+/* #1 average reference line — a dashed rule across the plot at the avg height. */
+.rh-spark-avg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--text-secondary) 55%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rh-bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  /* A fixed 2px floor keeps a fast-but-nonzero run visible WITHOUT inflating its
+     proportional height — the height % stays truthfully linear. */
+  min-height: 2px;
+  max-width: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 1px;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.rh-sparkline:hover .rh-bar { opacity: 0.4; }
+.rh-sparkline .rh-bar:hover { opacity: 0.95; }
+/* Selected bar (linked to the hovered/clicked list row) — full opacity + a ring
+   so the current run stands out from the muted others. */
+.rh-bar-selected,
+.rh-sparkline:hover .rh-bar-selected {
+  opacity: 1;
+  outline: 1px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.rh-bar-success { background: var(--accent-success); }
+.rh-bar-error { background: var(--accent-danger); }
+.rh-bar-interrupted { background: var(--accent-warning); }
+
+/* Summary strip — compact aggregates over the shown runs. */
+.rh-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  /* Match the budget / critical-path lines: 11px with text-tertiary labels and
+     text-secondary bold values, so "last/avg/fastest/slowest" read consistently
+     across the whole Run History callout (was 10px/text-muted — too dim/small). */
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.rh-summary-item b { color: var(--text-secondary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rh-summary-sep { color: var(--border-default); }
+.rh-summary-error b { color: var(--accent-danger); }
+/* Trend delta (Run All filter only): slower = warning, faster = success. */
+.rh-trend-slower { color: var(--accent-warning); }
+.rh-trend-slower b { color: var(--accent-warning); }
+.rh-trend-faster { color: var(--accent-success); }
+.rh-trend-faster b { color: var(--accent-success); }
+.rh-trend-same { color: var(--text-muted); }
+
+/* Run list rows */
+.rh-list { display: flex; flex-direction: column; }
+.rh-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 3px 0 3px 6px;
+  white-space: nowrap;
+  border-top: 1px solid var(--border-subtle);
+  /* Left accent bar (transparent by default) — turns red/amber for error/stopped
+     runs so a broken run is obvious at a glance. */
+  border-left: 2px solid transparent;
+  transition: background var(--transition-fast);
+}
+.rh-row:first-child { border-top: none; }
+.rh-row-error { border-left-color: var(--accent-danger); }
+.rh-row-interrupted { border-left-color: var(--accent-warning); }
+/* Selected row (linked to hovered/clicked bar). */
+.rh-row-selected { background: var(--accent-primary-subtle); }
+/* Brief flash when the matching sparkline bar is hovered — a quick accent pulse
+   that fades, making the bar↔row link obvious without a persistent highlight. */
+.rh-row-flash { animation: rhRowFlash 0.7s ease-out; }
+@keyframes rhRowFlash {
+  0%   { background: var(--accent-primary-muted); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rh-row-flash { animation: none; }
+}
+/* Expandable run rows: click to open the per-cell drill-down. */
+.rh-row-expandable { cursor: pointer; }
+.rh-expand-caret {
+  flex: 0 0 auto;
+  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Match the app-standard rotating chevron (IntelAccordion): right-pointing,
+   rotates 90° down when expanded. Keeps expand affordances consistent. */
+.rh-chevron { color: var(--text-muted); transition: transform 0.15s; flex-shrink: 0; }
+.rh-chevron.open { transform: rotate(90deg); }
+
+/* Analysis callout above the per-cell bars: time budget (wall/compute/overhead)
+   + critical path (slowest cell share). */
+.rh-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px 6px 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.rh-analysis-budget {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+.rh-analysis-metric { display: inline-flex; align-items: center; gap: 4px; }
+.rh-analysis-metric b { color: var(--text-secondary); font-weight: 600; }
+.rh-analysis-swatch { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 auto; }
+.rh-analysis-swatch-wall { background: var(--text-muted); }
+.rh-analysis-swatch-compute { background: var(--accent-success); }
+.rh-analysis-swatch-overhead { background: var(--text-muted); opacity: 0.5; }
+.rh-analysis-swatch-mem { background: var(--accent-purple); }
+.rh-analysis-critical {
+  /* Label words ("slowest:" / "heaviest:") stay text-tertiary to match the budget
+     line's labels (wall/compute/overhead) — consistent quiet labels. Only the size
+     is bumped to 11px so the whole line reads at the same scale as the budget line;
+     the VALUES are lifted via .rh-analysis-val below. */
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.rh-analysis-critical b { color: var(--accent-primary); font-weight: 600; }
+/* Values (9.0s, 353 MB) read at secondary — same treatment as the budget line's
+   bold values — so they're legible while the labels stay quiet. */
+.rh-analysis-critical .rh-analysis-val { color: var(--text-secondary); font-weight: 600; }
+.rh-analysis-share { color: var(--text-tertiary); }
+
+/* Per-cell peak resource pill (memory + CPU) in the drill-down row. Two compact
+   segments; memory tinted purple (matches the peak-mem swatch), CPU muted. */
+.rh-cell-res {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.rh-cell-res-mem {
+  color: var(--accent-purple);
+  background: var(--accent-purple-subtle);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.rh-cell-res-cpu {
+  color: var(--text-tertiary);
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Per-cell drill-down: one row per executed cell, badge + duration bar + time. */
+.rh-celldetail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 0 6px 8px;  /* small indent: the per-cell rows need the width */
+  border-left: 2px solid var(--border-subtle);
+  margin-left: 2px;
+}
+.rh-cellrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+.rh-cellrow:hover { background: var(--accent-primary-subtle); }
+/* Compact rows: exactly ONE fixed-height line per cell. @params and SQL result
+   sizes are small markers before the value (details in the row tooltip), so
+   nothing wraps below a row. */
+.rh-cellrow {
+  flex: 0 0 auto;
+  height: 18px;
+  padding: 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  color: inherit;
+}
+.rh-cellrow:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+/* The single lane: badge · lead flag · bar · markers · value. */
+.rh-cellrow-main {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+/* Fixed-width slots, so the bar and the value line up on every row whatever
+   the markers. Lead: ⚠ (failed) or 🕒 (slowest). Marks: @params · table · ▲. */
+.rh-cell-lead {
+  flex: 0 0 11px;
+  width: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+}
+.rh-cell-marks {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  color: var(--text-secondary);
+}
+.rh-cell-mark {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+}
+.rh-cell-mark svg { display: block; flex-shrink: 0; }
+/* "+27 more" under a Top 10 list. */
+.rh-cell-more {
+  font-size: 10px;
+  color: var(--text-secondary);
+  padding: 1px 4px 0;
+}
+.rh-cell-more-err { color: var(--accent-danger); }
+/* Label + value columns: one width for the whole run (set inline as ch on
+   .rh-celldetail from the longest label / value of all its cells), so every
+   row lines up and nothing shifts between Top 10 and All. */
+.rh-cellrow .rh-cell-badge {
+  flex: 0 0 auto;
+  width: var(--rh-badge-w, auto);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rh-cellrow .rh-cell-dur { width: var(--rh-val-w, auto); min-width: 0; white-space: nowrap; }
+.rh-cellrow .rh-cell-bar-track { min-width: 16px; }
+/* Metric tabs: same layout as the VM card's .vm-detail-tabs (one track, never
+   wraps; scrolls sideways if a panel is too narrow). The look is shared above. */
+.rh-metric-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rh-metric-tabs::-webkit-scrollbar { display: none; }
+.rh-metric-tab { flex: 0 0 auto; font-family: inherit; white-space: nowrap; }
+.rh-metric-tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+/* Narrow panel (data-fit set in JS only when the full track would overflow):
+   tighter padding and icon-only inactive tabs, then icon-only for all. The
+   label stays readable by screen readers (visually hidden) and in the title. */
+.rh-metric-tabs:is([data-fit="compact"], [data-fit="icons"]) .rh-metric-tab { position: relative; padding: 4px 6px; }
+.rh-metric-tabs[data-fit="compact"] .rh-metric-tab:not(.active) .rh-metric-tab-label,
+.rh-metric-tabs[data-fit="icons"] .rh-metric-tab-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* ONE row under the summary: tabs · Duration legend · view option (right).
+   Narrow: the legend wraps below first (data-legend="below", set in JS when the
+   tabs + option still fit), else normal wrapping. Nothing is clipped. */
+.rh-metric-select { column-gap: 8px; }
+.rh-metric-select > .rh-metric-tabs { order: 1; }
+.rh-metric-select > .rh-cell-legend { order: 2; margin-left: 0; flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.rh-metric-select[data-legend="below"] > .rh-cell-legend { order: 4; flex-basis: 100%; }
+/* "Top 10 / All" view option: the app's option-chip pattern (.outline-filter-chip),
+   right-aligned, so it reads as an option and not as a second tab group. */
+.rh-view-options { order: 3; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+
+/* Per-cell row tooltip (portal on <body>, position: fixed). */
+.rh-cell-tip {
+  position: fixed;
+  z-index: 10000;
+  max-width: 280px;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--surface-elevated, var(--surface-1));
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.rh-cell-tip-line { display: flex; align-items: baseline; gap: 4px; }
+.rh-cell-tip-text { white-space: pre-line; overflow-wrap: anywhere; min-width: 0; }
+.rh-cell-tip-head { font-weight: 600; }
+.rh-cell-tip-error { color: var(--accent-danger); }
+.rh-cell-tip-hint { color: var(--text-secondary); }
+.rh-cell-tip-icon { flex: 0 0 auto; color: var(--text-secondary); align-self: center; display: inline-flex; }
+.rh-cell-badge {
+  flex: 0 0 auto;
+  min-width: 42px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  font-size: 9px;
+}
+.rh-cell-bar-track {
+  flex: 1 1 auto;
+  height: 6px;
+  background: var(--surface-4);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;            /* lay the compute + overhead segments in a row */
+  align-items: stretch;
+}
+.rh-cell-bar {
+  display: block;
+  height: 100%;
+  background: var(--accent-success);
+}
+/* Single-bar (CPU/Memory) case keeps a min width + full rounding so a tiny value
+   is still visible as a pill. */
+.rh-cell-bar-track > .rh-cell-bar:only-child { border-radius: 3px; min-width: 2px; }
+/* Two-part Duration bar: compute (solid bright green) then overhead (a lighter,
+   desaturated green so the second series is clearly VISIBLE against the dark
+   track — a muted/near-transparent fill blended into the track and read as
+   "empty"). Compute rounds its left end, overhead its right → one continuous bar. */
+.rh-cell-bar-compute { background: var(--accent-success); border-radius: 3px 0 0 3px; }
+.rh-cell-bar-overhead {
+  background: color-mix(in srgb, var(--accent-success) 32%, var(--surface-2));
+  border-radius: 0 3px 3px 0;
+}
+/* Errored/interrupted compute segment recolors (overhead stays muted). */
+.rh-cell-bar-error { background: var(--accent-danger); }
+.rh-cell-bar-interrupted { background: var(--accent-warning); }
+
+/* Compute/overhead legend — sits inline in the metric-selector row, pinned to
+   the right of the Duration/CPU/Memory tabs. Colors mirror the bar segments. */
+.rh-cell-legend {
+  margin-left: auto;        /* push to the right edge of the Show row */
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  /* Bumped from 9px/text-muted — the legend was barely legible. Larger + a
+     brighter secondary text color makes "compute"/"overhead" readable. */
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.rh-cell-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+/* Legend overhead swatch matches the LIGHT-GREEN overhead bar segment (not the
+   run-level callout's gray swatch) so the legend truthfully maps to the bars. */
+.rh-cell-legend .rh-analysis-swatch-overhead {
+  background: color-mix(in srgb, var(--accent-success) 32%, var(--surface-2));
+  opacity: 1;
+}
+
+/* Per-run metric selector (Duration / CPU / Memory) above the per-cell bars. */
+.rh-metric-select {
+  display: flex;
+  flex-wrap: wrap;  /* the Top 10 / All toggle drops below the tabs when narrow */
+  align-items: center;
+  gap: 4px;
+  padding: 2px 2px 6px;
+}
+
+/* Segmented tab control for the per-cell metric (Duration / CPU / Memory). A
+   single connected pill-track group reads clearly as "these are tabs" (unlike
+   loose chips). The active tab is filled solid with the accent — that fill alone
+   is the selection signal, so no extra underline/indicator competes with it.
+   The VM card tabs (.vm-detail-tabs, Live MicroVMs panel) share these rules so
+   every tab control in the sidebar looks the same. */
+.rh-metric-tabs,
+.vm-detail-tabs {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+.rh-metric-tab,
+.vm-detail-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 999px;
+  line-height: 1;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.rh-metric-tab svg,
+.vm-detail-tab svg { opacity: 0.75; flex-shrink: 0; }
+.rh-metric-tab:hover:not(.active),
+.vm-detail-tab:hover:not(.active) { color: var(--text-primary); background: var(--surface-3); }
+.rh-metric-tab.active,
+.vm-detail-tab.active {
+  background: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--accent-primary) 50%, transparent);
+}
+.rh-metric-tab.active svg,
+.vm-detail-tab.active svg { opacity: 1; }
+/* Ember: white on the orange fill is 2.8:1; near-black is ≥ 4.5:1. Both tab
+   groups keep the same look. */
+[data-theme="ember"] :is(.rh-metric-tab, .vm-detail-tab).active { color: var(--surface-0); }
+.rh-metric-tab-label,
+.vm-detail-tab-label { line-height: 1; }
+.rh-analysis-heaviest { color: var(--accent-purple); font-weight: 600; }
+
+/* Slowest / heaviest highlighted rows — a subtle tint + a colored left edge that
+   ties each row to the "slowest" / "heaviest" names in the analysis callout. */
+.rh-cellrow-slowest { background: color-mix(in srgb, var(--accent-primary) 8%, transparent); box-shadow: inset 2px 0 0 0 var(--accent-primary); }
+.rh-cellrow-heaviest { background: color-mix(in srgb, var(--accent-purple) 8%, transparent); box-shadow: inset 2px 0 0 0 var(--accent-purple); }
+/* A cell that is BOTH gets both edges (primary left, purple right). */
+.rh-cellrow-slowest.rh-cellrow-heaviest { box-shadow: inset 2px 0 0 0 var(--accent-primary), inset -2px 0 0 0 var(--accent-purple); }
+
+.rh-cell-flag-heavy { color: var(--accent-purple); font-weight: 700; }
+
+.rh-cell-dur {
+  flex: 0 0 auto;
+  min-width: 44px;
+  text-align: right;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* SQL result shape (rows×cols·size) as a pill, sitting just left of the
+   right-pinned duration. Pill styling sets it apart from the loose duration
+   text and keeps the row scannable. */
+.rh-cell-shape {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  white-space: nowrap;
+  background: var(--surface-4);
+  border: 1px solid var(--border-subtle, rgba(127, 127, 127, 0.2));
+  border-radius: 999px;
+  padding: 0 6px;
+  line-height: 14px;
+}
+.rh-cellrow-error .rh-cell-badge { color: var(--accent-danger); }
+/* Error marker on a failed cell row — small ⚠ that carries the persisted error
+   as its tooltip (see run_cells[].error). Sits right after the badge. */
+.rh-cell-err {
+  flex: 0 0 auto;
+  color: var(--accent-danger);
+  font-size: 9px;
+  line-height: 1;
+  cursor: help;
+}
+.rh-status { flex: 0 0 auto; width: 11px; text-align: center; font-weight: 700; font-size: 10px; }
+.rh-status-success { color: var(--accent-success); }
+.rh-status-error { color: var(--accent-danger); }
+.rh-status-interrupted { color: var(--accent-warning); font-size: 11px; line-height: 1; }
+.rh-trigger {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+.rh-trigger-run_all { color: var(--accent-primary); }
+/* Reactive re-runs of dependent cells (Run dependents / auto-run) — amber to
+   match the dataflow-stale cue that triggers them. */
+.rh-trigger-reactive { color: var(--accent-warning); }
+.rh-cells { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; color: var(--text-tertiary); }
+.rh-note { color: var(--text-muted); }
+.rh-note-error { color: var(--accent-danger); }
+.rh-dur { flex: 0 0 auto; color: var(--text-secondary); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* Per-row delta vs the previous Run All (Run All mode only). Compact + tabular;
+   color from .rh-trend-slower / .rh-trend-faster. */
+.rh-row-delta {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+/* Param badge on a run row: a small accent-tinted tag + count ("🏷 2") marking
+   that the run had @param values. Fixed width so it never truncates; the full
+   label=value list is in the title tooltip and the expanded drill-down. Accent
+   color (not muted gray) so it's actually noticeable in the row. */
+.rh-param-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #6ea8fe);
+  background: color-mix(in srgb, var(--accent, #6ea8fe) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #6ea8fe) 32%, transparent);
+  border-radius: 4px;
+  padding: 0 4px;
+  line-height: 15px;
+  cursor: default;
+}
+.rh-param-badge svg { opacity: 0.85; }
+.rh-ago { flex: 0 0 auto; color: var(--text-muted); min-width: 42px; text-align: right; }
+
+/* Full param list inside the expanded run drill-down (has full panel width, so
+   values are read here rather than crammed into the row). */
+.rh-params-detail {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle, rgba(127, 127, 127, 0.18));
+}
+.rh-params-detail-title {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent, #6ea8fe);
+  margin-bottom: 4px;
+}
+/* The title doubles as the collapse toggle (collapsed by default). Reset the
+   button chrome so it keeps the small uppercase section-label look. */
+.rh-params-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 1px 2px;
+  margin: 0;
+  margin-bottom: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  border-radius: 4px;
+}
+.rh-params-detail-toggle[aria-expanded="true"] { margin-bottom: 4px; }
+.rh-params-detail-toggle:hover { color: var(--text-primary, inherit); }
+.rh-params-detail-toggle:focus-visible { outline: 2px solid var(--border-focus, #6ea8fe); outline-offset: 1px; }
+.rh-params-detail-count {
+  font-weight: 600;
+  opacity: 0.8;
+}
+.rh-params-detail-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+/* Run-level PARAMETERS list: accent-tinted border, accent-colored key on a
+   faint accent wash, primary-text value. The cell rows no longer carry param
+   chips, so this is the one place the run's params are listed. */
+.rh-param-kv {
+  display: inline-flex;
+  align-items: stretch;
+  font-size: 10px;
+  border-radius: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--accent, #6ea8fe) 30%, transparent);
+}
+.rh-param-kv-key {
+  padding: 1px 5px;
+  color: var(--accent, #6ea8fe);
+  background: color-mix(in srgb, var(--accent, #6ea8fe) 12%, transparent);
+}
+.rh-param-kv-val {
+  padding: 1px 5px;
+  color: var(--text-primary, inherit);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Single-cell scope drill-down: a lighter panel (no per-cell bars — just this
+   cell's result shape + params for the selected run). */
+.rh-celldetail-scoped { padding-top: 2px; }
+.rh-scoped-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.rh-scoped-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent, #6ea8fe);
+  flex: 0 0 auto;
+}
+
+/* Match the in-cell executing spinner (.cell-spinner) exactly for UI consistency:
+   border-strong ring with a warning top cap. */
+.nb-exec-spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent-warning);
+  border-radius: 50%;
+  animation: vm-spin 0.6s linear infinite;
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.sidebar-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-base);
+  font-weight: 600;  /* notebook name in bold: the semibold primary-name weight (.vm-item-name, .nb-tag-name) */
+}
+
+/* Notebook row: name + run-summary subline stacked in a growing column,
+   with the connection dot / tag / close controls kept in the outer flex row. */
+.sidebar-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sidebar-item-titlerow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sidebar-item-subline {
+  font-size: 10px;
+  /* Lifted from --text-muted (the dimmest) to --text-tertiary so the "Last run: …"
+     subline is readable while staying subordinate to the notebook name. */
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+/* Connected-VM subline on a notebook row: state dot · state · vm <id> · $cost.
+   A borderless button (opens the MicroVMs panel on click) styled to read like a
+   second subline under "Last run…". */
+.sidebar-item-vm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1.3;
+  /* Match the "Last run" subline: --text-tertiary so the vm spec line
+     (vm id · GB · vCPU · arch · state) is readable, not near-invisible. */
+  color: var(--text-tertiary);
+  max-width: 100%;
+  overflow: hidden;
+}
+.sidebar-item-vm:hover { color: var(--text-secondary); }
+.sidebar-item-vm:hover .sidebar-item-vm-id { text-decoration: underline; }
+/* State dot — reuses the MicroVMs panel vm-state-<state> color classes for the fill;
+   this class supplies the shape/size. */
+.sidebar-item-vm-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sidebar-item-vm-state { flex-shrink: 0; }
+.sidebar-item-vm-id { font-family: var(--font-mono); flex-shrink: 0; }
+.sidebar-item-vm-spec { flex-shrink: 0; white-space: nowrap; }
+.sidebar-item-vm-sep { color: var(--text-muted); flex-shrink: 0; }
+
+/* Session-cost pill in the notebook title row — reuses .vm-item-cost's green chip
+   look (from the MicroVMs panel) but slightly smaller/tighter to fit the narrow
+   sidebar row, sits at the right edge of the title row, and is clickable when the
+   session has a live VM to show there. */
+.sidebar-item-cost-pill {
+  flex-shrink: 0;
+  margin-left: 6px;
+  cursor: pointer;
+  padding: 1px 7px;
+  font-size: 10px;
+  border-radius: 8px;
+}
+.sidebar-item-cost-pill:hover {
+  background: var(--accent-primary-muted, var(--accent-primary-subtle));
+}
+/* Every VM behind this session has terminated — the MicroVMs panel has nothing to
+   show for it, so the pill is purely informational (breakdown still in the
+   tooltip): no pointer cursor, no hover affordance, no click handler. */
+.sidebar-item-cost-pill-static {
+  cursor: default;
+}
+.sidebar-item-cost-pill-static:hover {
+  background: none;
+}
+
+/* Notebooks-panel total-cost header — reuses the MicroVMs .vm-total-cost-bar look
+   but is clickable (opens the MicroVMs panel). */
+.sidebar-total-cost-bar { cursor: pointer; }
+.sidebar-total-cost-bar:hover { background: var(--surface-3); }
+
+.sidebar-item-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  padding: 2px;
+  margin-top: 2px;   /* align to the name's first line (open rows are top-aligned) */
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-item:hover .sidebar-item-close {
+  opacity: 1;
+}
+
+.sidebar-item-close:hover {
+  color: var(--accent-danger);
+  background: var(--accent-danger-subtle);
+}
+
+/* Delete (trash) — destructive; hidden until row hover, reddens on its own hover.
+   Shared by open rows and closed rows. */
+.sidebar-item-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  padding: 2px;
+  margin-top: 2px;   /* align to the name's first line (open rows are top-aligned) */
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+.sidebar-item:hover .sidebar-item-delete { opacity: 0.75; }
+.sidebar-item-delete:hover { opacity: 1; color: var(--accent-danger); background: var(--accent-danger-subtle); }
+
+/* Closed (DB-only) notebook rows — deliberately styled to read as "archived",
+   not just "quiet". A muted dot alone reads the same as a disconnected/suspended
+   VM on an OPEN notebook, so this uses three independent cues instead: a dashed
+   left border (open rows have a solid one when active, none otherwise), a subtly
+   different striped/tinted row background, and an archive-box icon in place of
+   the state dot (shape-based, not just color-based, so it still reads under any
+   theme or for color-blind users) plus a small "Archived" text badge. */
+.nb-row-closed {
+  opacity: 0.68;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-2) 0px, var(--surface-2) 8px,
+    transparent 8px, transparent 16px
+  );
+  border-left: 2px dashed var(--border-strong);
+  border-radius: 0;
+}
+.nb-row-closed:hover {
+  opacity: 1;
+  background: var(--surface-3);
+  border-left-color: var(--text-muted);
+}
+.sidebar-item-label-closed { color: var(--text-secondary); font-style: italic; }
+.nb-closed-spacer { display: inline-block; width: 16px; flex: 0 0 auto; }
+.sidebar-item-archive-icon {
+  flex: 0 0 auto;
+  margin-top: 3px;   /* align to the name's first line, like the open-row status dot */
+  color: var(--text-muted);
+}
+.nb-row-closed:hover .sidebar-item-archive-icon { color: var(--text-secondary); }
+.sidebar-item-closed-badge {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.4;
+}
+.sidebar-item-reopen {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-sm);
+  padding: 1px 7px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+.sidebar-item-closed:hover .sidebar-item-reopen { opacity: 1; }
+.sidebar-item-reopen:hover { background: var(--accent-primary-subtle); }
+.sidebar-item-reopen:disabled { opacity: 1; cursor: default; }
+
+/* Reopening state: instant feedback while the async reopen (fetch + VM launch +
+   restore) runs, so the click clearly registered and the row can't be re-clicked. */
+.sidebar-item-reopening { cursor: default; }
+.sidebar-item-reopening .sidebar-item-subline { color: var(--accent-primary); }
+.sidebar-item-spinner {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin: 0 3px;  /* align with the 16px dot/spacer slot */
+  border: 2px solid var(--accent-primary-muted);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.sidebar-rename-input {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  padding: 2px 6px;
+  outline: none;
+  box-shadow: var(--shadow-glow-blue);
+}
+
+/* File items */
+.sidebar-file-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+  padding-left: 20px;
+}
+
+.sidebar-file-item:hover {
+  background: var(--accent-primary-subtle);
+}
+
+.sidebar-file-item:hover .sidebar-file-delete {
+  opacity: 1;
+}
+
+/* S3 data-source folder tree */
+.ds-tree-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition-fast);
+}
+.ds-tree-folder:hover { background: var(--accent-primary-subtle); color: var(--text-primary); }
+.ds-tree-chevron {
+  width: 10px;
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: inline-block;
+}
+.ds-tree-folder-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-tree-folder-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.sidebar-file-icon {
+  font-size: var(--font-size-base);
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-file-name {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}
+
+.sidebar-file-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* "Iceberg" pill on an S3 Tables row — marks Apache Iceberg / S3 Tables tables
+   distinctly from plain Athena tables (they share the Athena group, Option B). */
+.ds-iceberg-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ds-iceberg, #38bdf8);
+  background: color-mix(in srgb, var(--ds-iceberg, #38bdf8) 16%, transparent);
+  vertical-align: middle;
+}
+
+.sidebar-file-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-file-delete:hover {
+  color: var(--accent-danger);
+  background: var(--accent-danger-subtle);
+}
+
+/* The endpoint mode pill sits on its OWN line below the endpoint name (endpoint
+   names are long and would clip an inline badge off the panel's right edge). This
+   wrapper gives it its own row and lets it shrink-to-fit the badge. */
+.ds-ep-badge-line {
+  display: flex;
+  margin-top: 2px;
+}
+
+/* Endpoint mode pill (Serverless vs Instance) — mirrors .ds-iceberg-badge sizing so
+   the two read as the same class of at-a-glance row marker. On its own line (see
+   .ds-ep-badge-line) it needs no left margin; it shrink-wraps the text and the
+   instance-type pill can ellipsis if the type ever gets long. */
+.ds-ep-badge {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+/* Serverless = calm green ($0 idle). Instance = amber (bills continuously). */
+.ds-ep-badge-serverless {
+  color: #16a34a;
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+}
+/* Instance badge is now just the word "Instance" (the instance type moved to the
+   meta line), so it shares the base .ds-ep-badge uppercase/letter-spacing treatment
+   — identical shape to the "Serverless" pill, only the color differs. */
+.ds-ep-badge-instance {
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+
+/* Stop/Start action buttons on an instance-endpoint row — same reveal-on-hover
+   treatment as the delete button, but neutral (non-danger) since they're reversible. */
+.sidebar-file-action {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  padding: 2px 3px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1;
+}
+.sidebar-file-item:hover .sidebar-file-action { opacity: 1; }
+.sidebar-file-action:hover {
+  color: var(--accent-primary, #3b82f6);
+  background: var(--bg-hover, rgba(127,127,127,0.12));
+}
+
+/* In-flight action spinner on a Data Catalog row (delete / stop / start). Always
+   visible (not hover-gated) and sized to sit in the same slot as the action buttons,
+   so the row reads as "working…" until its real state settles. */
+.ds-row-spinner {
+  opacity: 1;
+  margin: 0 4px;
+}
+
+.sidebar-empty {
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  line-height: var(--line-height-normal);
+}
+
+/* Shared panel empty / loading / error state (PanelState.jsx) */
+.panel-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  color: var(--text-tertiary);
+  /* Own the typography so the empty state renders identically regardless of the
+     wrapping container. The Logs panel sets a monospace font + 11px on
+     .logs-container, which PanelState would otherwise inherit — making its text
+     look larger/heavier than the same state in Terminal and Intel. */
+  font-family: var(--font-sans);
+}
+.panel-state-icon {
+  display: inline-flex;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.panel-state-icon svg { width: 24px; height: 24px; }
+.panel-state-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+  max-width: 220px;
+}
+.panel-state-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  max-width: 220px;
+}
+.panel-state-error .panel-state-message { color: var(--accent-danger); }
+.panel-state-action {
+  margin-top: var(--space-1);
+  padding: 4px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.panel-state-action:hover { background: var(--accent-primary-muted); }
+.panel-state-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: vm-spin 0.7s linear infinite;
+}
+
+/* Sample items (Samples panel rows: <button class="sidebar-item sidebar-sample-item">).
+   Resets only the <button> chrome .sidebar-item doesn't set; hover/active come from
+   .sidebar-item (base = ember, theme-light.css = light/dark). */
+.sidebar-sample-item {
+  cursor: pointer;
+  background: none;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  font-family: inherit;
+  line-height: inherit;
+  text-align: left;
+  min-height: 0;  /* a flex-item <button> defaults to auto; rows are 0 (light/dark set 28px) */
+}
+
+.sidebar-sample-item:hover {
+  background: var(--accent-primary-subtle);
+}
+
+.sidebar-subheader {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  /* Section/group header labels in the highlight colour (colour only), the same
+     token as the VM card's .vm-section-title / .vm-session-notebook. */
+  color: var(--accent-primary);
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-subheader-toggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: color var(--transition-fast);
+}
+
+.sidebar-subheader-toggle:hover {
+  color: var(--accent-primary);
+}
+
+.sidebar-subheader-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 8px);
+  margin-left: auto;
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.2px;
+}
+
+/* Inline refresh spinner in a DataSources group header. Replaces the old full-width
+   "Loading..." row that caused the tree to jump on every discovery refresh. The
+   `margin-left:auto` pushes it to the right edge when the group has NO count bubble
+   (empty group); when a count IS present it already claimed the free space, so this
+   auto collapses and the spinner just trails the count with the flex gap. */
+.sidebar-subheader-spinner {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-left: auto;
+  border: 2px solid var(--accent-primary-muted);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+/* When a count bubble precedes the spinner, the count owns the auto-margin, so the
+   spinner should NOT also grab remaining space — keep it tight to the count. */
+.sidebar-subheader-count + .sidebar-subheader-spinner {
+  margin-left: 2px;
+}
+
+.sidebar-subheader-chevron {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-secondary);
+  margin-left: 6px;
+}
+
+.sidebar-empty-inline {
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: var(--line-height-normal);
+  padding-left: 20px;
+}
+
+.sidebar-load-samples-pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 12px;
+  font-size: 11px;
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  vertical-align: middle;
+}
+
+.sidebar-load-samples-pill:hover {
+  background: var(--accent-primary-muted);
+  color: var(--accent-primary-hover);
+}
+
+.sidebar-subheader-hint {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ===== Packages Panel ===== */
+.pkg-sidebar-install {
+  display: flex;
+  gap: 4px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pkg-sidebar-input {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.pkg-sidebar-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.pkg-sidebar-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Version picker — a compact select beside the name field. Fixed, narrow width so
+   the name input keeps the room; monospace so version numbers align. */
+.pkg-sidebar-version-select {
+  flex: 0 0 auto;
+  width: 84px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  padding: 5px 4px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.pkg-sidebar-version-select:focus { border-color: var(--accent-primary); }
+.pkg-sidebar-version-select:hover:not(:disabled) { border-color: var(--text-muted); }
+.pkg-sidebar-version-select:disabled { opacity: 0.5; cursor: default; }
+/* Signal a pinned (non-latest) selection with the accent color. */
+.pkg-sidebar-version-select.pinned { color: var(--accent-primary); border-color: var(--accent-primary-muted); }
+
+.pkg-sidebar-btn {
+  background: var(--accent-primary);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--transition-fast);
+}
+
+.pkg-sidebar-btn:hover { opacity: 0.85; }
+.pkg-sidebar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pkg-sidebar-msg {
+  padding: 4px var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.pkg-msg-success { color: var(--accent-success); }
+.pkg-msg-error { color: var(--accent-danger); }
+.pkg-msg-installing { color: var(--accent-primary); }
+
+/* Failed install with pip output: message + dismiss, then a Details expander. */
+.pkg-msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.pkg-msg-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pkg-msg-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 3px);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.pkg-msg-dismiss:hover { opacity: 1; background: var(--fill-hover, rgba(127, 127, 127, 0.15)); }
+.pkg-msg-dismiss:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.pkg-msg-details { margin-top: 4px; }
+.pkg-msg-details > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.pkg-msg-details > summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.pkg-msg-details > pre {
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 3px);
+  user-select: text;
+}
+
+.pkg-sidebar-filter {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+/* Text filter: takes the free width; anchor for its clear (✕) button. */
+.pkg-filter-field {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+.pkg-filter-field .outline-search-clear { right: 5px; }
+/* All / User installed (n): the shared filter pills (FilterPills, .outline-filter-chip
+   look, same as the Outline type filter), right of the textbox and vertically
+   centred on it. Never wraps or shrinks: the textbox gives up the width instead. */
+.pkg-scope-pills {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pkg-sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 4px var(--space-3);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+  gap: 4px;
+  position: relative;
+}
+
+.pkg-sidebar-item:hover {
+  background: var(--accent-primary-subtle);
+}
+
+.pkg-sidebar-item.pkg-user-installed {
+  border-left: 2px solid var(--accent-success);
+  padding-left: calc(var(--space-3) - 2px);
+}
+
+.pkg-sidebar-name {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.pkg-user-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-success);
+  background: var(--accent-success-subtle);
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  margin-left: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* A package the last restore could not re-install (restore report). Status colour
+   only on the 3 px left accent; the state and the pip reason wrap in full below the
+   name. Base rule serves ember, light and dark (theme tokens). */
+.pkg-sidebar-item.pkg-restore-failed {
+  align-items: flex-start;
+  border-left: 3px solid var(--accent-danger);
+  padding-left: calc(var(--space-3) - 3px);
+}
+.pkg-restore-failed .pkg-sidebar-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.pkg-restore-failed-note {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.pkg-restore-failed-reason {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.pkg-sidebar-version {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  letter-spacing: -0.2px;
+}
+
+.pkg-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.pkg-sidebar-item:hover .pkg-actions {
+  opacity: 1;
+}
+
+.pkg-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all var(--transition-fast);
+}
+
+.pkg-import-btn {
+  color: var(--accent-primary);
+}
+
+.pkg-import-btn:hover {
+  background: var(--accent-primary-subtle);
+}
+
+.pkg-uninstall-btn {
+  color: var(--accent-danger);
+}
+
+.pkg-uninstall-btn:hover {
+  background: var(--accent-danger-subtle);
+}
+
+.pkg-view-toggle {
+  font-size: 14px !important;
+  font-weight: bold;
+}
+
+.pkg-view-toggle.active {
+  color: var(--accent-primary);
+}
+
+.pkg-group {
+  margin-bottom: 4px;
+}
+
+.pkg-group-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-primary);  /* category header: highlight colour (see .sidebar-subheader) */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px var(--space-3) 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4px;
+}
+
+.pkg-group-header:first-child {
+  border-top: none;
+  margin-top: 0;
+}
+
+.pkg-group-count {
+  font-size: 9px;
+  color: var(--text-muted);
+  background: var(--surface-3);
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+}
+
+/* ===== MicroVM Panel ===== */
+.vm-item {
+  margin: var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+/* Active card = the VM attached to the current notebook. Reads as a distinct,
+   elevated "selected" card (dark-UI convention: lift by lightening the surface +
+   a soft accent glow, not just a border). Layered box-shadow:
+     1) inset 3px accent left-edge bar (identity stripe, no layout shift),
+     2) 1px accent ring (crisp selection edge),
+     3) outer accent glow (depth / focus),
+     4) subtle drop for elevation off the panel. */
+.vm-item-active {
+  border-color: var(--accent-primary-muted);
+  background: linear-gradient(
+    180deg,
+    var(--accent-primary-subtle) 0%,
+    var(--surface-2) 42%,
+    var(--surface-2) 100%
+  );
+  box-shadow:
+    inset 3px 0 0 0 var(--accent-primary),
+    0 0 0 1px var(--accent-primary-muted),
+    0 0 18px -2px var(--accent-primary-subtle),
+    0 4px 14px -6px rgba(0, 0, 0, 0.55);
+}
+
+/* Header row of the active card blends into the accent-tinted top so the whole
+   card feels like one cohesive selected surface (and stays visible on hover). */
+.vm-item-active .vm-item-row,
+.vm-item-active .vm-item-row:hover {
+  background: transparent;
+}
+
+/* Make the current VM's name read as primary (it's the active one). */
+.vm-item-active .vm-item-name {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.vm-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px var(--space-3);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.vm-item-row:hover {
+  background: var(--surface-3);
+}
+
+.vm-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.vm-state-running { background: var(--accent-success); box-shadow: 0 0 4px var(--accent-success); }
+.vm-state-suspended { background: var(--accent-warning); }
+.vm-state-terminated { background: var(--text-muted); }
+.vm-state-pending { background: var(--accent-purple); animation: glow 1.5s infinite; }
+.vm-state-unknown { background: var(--text-muted); }
+
+.vm-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.vm-item-name {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vm-item-meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.vm-meta-sep {
+  opacity: 0.4;
+}
+
+.vm-item-cost {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  /* Cost pill — a clearly-visible green-tinted chip (green = money/compute, matching
+     the running-state + compute-cost accents used elsewhere) so the per-VM cost reads
+     as a distinct token, not faint loose text. */
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 10px;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-subtle);
+  line-height: 1.3;
+}
+
+.vm-detail {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  background: var(--surface-0);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Tab bar of the expanded VM card (Overview / Cost / Resources). The look comes
+   from the shared segmented-tab rules above (.rh-metric-tabs / .rh-metric-tab);
+   only layout lives here. On a narrow panel the bar scrolls horizontally instead
+   of wrapping or overflowing. */
+.vm-detail-tabs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vm-detail-tabs::-webkit-scrollbar { display: none; }
+.vm-detail-tab {
+  flex: 0 0 auto;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.vm-detail-tab:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+/* One tab's content — the same card box the stacked sections used. */
+.vm-detail-panel {
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0 0;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+.vm-detail-panel:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+/* Long value (session id): one line with CSS ellipsis + a small copy button. */
+.vm-detail-value-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  margin-left: var(--space-2);
+}
+.vm-detail-row:has(> .vm-detail-value-wrap) > .vm-detail-label { flex-shrink: 0; white-space: nowrap; }
+.vm-detail-value-ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+.vm-copy-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.vm-copy-btn:hover { color: var(--text-primary); background: var(--surface-3); border-color: var(--border-subtle); }
+.vm-copy-btn:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.vm-copy-btn.is-copied { color: var(--accent-success); }
+.vm-copy-feedback {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-success);
+}
+
+/* VM card type scale (user feedback UF3): the side panels' tokens. Body tier =
+   --font-size-sm in the UI font (labels AND values; numbers tabular), section
+   header = the .sidebar-subheader tier, caption (rate lines, chart text, "VM
+   lifetime") = the Notebooks panel's sub-line (.sidebar-item-subline: 10px,
+   --text-tertiary).
+   Monospace only for identifiers (Session id, image names: .vm-detail-value-id),
+   as the app does for ids elsewhere (.sidebar-item-vm-id, .var-name). */
+.vm-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: var(--font-size-sm);
+}
+.vm-detail-label {
+  color: var(--text-secondary);
+}
+.vm-detail-value {
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  word-break: break-all;
+}
+code.vm-detail-value,
+.vm-detail-value.vm-detail-value-id { font-family: var(--font-mono); }
+
+.vm-item-warning {
+  border: 1px solid var(--accent-danger);
+  border-radius: 6px;
+}
+
+.vm-item-critical {
+  border: 1px solid var(--accent-danger);
+  border-radius: 6px;
+  animation: pulse-border-red 1s ease-in-out infinite;
+}
+
+/* VM linked to a CLOSED notebook — still live (suspended in the background,
+   still billing) but nobody has it open. Reuses the same "archived" visual
+   language as the closed notebook row in the Notebooks panel (dashed edge +
+   diagonal stripe) so the two are recognizable as the same concept, distinct
+   from a plain "Unattached" VM (which has no notebook link at all and gets its
+   own red treatment further down). */
+.vm-item-closed-nb {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-1) 0px, var(--surface-1) 8px,
+    var(--surface-2) 8px, var(--surface-2) 16px
+  );
+}
+.vm-item-closed-nb .vm-item-row:hover { background: var(--surface-3); }
+.vm-item-closed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: 1px 5px 1px 4px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.vm-detail-closed-nb {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* UNATTACHED warm-pool spare: a VM with no open tab, no notebook link, and no
+   name — a pre-booted spare the Pool Manager vends on launch. These should
+   RECEDE, not pop: a spare is idle inventory, less important than a VM a user is
+   actually working in. So this is a FADED treatment — dimmed opacity + a muted
+   gray left border + a quiet gray badge — NOT an accent highlight (which wrongly
+   drew the eye to them) and NOT the diagonal-stripe treatment used for
+   closed-notebook rows. The badge still names them so they read at a glance. */
+.vm-item-unattached {
+  border-left: 2px solid var(--border-default);
+}
+/* Pool-spare rows: name + meta render like any live VM row (muted text made the IDs
+   hard to read). The STATE DOT is neutral gray with no glow — same as light/dark —
+   so only real VMs carry a colored status; a spare is always idle inventory. They're
+   also told apart by the gray left border above and the "Pool spare" badge. */
+.vm-item-unattached .vm-state-dot {
+  background: var(--dot-neutral, #8e8e93);
+  box-shadow: none;
+  animation: none;
+}
+.vm-item-unattached-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  background: var(--surface-4);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 1px 5px 1px 4px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.vm-countdown-warning {
+  /* Amber under 30 min (red under 10 min, below); the row also says "ending soon". */
+  color: var(--accent-warning) !important;
+  font-weight: 600;
+}
+
+.vm-countdown-critical {
+  color: var(--accent-danger) !important;
+  font-weight: 700;
+  animation: pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes pulse-border-red {
+  0%, 100% { border-color: var(--accent-danger); box-shadow: 0 0 4px var(--accent-danger); }
+  50% { border-color: transparent; box-shadow: none; }
+}
+
+.vm-detail-unattached {
+  color: var(--accent-danger);
+  font-style: italic;
+  font-family: inherit;
+}
+
+.vm-detail-linked {
+  color: var(--accent-primary);  /* notebook name: accent, like .vm-session-notebook */
+  font-weight: 600;
+  font-family: inherit;
+}
+
+/* Cost tab: flat rows (vm-card-regroup). A small decorative colored DIAMOND (the
+   label carries the meaning; round dots are reserved for VM status), the label +
+   a short qualifier, a muted rate line under it, and the amount right-aligned.
+   No boxes, no Subtotal rows. */
+.vm-cost-line {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 4px 0;
+  font-size: var(--font-size-sm);
+  min-width: 0;
+}
+.vm-cost-dot {
+  flex: 0 0 8px;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 1px;
+  transform: rotate(45deg) scale(0.9);
+  background: var(--vm-cost-c, var(--text-secondary));
+}
+.vm-cost-line-compute { --vm-cost-c: var(--accent-success); }
+.vm-cost-line-reads { --vm-cost-c: var(--accent-primary); }
+.vm-cost-line-storage { --vm-cost-c: var(--accent-warning); }
+.vm-cost-line-writes { --vm-cost-c: var(--accent-purple); }
+.vm-cost-line-burst { --vm-cost-c: var(--accent-danger); }
+.vm-cost-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vm-cost-label {
+  color: var(--text-primary);
+  white-space: normal;
+  overflow-wrap: normal;
+}
+.vm-cost-qual { color: var(--text-secondary); }
+.vm-cost-rate {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.vm-cost-amount {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: right;
+}
+/* Overview (Notebook / Lifecycle / Checkpoint) and Resources (History /
+   Environment): flat sections (no sub-card, no accent bar), separated by a
+   hairline and headed by .vm-section-title. */
+.vm-res-section {
+  padding: 6px 0 2px;
+  margin-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+  background: transparent;
+  min-width: 0;
+}
+.vm-runtime { min-width: 0; }
+/* Same tier as the side panels' section headers (.sidebar-subheader); coloured
+   with the theme accent, like the VM panel's notebook name (.vm-session-notebook). */
+.vm-section-title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-primary);
+  margin-bottom: 2px;
+}
+/* Collapsible section heading: the same blue uppercase title as a button, with
+   the app's rotating chevron (.rh-chevron) tinted to the title colour. */
+.vm-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 1px 2px 1px 0;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.vm-section-toggle .rh-chevron { color: currentColor; }
+.vm-section-toggle:hover { color: var(--accent-primary-hover, var(--accent-primary)); }
+.vm-section-toggle:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.vm-section-toggle[aria-expanded="false"] { margin-bottom: 0; }
+/* "Needs attention" value (unsaved changes, changed since the last save). The
+   text itself says so; the colour is an extra cue. */
+.vm-detail-value.vm-state-attn {
+  color: var(--accent-warning);
+  font-weight: 600;
+}
+.vm-image-older {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-warning);
+  background: var(--accent-warning-subtle);
+  border: 1px solid var(--accent-warning);
+  white-space: nowrap;
+  cursor: help;
+}
+.vm-countdown-at {
+  /* text-secondary: text-tertiary is under 4.5:1 on the ember purple band. Light and
+     dark override this to text-tertiary in theme-light.css (≥ 4.5:1 there). */
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+/* Ember: lift --accent-danger (#ff3333) for the small countdown text. */
+:root[data-theme="ember"] .vm-overview-lifecycle .vm-countdown-critical {
+  color: color-mix(in srgb, var(--accent-danger) 75%, #ffffff) !important;
+}
+/* State / timing / Runtime bands: labels stay on one line with a gap before the
+   value; meaningful values (countdown + its text cue, checkpoint, variables, time,
+   origin) wrap instead of truncating. Only the image name truncates with CSS
+   ellipsis + a title tooltip; the user-installed package list wraps below its
+   label (.vm-detail-row-stacked). */
+/* A value that doesn't fit beside its label moves to its own full-width line
+   (row wraps) and breaks only at spaces, never mid-word. */
+:is(.vm-overview-notebook, .vm-overview-lifecycle, .vm-overview-checkpoint, .vm-runtime) .vm-detail-row {
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+:is(.vm-overview-notebook, .vm-overview-lifecycle, .vm-overview-checkpoint, .vm-runtime) .vm-detail-row > .vm-detail-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+:is(.vm-overview-notebook, .vm-overview-lifecycle, .vm-overview-checkpoint, .vm-runtime) .vm-detail-value { word-break: normal; }
+
+/* Label on its own line, the full value below it, left-aligned and wrapping
+   (comma-separated list of user-installed packages). */
+.vm-detail-row.vm-detail-row-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.vm-detail-row-stacked > .vm-detail-value-list {
+  text-align: left;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;   /* one very long name still breaks rather than overflowing */
+  line-height: 1.45;
+}
+/* Collapsed: at most 2 lines; the toggle below shows the rest. */
+.vm-detail-row-stacked > .vm-detail-value-list.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.vm-list-toggle {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+.vm-list-toggle:hover { text-decoration: underline; }
+.vm-list-toggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+.vm-detail-value-wrapline {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: normal;
+  text-align: right;
+}
+/* A link-styled button inside a value (e.g. "3 untracked" → Variables panel). */
+.vm-link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.vm-link-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vm-countdown-critical { animation: none; }
+}
+
+.vm-cost-hint {
+  font-weight: 400;
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.vm-detail-total {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  font-weight: 600;
+}
+
+.vm-detail-total .vm-detail-value {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+/* Fill gradients, also used by the notebook's floating live bar (ExecutionHud). */
+.vm-metric-cpu {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-purple));
+}
+
+.vm-metric-mem {
+  background: linear-gradient(90deg, var(--entity-data), var(--entity-number));
+}
+
+.vm-metric-disk {
+  background: linear-gradient(90deg, var(--entity-number), var(--entity-bool));
+}
+
+/* Resources > History (VmMetricsHistory.jsx, vm-run-chart): ONE chart whose x
+   axis is the run groups side by side (idle/suspended time removed). Each group
+   is a flex item sized by duration with a minimum width; a 1 px divider
+   separates groups. Per-group inline SVG (viewBox 0..100 × 0..72,
+   preserveAspectRatio=none, non-scaling strokes); gridlines, direct labels and
+   the tooltip are HTML so they stay crisp. Then a legend and 3 bullet bars. */
+.vm-history {
+  --vm-history-gutter: 26px;
+  --vm-history-plot-h: 72px;
+  /* Inset above/below the plot so dots at 0 % / 100 % are not cut. */
+  --vm-history-pad: 4px;
+  /* Fallback only: VmMetricsHistory sets it from the label font so the compact
+     time label ('12:59') always fits a group (≈ 4–5 groups per 141 px plot at 240). */
+  --vm-run-min-w: 30px;
+  min-width: 0;
+}
+.vm-history-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+.vm-history-head .vm-section-title { margin-bottom: 0; }
+.vm-history-meta {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  overflow-wrap: normal;
+}
+.vm-history-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.vm-history-refresh:hover:not(:disabled) { color: var(--text-primary); border-color: var(--border-strong); }
+.vm-history-refresh:disabled { opacity: 0.5; cursor: default; }
+.vm-history-refresh:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+.vm-history-empty {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+.vm-history-note {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.vm-history-chart {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+  min-width: 0;
+}
+.vm-history-gutter {
+  flex: 0 0 var(--vm-history-gutter);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: var(--vm-history-plot-h);
+  margin-top: calc(var(--vm-history-pad) - 5px);
+}
+.vm-history-ylabel {
+  font-size: 10px;
+  line-height: 10px;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--text-secondary);
+}
+.vm-history-ylabel:last-child { transform: translateY(5px); }
+.vm-history-plot {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Horizontal guides across the plot area (not the label row). */
+.vm-history-hline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.vm-history-limit { top: var(--vm-history-pad); border-top: 1px dashed var(--border-strong); }
+.vm-history-limit.is-danger { border-top-color: var(--accent-danger); }
+.vm-history-grid { top: calc(var(--vm-history-pad) + var(--vm-history-plot-h) / 2); border-top: 1px solid var(--border-subtle); }
+.vm-history-base { top: calc(var(--vm-history-pad) + var(--vm-history-plot-h) - 1px); border-top: 1px solid var(--border-strong); }
+.vm-history-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+  padding-top: var(--vm-history-pad);
+  overscroll-behavior-x: contain;
+}
+.vm-history-groups {
+  display: flex;
+  width: 100%;
+}
+.vm-history-group {
+  position: relative;
+  flex: 1 1 0px;
+  min-width: var(--vm-run-min-w);
+  box-sizing: border-box;
+  outline: none;
+}
+.vm-history-group + .vm-history-group { border-left: 1px solid var(--border-strong); }
+.vm-history-group:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+.vm-history-area {
+  position: relative;
+  /* Side inset keeps edge dots inside their group (no scroll overflow). */
+  margin: 0 3px;
+  height: var(--vm-history-plot-h);
+  touch-action: pan-x;
+}
+.vm-history-svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.vm-history-cpu-area { fill: var(--accent-primary); fill-opacity: 0.25; stroke: none; }
+.vm-history-cpu-line,
+.vm-history-mem-line,
+.vm-history-dot { fill: none; stroke-linejoin: round; }
+.vm-history-cpu-line { stroke: var(--accent-primary); stroke-width: 1.5; }
+.vm-history-mem-line { stroke: var(--entity-data); stroke-width: 2; }
+.vm-history-dot { stroke-width: 4; }
+.vm-history-dot-cpu { stroke: var(--accent-primary); }
+.vm-history-dot-mem { stroke: var(--entity-data); }
+/* Direct labels: the CPU peak (dot + value) and the last memory point (dot). */
+.vm-history-peak,
+.vm-history-memlast {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.vm-history-peak-dot,
+.vm-history-memlast::before {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  content: '';
+}
+.vm-history-peak-dot { background: var(--accent-primary); }
+.vm-history-memlast::before { background: var(--entity-data); }
+.vm-history-peak-label {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+.vm-history-peak-label.is-offscreen { visibility: hidden; }
+.vm-history-peak.is-left .vm-history-peak-label { left: auto; right: 4px; }
+.vm-history-peak.is-below .vm-history-peak-label { bottom: auto; top: 3px; }
+/* Burst scale, peak ON the top line: the multiple ("4×") is already the axis label and
+   sits under the top reference label ("8 GB · 4× · out-of-memory limit"), so the extra
+   value text collided with it. Keep the dot; the value is in the point tooltip, the
+   group tooltip and the Peak CPU bar. */
+.vm-history-peak.is-on-axis .vm-history-peak-label { display: none; }
+/* Under-group label: time / trigger, wraps between words. VmMetricsHistory picks
+   the widest form that fits ('07:12 PM Run All' → '7:12 Run All' → '7:12'), so
+   every group has visible text; the full text is in the tooltip / aria-label. */
+.vm-history-glabel {
+  padding: 2px 1px 0 2px;
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--text-secondary);
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow: hidden;
+}
+.vm-history-gword { white-space: nowrap; }
+.vm-history-errdot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 2px;
+  border-radius: 50%;
+  background: var(--accent-danger);
+  vertical-align: 1px;
+}
+/* Right-edge end labels (normal width only). */
+/* One grid cell holds both labels (offset by margin-top), so the column is as
+   wide as its widest label and nothing overflows. */
+.vm-history-ends {
+  flex: 0 0 auto;
+  display: grid;
+  margin-top: var(--vm-history-pad);
+  height: var(--vm-history-plot-h);
+}
+.vm-history-end {
+  grid-area: 1 / 1;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  font-size: 10px;
+  line-height: 12px;
+  white-space: nowrap;
+}
+.vm-history-end-value { font-weight: 600; }
+.vm-history-end-mem .vm-history-end-value { color: var(--entity-data); }
+.vm-history-end-cpu .vm-history-end-value { color: var(--accent-primary); }
+.vm-history-end-sub { color: var(--text-secondary); }
+.vm-history-tooltip {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-1, var(--bg-primary));
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 3;
+}
+.vm-history-tooltip-point { font-weight: 600; }
+.vm-history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.vm-history-legend > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.vm-history-key {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 8px;
+  border-radius: 2px;
+}
+.vm-history-key-cpu { background: color-mix(in srgb, var(--accent-primary) 50%, transparent); border-top: 1.5px solid var(--accent-primary); box-sizing: border-box; }
+.vm-history-key-mem { height: 0; border-top: 2px solid var(--entity-data); border-radius: 0; }
+.vm-history-key-div { width: 0; height: 10px; border-left: 1px solid var(--border-strong); border-radius: 0; }
+/* Lifetime bullet bars: label · 8 px bar · value. */
+.vm-history-bars {
+  display: grid;
+  grid-template-columns: max-content minmax(24px, 1fr) max-content;
+  align-items: center;
+  gap: 3px 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+/* "VM lifetime" sub-header: styled by .vm-section-title (same as the other
+   section titles); this rule only places it in the bar grid. */
+.vm-history-bars-caption {
+  grid-column: 1 / -1;
+}
+.vm-history-bar-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: 0 8px;
+}
+.vm-history-bar-label { color: var(--text-secondary); white-space: nowrap; }
+.vm-history-bar-value { color: var(--text-primary); white-space: nowrap; text-align: right; }
+.vm-history-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+.vm-history-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+}
+.vm-history-bar-memory .vm-history-bar-fill { background: var(--entity-data); }
+.vm-history-bar-cpu .vm-history-bar-fill { background: var(--accent-primary); }
+.vm-history-bar-disk .vm-history-bar-fill { background: var(--accent-warning); }
+.vm-history-bar-fill.is-danger { background: var(--accent-danger) !important; }
+.vm-history-bar-tick {
+  position: absolute;
+  right: 0;
+  top: -3px;
+  bottom: -3px;
+  border-left: 1px solid var(--text-secondary);
+}
+/* Narrow card: label + value on one line, the bar on its own line under them. */
+.vm-history.is-narrow .vm-history-bars { grid-template-columns: 1fr max-content; }
+.vm-history.is-narrow .vm-history-bar-row { row-gap: 2px; }
+.vm-history.is-narrow .vm-history-bar { grid-column: 1 / -1; grid-row: 2; }
+/* vm-history-inset-card (user option B): the chart + its legend (or the empty /
+   loading / error state) sit in ONE subtle inset card, so the legend reads as the
+   chart's and not as part of the VM lifetime bars. Raised surface + hairline from
+   the theme tokens; this base rule serves light, dark and ember alike. No overflow
+   clipping: the run row scrolls inside its own scroller and the tooltip stays
+   visible. VmMetricsHistory measures the card's content box for narrow mode. */
+.vm-history-card {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--surface-3);
+  min-width: 0;
+  overflow: visible;
+}
+.vm-history-card > .vm-history-chart { margin-top: 0; }
+.vm-history-card + .vm-history-bars { margin-top: 12px; }
+/* vm-history-burst: when memory went above its tier (1x), the chart's scale grows to
+   2x or 4x of the tier and shows multiples. Memory above 1x is amber (warning = burst
+   billing) over a faint band; the 4x line is the out-of-memory limit (danger). None of
+   this renders for a VM that stayed within its tier. */
+.vm-history-gutter.is-multiples { display: block; position: relative; }
+.vm-history-gutter.is-multiples .vm-history-ylabel {
+  position: absolute;
+  right: 0;
+  top: calc(var(--f) * var(--vm-history-plot-h));
+}
+.vm-history-gutter.is-multiples .vm-history-ylabel:last-child { transform: none; }
+.vm-history-plot.is-burst { container: vmplot / inline-size; }
+.vm-history-ref { top: calc(var(--vm-history-pad) + var(--f) * var(--vm-history-plot-h)); }
+.vm-history-ref-base { border-top: 1px solid var(--text-secondary); }
+.vm-history-ref-grid { border-top: 1px solid var(--border-subtle); }
+.vm-history-ref-oom { border-top: 1px dashed var(--accent-danger); }
+.vm-history-reflabel {
+  position: absolute;
+  left: 3px;
+  z-index: 1;
+  top: calc(var(--vm-history-pad) + var(--f) * var(--vm-history-plot-h) - 13px);
+  padding: 0 3px;
+  border-radius: 2px;
+  font-size: 10px;
+  line-height: 12px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-3) 85%, transparent);
+}
+.vm-history-reflabel.is-below { top: calc(var(--vm-history-pad) + var(--f) * var(--vm-history-plot-h) + 2px); }
+.vm-history-reflabel-oom { color: var(--text-primary); } /* the line is danger; the text needs 4.5:1 in every theme */
+.vm-history-reflabel .is-short { display: none; }
+@container vmplot (max-width: 215px) {
+  .vm-history-reflabel .is-long { display: none; }
+  .vm-history-reflabel .is-short { display: inline; }
+}
+.vm-history-burst-band { fill: var(--accent-warning); fill-opacity: 0.12; stroke: none; }
+.vm-history-mem-line.is-burst { stroke: var(--accent-warning); }
+.vm-history-cpu-line.is-burst { stroke: var(--accent-warning); stroke-dasharray: 3 2; }
+.vm-history-key-burst { background: color-mix(in srgb, var(--accent-warning) 25%, transparent); border: 1px solid var(--accent-warning); box-sizing: border-box; }
+.vm-history-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* Lifetime bars on the 0-4x scale (peak above the tier): ticks at 1x and 2x, the part
+   above 1x amber, danger red only near the 4x limit (.is-danger on the whole fill). */
+.vm-history-bar-fill-burst {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--accent-warning);
+  border-radius: 0 2px 2px 0;
+}
+/* Burst rows have long values ('4.1 GB · 2.05× of 2 GB (burst)'): label + value on one
+   line (the value may wrap), the bar on its own line under them, at every width. */
+.vm-history-bars.is-stacked { grid-template-columns: max-content minmax(0, 1fr); }
+.vm-history.is-narrow .vm-history-bars.is-stacked { grid-template-columns: max-content minmax(0, 1fr); }
+.vm-history-bars.is-stacked .vm-history-bar-row { row-gap: 2px; }
+.vm-history-bars.is-stacked .vm-history-bar { grid-column: 1 / -1; grid-row: 2; }
+.vm-history-bars.is-stacked .vm-history-bar-value { white-space: normal; min-width: 0; }
+/* "Burst: 4.1 s billed above baseline" under the lifetime bars (burst-cost-time); wraps. */
+.vm-history-burst-note { grid-column: 1 / -1; color: var(--text-secondary); white-space: normal; overflow-wrap: anywhere; }
+.vm-history-bar-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-left: 1px solid var(--text-secondary);
+}
+.vm-detail-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.vm-total-cost-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px var(--space-3);
+  margin: 0 0 var(--space-1);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.vm-total-cost-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vm-total-cost-value {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  /* Match the per-VM cost pill (same green-tinted chip) so the total reads as the
+     same kind of token, just slightly larger/bolder as the summary figure. */
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 10px;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-subtle);
+  line-height: 1.3;
+}
+
+/* Sort control for the MicroVMs list — compact row above the VM entries. */
+.vm-sort-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-3) 6px;
+}
+
+.vm-sort-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vm-sort-select {
+  flex: 1;
+  min-width: 0;
+  /* Match the Variables panel's sort dropdown (.var-sort-select) for a
+     consistent sort-control font across sidebar panels: same --font-size-sm,
+     and no font-family override (inherit, as .var-sort-select does). */
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.vm-sort-select:hover { border-color: var(--border-default, var(--border-subtle)); }
+.vm-sort-select:focus-visible { outline: 1px solid var(--accent-primary); outline-offset: 1px; }
+
+/* Collapsible "Pool spares" section wrapping the warm-pool spare rows. */
+.vm-pool-spares-section {
+  margin-top: var(--space-1);
+}
+
+.vm-pool-spares-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px var(--space-3);
+  margin-bottom: var(--space-1);
+  background: var(--surface-2);
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.vm-pool-spares-header:hover { color: var(--text-primary); }
+.vm-pool-spares-header svg { flex-shrink: 0; }
+
+.vm-pool-spares-title { flex: 1; }
+
+/* Count bubble — identical treatment to .sidebar-panel-count / .env-section-count /
+   the DataSources section counts so every panel's count badge matches. */
+.vm-pool-spares-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 8px);
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.2px;
+}
+
+.vm-session-group {
+  margin-bottom: var(--space-2);
+}
+
+.vm-session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--space-3);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.vm-session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vm-session-notebook {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+}
+
+.vm-session-header-closed {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--surface-2) 0px, var(--surface-2) 8px,
+    var(--surface-3) 8px, var(--surface-3) 16px
+  );
+}
+.vm-session-header-closed .vm-session-notebook { color: var(--text-secondary); }
+
+.vm-session-cost {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.vm-mode-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+.vm-mode-eternal {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.vm-mode-checkpoint {
+  background: rgba(249, 168, 37, 0.15);
+  color: var(--accent-warning);
+}
+
+/* None (ephemeral) — muted/neutral: state is not persisted, so no accent color. */
+.vm-mode-none {
+  background: var(--surface-3, rgba(255, 255, 255, 0.06));
+  color: var(--text-muted);
+}
+
+.vm-action-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.vm-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vm-btn-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: vm-spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@keyframes vm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.vm-btn-attach {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.vm-btn-attach:hover:not(:disabled) {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.vm-btn-terminate {
+  background: var(--accent-danger-subtle);
+  color: var(--accent-danger);
+}
+
+.vm-btn-terminate:hover:not(:disabled) {
+  background: var(--accent-danger);
+  color: white;
+}
+
+.vm-btn-suspend {
+  background: rgba(249, 226, 175, 0.15);
+  color: var(--accent-warning, #f9e2af);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+.vm-btn-suspend-warn {
+  color: var(--accent-warning);
+  border-color: var(--accent-warning);
+  animation: pulse-subtle 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.vm-btn-suspend:hover:not(:disabled) {
+  background: var(--accent-warning-subtle);
+  color: var(--accent-warning);
+  border-color: var(--accent-warning);
+}
+
+/* ===== Variable Explorer (in sidebar) ===== */
+.var-item {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.var-item-row {
+  display: flex;
+  /* Wrap instead of squeezing: a long name (or name + badge) pushes the type /
+     shape onto the next line rather than being clipped (no truncation of names). */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.var-item-row:hover {
+  background: var(--surface-3);
+}
+
+.var-expand-icon {
+  color: var(--text-muted);
+  width: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.var-type-icon {
+  font-size: 11px;
+  width: 22px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.var-type-dataframe { background: var(--entity-code-subtle); color: var(--entity-code); }
+.var-type-collection { background: var(--entity-data-subtle); color: var(--entity-data); }
+.var-type-dict { background: var(--entity-markdown-subtle); color: var(--entity-markdown); }
+.var-type-number { background: var(--entity-number-subtle); color: var(--entity-number); }
+.var-type-string { background: var(--entity-string-subtle); color: var(--entity-string); }
+.var-type-bool { background: var(--entity-bool-subtle); color: var(--entity-bool); }
+.var-type-other { background: var(--surface-3); color: var(--text-muted); }
+
+.var-name {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+  /* Never clipped (every theme): the name keeps its full width when it fits and
+     wraps inside the row when it alone is wider than the panel. */
+  flex: 0 1 auto;
+  min-width: 0;
+  /* Room for the expand + type icons (12 + 22 + 2 gaps), so a long name stays
+     on the icons' line and wraps there instead of dropping to a line of its own. */
+  max-width: calc(100% - 46px);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.var-type {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.var-shape {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* Inline scalar value on a variable row (int/float/bool/str/None). Sits where
+   `.var-shape` would; truncates with an ellipsis so a long string never pushes the
+   row wide (the full value is in the title tooltip + the expanded detail). */
+.var-inline-value {
+  /* `.var-type` already carries `margin-left:auto`, so it + this value are pushed
+     to the right edge together; no extra auto-margin needed here (that would add a
+     gap between the type and the value). */
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* A truncated string value is a click target that opens the full value in the
+   detail modal — show it's interactive (link-colored, pointer, underline on hover)
+   so the user knows the "…" can be expanded. */
+.var-inline-value-clickable {
+  cursor: pointer;
+  color: var(--accent, var(--text-link, #6ea8fe));
+  opacity: 1;
+}
+.var-inline-value-clickable:hover {
+  text-decoration: underline;
+}
+
+.var-detail {
+  padding: var(--space-2) var(--space-3);
+  padding-left: 40px;
+  background: var(--surface-0);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.var-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  font-size: var(--font-size-xs);
+}
+
+.var-detail-label {
+  color: var(--text-muted);
+}
+
+.var-detail-value {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.var-detail-preview {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  overflow-x: auto;
+}
+
+.var-detail-preview pre {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.var-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.var-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+.var-action-btn svg { flex-shrink: 0; }
+
+.var-action-btn:hover {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border-color: var(--accent-primary);
+}
+
+/* Delete uses the shared trash icon + a danger accent on hover */
+.var-action-delete:hover {
+  background: var(--accent-danger);
+  border-color: var(--accent-danger);
+  color: var(--text-inverse);
+}
+
+/* Variable preview styles */
+
+.var-preview-number {
+  font-family: var(--font-mono);
+  color: var(--entity-number);
+}
+
+.var-preview-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.var-badge-true { background: rgba(166, 227, 161, 0.15); color: var(--accent-success); }
+.var-badge-false { background: rgba(243, 139, 168, 0.15); color: var(--accent-danger); }
+.var-badge-null { background: var(--surface-3); color: var(--text-muted); font-style: italic; }
+.var-badge-plot { background: var(--entity-code-subtle); color: var(--entity-code); }
+
+.var-preview-url a,
+.var-preview-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-primary);
+  word-break: break-all;
+}
+
+.var-path-dir { color: var(--text-muted); }
+.var-path-file { color: var(--text-primary); font-weight: 500; }
+
+.var-preview-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.var-preview-date-raw {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.var-preview-dict,
+.var-preview-list {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.var-dict-row,
+.var-list-item {
+  display: flex;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.var-dict-key { color: var(--entity-markdown); }
+.var-dict-val { color: var(--text-secondary); }
+.var-list-index { color: var(--text-muted); min-width: 16px; }
+.var-list-value { color: var(--text-secondary); }
+.var-dict-more,
+.var-list-more { color: var(--text-muted); font-style: italic; }
+
+.var-preview-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.var-color-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.var-color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+}
+
+.var-color-value {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+/* About Panel */
+.about-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  text-align: center;
+}
+
+/* Logo in a glowing gradient badge instead of a bare stroke icon. */
+.about-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: var(--space-3);
+  border-radius: 16px;
+  color: var(--accent-primary);
+  background: linear-gradient(145deg, rgba(137, 180, 250, 0.18), rgba(137, 180, 250, 0.04));
+  border: 1px solid rgba(137, 180, 250, 0.25);
+  box-shadow: 0 0 24px rgba(137, 180, 250, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.about-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1);
+  letter-spacing: -0.2px;
+}
+
+.about-subtitle {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 300px;
+}
+
+/* Feature pills that fill the space under the subtitle. */
+.about-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.about-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Info as a subtle card with hairline row dividers. */
+.about-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.about-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 12.5px;
+  padding: 9px 12px;
+}
+
+.about-row + .about-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.about-row-key {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.about-row-val {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-align: right;
+}
+
+.about-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: var(--space-4);
+}
+
+.about-team-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.about-team-name {
+  font-size: 15px;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent-primary), #b4befe);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.about-team-love {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.about-heart {
+  color: #f38ba8;
+  animation: about-heartbeat 1.6s ease-in-out infinite;
+}
+
+@keyframes about-heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.25); }
+  30% { transform: scale(1); }
+}
+
+.about-footer {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.about-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.about-github:hover {
+  background: var(--surface-4);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.12);
+}
+
+.about-legal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* DataSource insert choice popover */
+
+.sidebar-file-item {
+  position: relative;
+}
+
+.ds-insert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.ds-insert-python {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+.ds-insert-python:hover {
+  background: var(--accent-primary-muted);
+}
+
+.ds-insert-sql {
+  background: var(--entity-sql-subtle);
+  color: var(--entity-sql);
+}
+.ds-insert-sql:hover {
+  background: rgba(224, 108, 29, 0.3);
+}
+
+/* Inline insert actions: hidden at rest so rows stay clean, revealed only on row
+   hover / keyboard focus-within — the standard file-explorer reveal pattern.
+   Kept mounted (visibility, not display:none) so layout doesn't jump on hover. */
+/* Insert actions take ZERO width at rest so the file/table name gets the full
+   row — they collapse to width:0 (overflow hidden) and expand only on row hover /
+   focus-within. This reclaims the space the buttons used to permanently reserve
+   (which was truncating names). The chevron (SchemaExpander) and sparkle
+   (EntityDocBadge) remain in their normal trailing position. */
+.ds-insert-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.sidebar-file-item:hover .ds-insert-actions,
+.sidebar-file-item:focus-within .ds-insert-actions {
+  width: auto;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+  margin-left: 4px;
+}
+/* Rows are no longer click-to-insert (the buttons handle it) — default cursor,
+   but keep the subtle hover background so the row still reads as interactive. */
+.sidebar-ds-row { cursor: default; }
+.sidebar-ds-row:hover { background: var(--accent-primary-subtle); }
+
+/* Schema browser (expandable column list) */
+
+.sidebar-file-item:has(.ds-schema-panel) {
+  flex-wrap: wrap;
+}
+
+.ds-schema-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  transition: all 0.15s;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ds-schema-toggle:hover {
+  color: var(--accent-primary);
+  background: var(--surface-2);
+}
+
+.ds-schema-panel {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 4px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.ds-schema-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.ds-schema-loading {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.ds-schema-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ds-schema-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: background 0.1s;
+}
+
+.ds-schema-col:hover {
+  background: var(--surface-3);
+}
+
+.ds-col-name {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.ds-col-type {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--surface-3);
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.ds-col-type.ds-type-int,
+.ds-col-type.ds-type-float {
+  color: var(--accent-warning, #f9a825);
+  background: rgba(249, 168, 37, 0.12);
+}
+
+.ds-col-type.ds-type-string {
+  color: var(--accent-success, #00c9a7);
+  background: rgba(0, 201, 167, 0.12);
+}
+
+.ds-col-type.ds-type-date,
+.ds-col-type.ds-type-datetime {
+  color: var(--accent-primary, #7b61ff);
+  background: rgba(123, 97, 255, 0.12);
+}
+
+.ds-col-type.ds-type-boolean {
+  color: var(--accent-danger, #ef5350);
+  background: rgba(239, 83, 80, 0.12);
+}
+
+.ds-col-sample {
+  color: var(--text-muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+  opacity: 0.7;
+  margin-left: auto;
+}
+
+/* ===== Entity Doc Badge & Popover ===== */
+.ds-entity-doc-badge {
+  background: none;
+  border: none;
+  color: var(--accent-primary, #7b61ff);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.8;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.ds-entity-doc-badge:hover {
+  opacity: 1;
+  background: rgba(123, 97, 255, 0.12);
+}
+
+.ds-entity-popover {
+  position: absolute;
+  right: 6px;
+  top: 100%;
+  z-index: 100;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+  width: 260px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ds-entity-popover-header {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  word-break: break-all;
+}
+.ds-entity-popover-desc {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-style: italic;
+}
+.ds-entity-popover-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.ds-entity-flag {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.ds-entity-flag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.ds-entity-flag-text {
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.ds-entity-flag-more {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+  padding-left: 12px;
+}
+.ds-entity-popover-full {
+  width: 100%;
+  padding: 5px 0;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ds-entity-popover-full:hover {
+  background: rgba(123, 97, 255, 0.08);
+}
+
+/* Entity Doc Full Profile Modal */
+.ds-entity-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ds-entity-modal {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  width: min(1200px, 90vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.ds-entity-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  /* Tinted header bar + stronger accent underline so it reads clearly as the
+     modal's title bar, distinct from the body below. */
+  background: var(--accent-primary-subtle);
+  border-bottom: 1px solid var(--accent-primary-muted);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+/* Entity title (the source name) in the app's brand accent — matches the AI
+   Assistant chrome. Scoped to the header's direct <span> so the action buttons
+   keep their own muted color. */
+.ds-entity-modal-header > span {
+  color: var(--accent-primary);
+}
+.ds-entity-modal-header button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+.ds-entity-modal-header button:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+.ds-entity-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ds-entity-export-btn {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.ds-entity-export-label {
+  font-size: 9px;
+}
+.ds-entity-export-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ds-entity-export-btn:disabled:hover {
+  background: none;
+  color: var(--text-muted);
+}
+.ds-entity-modal-body {
+  overflow-y: auto;
+  padding: 16px 20px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.ds-entity-modal-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.ds-entity-modal-flags-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.ds-entity-modal-flag {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.ds-entity-modal-flag strong {
+  color: var(--text-primary);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+.ds-entity-modal-flag-text {
+  flex: 1;
+}
+/* Section subtitles (Shape & Size, Schema, Numeric Summary, ...) in the brand
+   accent — matches the entity title + AI Assistant chrome. */
+.ds-entity-modal-body h1, .ds-entity-modal-body h2 {
+  color: var(--accent-primary);
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+.ds-entity-modal-body h3 {
+  color: var(--accent-primary);
+  margin: 12px 0 6px;
+  font-size: 12px;
+}
+.ds-entity-modal-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 11px;
+}
+.ds-entity-modal-body th, .ds-entity-modal-body td {
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+}
+.ds-entity-modal-body th {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+.ds-entity-modal-body code {
+  background: var(--surface-3);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+/* Fenced CODE BLOCKS (``` … ```, e.g. the "How to Query" examples). Without an
+   explicit pre rule a multi-line code fence collapsed to the inline-code style —
+   tiny, no block background, no padding, no horizontal scroll — so it read as plain
+   cramped text. Mirror the shared .md-rendered pre treatment: a real code card with
+   a surface background, border, padding, and scroll, and reset the inner <code> so
+   it isn't double-styled by the inline-code rule above. */
+.ds-entity-modal-body pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  padding: 10px 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ds-entity-modal-body pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: var(--text-primary);
+  white-space: pre;
+}
+.ds-entity-modal-body blockquote {
+  border-left: 3px solid var(--accent-primary);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ===== Terminal Panel ===== */
+
+.terminal-container {
+  flex: 1;
+  min-height: 200px;
+  padding: 4px;
+  background: var(--surface-0);
+  border-radius: var(--radius-md);
+  margin: var(--space-2);
+  overflow: hidden;
+}
+
+.terminal-container .xterm {
+  height: 100%;
+}
+
+.terminal-status {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.terminal-status-connected { color: var(--accent-success); }
+.terminal-status-connecting { color: var(--accent-warning); animation: pulse-subtle 1s infinite; }
+.terminal-status-disconnected { color: var(--text-muted); }
+.terminal-status-error { color: var(--accent-danger); }
+
+/* Snippets Panel */
+.snippets-list {
+  padding: 0 8px;
+}
+
+.snippet-item {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background 0.1s;
+  /* Row layout: text column on the left, hover-revealed Python button on the right. */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.snippet-item:hover {
+  background: var(--surface-3);
+}
+/* Recipes (multi-step workflows) get a subtle accent bar so they read as distinct
+   from single-call snippets in the same list. */
+.snippet-item-recipe {
+  border-left: 2px solid var(--accent-primary-muted, var(--accent-primary));
+  padding-left: 8px;
+}
+.snippet-item-text {
+  flex: 1;
+  min-width: 0;
+}
+/* Reveal the Python insert button on snippet-row hover / focus (same collapse-at-
+   rest pattern as the Data Sources rows). */
+.snippet-item:hover .ds-insert-actions,
+.snippet-item:focus-within .ds-insert-actions {
+  width: auto;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+  margin-left: 4px;
+}
+
+.snippet-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.snippet-name code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-primary);
+}
+
+.snippet-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  padding-left: 16px;
+}
+
+/* User-authored snippets: New-snippet button, inline editor, edit/delete actions. */
+.snippets-user-actions {
+  /* Match the Secrets & Env add-button inset (space-3 sides, space-2 vertical) so
+     the full-width New-snippet button lines up with Attach a secret / Add env var. */
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Full-width dashed "add" button, matching the Secrets & Env panel's
+   .env-add-btn (Attach a secret / Add env var) so the two panels' add-actions are
+   visually consistent — same width, padding, size, radius, and dashed style. */
+.snippets-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 7px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--accent-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.snippets-new-btn:hover {
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  border-color: var(--accent-primary);
+}
+
+.snippet-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.snippet-editor-input,
+.snippet-editor-code {
+  background: var(--input-bg, var(--surface-2));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 11px;
+  padding: 5px 7px;
+  outline: none;
+}
+
+.snippet-editor-input:focus,
+.snippet-editor-code:focus { border-color: var(--accent-primary); }
+
+.snippet-editor-code {
+  font-family: var(--font-mono);
+  resize: vertical;
+  min-height: 72px;
+}
+
+.snippet-editor-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.snippet-editor-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.snippet-editor-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.snippet-editor-cancel {
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+/* Edit / delete icon buttons on a "My Snippets" row. They reuse .ds-insert-btn
+   for sizing but that class sets no background — so without this they fell back
+   to the browser's default light button chrome (white boxes on the dark panel).
+   Give them a proper icon-button base: subtle surface, muted icon, faint border. */
+.snippet-edit-btn,
+.snippet-delete-btn {
+  justify-content: center;
+  padding: 4px 6px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.snippet-edit-btn:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+.snippet-delete-btn:hover {
+  color: var(--accent-danger, #f85149);
+  border-color: var(--accent-danger, #f85149);
+  background: color-mix(in srgb, var(--accent-danger, #f85149) 15%, transparent);
+}
+
+/* ============================================================
+   VARIABLES PANEL — controls, column schema, data viewer (P1)
+   ============================================================ */
+
+.var-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Match the Packages/Outline filter wrapper padding so the controls row lines
+     up with the other side panels. */
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.var-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Aligned with .outline-search-input: same border, radius, and vertical
+     padding so the filter box matches the Packages panel's search box. */
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  color: var(--text-muted);
+  transition: border-color var(--transition-fast);
+}
+/* Focus ring mirrors the Packages/Outline search when the inner input is focused. */
+.var-search:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+
+.var-search-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  /* Bumped from --font-size-xs to match the Packages filter's readable size. */
+  font-size: var(--font-size-sm);
+}
+
+.var-search-input::placeholder { color: var(--text-muted); }
+
+.var-search-clear {
+  display: inline-flex;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.var-search-clear:hover { color: var(--text-primary); }
+
+.var-sort-select {
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  /* Match the search box: same font size + vertical padding so the sort dropdown
+     and the filter box are the same height and read consistently. */
+  font-size: var(--font-size-sm);
+  padding: 5px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.var-sort-select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+
+.var-group-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  /* Square-ish button sized to match the search/sort control height. */
+  padding: 6px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+.var-group-btn:hover { color: var(--text-primary); }
+.var-group-btn.active {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+/* Variables group-by-kind section headers now reuse the shared collapsible
+   .sidebar-subheader / .sidebar-subheader-toggle styling (same as the Snippets
+   panel) so the chevron, count bubble, and click-to-collapse match 1:1. */
+
+/* Column schema block (DataFrame/Series) */
+.var-schema {
+  margin-top: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.var-schema-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--surface-3);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.var-schema-count {
+  background: var(--surface-4, var(--surface-2));
+  border-radius: 8px;
+  padding: 0 6px;
+  color: var(--text-secondary);
+}
+.var-schema-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-areas: "col dtype" "meta meta";
+  gap: 0 8px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+.var-schema-col {
+  grid-area: col;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.var-schema-dtype {
+  grid-area: dtype;
+  text-align: right;
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  white-space: nowrap;
+}
+.var-schema-meta {
+  grid-area: meta;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.var-schema-more, .var-schema-loading {
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.var-schema-more { border-top: 1px solid var(--border-subtle); }
+
+.var-action-view {
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+}
+
+/* Full data-grid viewer modal — widen the shared modal card for a table. This
+   rule governs the DataFrame preview width (it beats .modal-card-lg on source
+   order at equal specificity), so the roomy width lives HERE. */
+.modal-card:has(.var-viewer) {
+  max-width: 1600px;
+  width: 90vw;
+}
+/* Let the grid fill the tall modal: the viewer + its DataGrid stretch to the
+   modal body's height, and the scroll area's inline-output 400px cap is lifted so
+   many more rows are visible before scrolling (the modal already scrolls its own
+   body as a fallback). Scoped to the modal so in-notebook cell output keeps 400px. */
+.modal-card-lg .modal-body:has(.var-viewer) { display: flex; }
+.var-viewer { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; width: 100%; }
+.var-viewer .df-grid { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.var-viewer .df-table-scroll { max-height: none; flex: 1 1 auto; min-height: 0; }
+.var-viewer-status {
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+.var-viewer-error { color: var(--accent-danger); }
+.var-viewer-note {
+  margin-top: 8px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.var-viewer-text {
+  margin: 0;
+  max-height: 60vh;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+}
+
+/* Samples panel: each sample is a shared .sidebar-item row (same padding, hover,
+   active and focus ring as the Notebooks / Data Sources rows, in every theme).
+   .sidebar-sample-item (above, "Sample items") only resets the <button> chrome. */
+.sidebar-samples-list {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) 0;
+}
+/* Small inline icon instead of the 40px tile. */
+.sidebar-samples-list .sample-card-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+.sidebar-samples-list .sample-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.sidebar-samples-list .sample-card-name {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--accent-primary);  /* sample name: highlight colour (see .sidebar-subheader) */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Clamp the description so each row stays compact in the narrow rail. */
+.sidebar-samples-list .sample-card-desc {
+  font-size: 10px;
+  color: var(--text-tertiary);  /* secondary text tier of the other rows (AA in ember) */
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Showcased-feature pills (index.json `showcasedFeatures`) under the description:
+   neutral raised fill, neutral secondary text (quieter than the accent sample
+   name; no accent colour, hover included). They wrap and are never truncated.
+   Light/dark fill is in theme-light.css ("Samples panel"). */
+.sidebar-samples-list .sample-feature-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+/* Shape and size match the shared filter pill (.outline-filter-chip): 10px text,
+   2px 8px padding, 10px radius, normal line height. Display-only tags, so no
+   hover/selected state. */
+.sidebar-samples-list .sample-feature-pill {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: normal;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* Search hit inside a pill: a neutral tint instead of the shared accent tint, so
+   pills never carry accent colour (the sample name keeps the Snippets highlight). */
+.sidebar-samples-list .sample-feature-pill .outline-search-hit {
+  background: color-mix(in srgb, var(--text-primary) 16%, transparent);
+  color: var(--text-primary);
+}
+
+/* Variable provenance: new/changed badge dots + jump-to-cell link */
+.var-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.var-badge-new {
+  background: var(--accent-success, #a6e3a1);
+  box-shadow: 0 0 6px 1px rgba(166, 227, 161, 0.6);
+}
+.var-badge-changed {
+  background: var(--accent-warning);
+  box-shadow: 0 0 6px 1px rgba(249, 199, 79, 0.55);
+}
+/* Variable origin badge: "AI" / "No cell" for a variable no cell produces
+   (VariablesPanel + services/variableOrigin.js). Always a text label; the full
+   reason is the title tooltip plus a visually hidden suffix for screen readers. */
+.var-origin-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  padding: 0 5px;
+  border-radius: var(--radius-sm, 4px);
+  color: var(--accent-warning);
+  background: var(--accent-warning-subtle);
+  white-space: nowrap;
+  cursor: help;
+}
+/* Deleted cell's variable that live cells still read (deleted-cell-flag, case 3):
+   amber outline on the compact badge, plus a full-width "deleted cell · used by
+   PY-3, PY-5" line under the row. Wrapped, never cut. */
+.var-origin-in-use {
+  box-shadow: inset 0 0 0 1px var(--accent-warning);
+}
+.var-origin-usedby {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--accent-warning);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  /* Aligned with the name column: row padding + expand icon + type icon + gaps. */
+  padding: 0 var(--space-3) 6px calc(var(--space-3) + 46px);
+  cursor: help;
+}
+/* "Clean up N untracked variables" bar + its confirmation list. */
+.var-cleanup-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: var(--space-2) var(--space-3) 0;
+  min-width: 0;
+}
+.var-cleanup-btn {
+  max-width: 100%;
+  min-width: 0;
+}
+.var-cleanup-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.var-cleanup-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.var-cleanup-msg {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.var-cleanup-error {
+  color: var(--accent-danger);
+}
+.var-cleanup-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.var-cleanup-item {
+  display: flex;
+  min-width: 0;
+}
+.var-cleanup-name,
+.var-cleanup-internal {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.var-cleanup-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+}
+.var-cleanup-internal {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.var-prov-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 38%, transparent);
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
+}
+/* Small "jump" arrow so it reads unmistakably as a navigable link. */
+.var-prov-link::after {
+  content: '↗';
+  font-size: 0.95em;
+  opacity: 0.65;
+}
+.var-prov-link:hover {
+  background: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  text-decoration: none;
+}
+.var-prov-link:hover::after {
+  opacity: 1;
+}
+.var-prov-link:active {
+  transform: translateY(0.5px);
+}
+.var-prov-link:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+/* ===== Secrets & Env panel =====
+   Styled to match the other side panels: design-system tokens for type
+   (--font-size-*), spacing (--space-*), radii (--radius-*) and transitions,
+   and the same primary-button treatment as the VM/Connection panel. */
+.env-panel .env-error {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--accent-danger);
+}
+.env-vm-note { color: var(--text-muted); font-style: italic; }
+
+/* Shown when a section has entries but none match the search filter. */
+.env-empty-match {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Section headers in the highlight colour, like every side-panel section header
+   (.sidebar-subheader); the section icons keep telling secrets from env. */
+.env-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--space-3);
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: var(--surface-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.env-section-secrets { color: var(--accent-primary); }
+.env-section-env { color: var(--accent-primary); }
+/* Count bubble — identical treatment to .sidebar-subheader-count / the
+   DataSources section counts (S3 BUCKET etc.) so all panels match. */
+.env-section-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--surface-4);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 8px);
+  border: 1px solid var(--border-default);
+  letter-spacing: 0.2px;
+}
+
+/* A secret / env var row */
+.env-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.env-row:hover { background: var(--surface-2); }
+.env-row-text { flex: 1; min-width: 0; }
+.env-row-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.env-row-sub {
+  font-size: var(--font-size-xs);
+  /* Source path/key — muted grey, a shade darker than the row name but still
+     legible against the dark rail (unlike the too-dim --text-muted). */
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.env-row-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.env-row:hover .env-row-actions { opacity: 1; }
+.env-row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.env-row-btn:hover:not(:disabled) { background: var(--surface-3); color: var(--text-primary); }
+.env-row-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.env-row-btn-danger:hover:not(:disabled) { color: var(--accent-danger); }
+.env-row-btn-insert:hover:not(:disabled) { color: var(--accent-primary); }
+
+/* Refresh-all row — dashed secondary action tinted to the secrets accent. */
+.env-refresh-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 2 * var(--space-3));
+  margin: var(--space-2) var(--space-3);
+  padding: 6px var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--accent-warning);
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--accent-warning) 50%, transparent);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.env-refresh-all:hover:not(:disabled) { background: color-mix(in srgb, var(--accent-warning) 8%, transparent); }
+.env-refresh-all:disabled { opacity: 0.4; cursor: not-allowed; }
+.env-spin { animation: env-spin 0.9s linear infinite; }
+@keyframes env-spin { to { transform: rotate(360deg); } }
+
+/* Transient status shown after a refresh (success/failure) */
+.env-refresh-status {
+  margin: -2px var(--space-3) var(--space-2);
+  font-size: var(--font-size-xs);
+  animation: env-fade-in 0.15s ease;
+}
+.env-refresh-ok { color: var(--accent-success); }
+.env-refresh-warn { color: var(--accent-warning); }
+@keyframes env-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Add buttons (dashed, section-colored) */
+.env-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: calc(100% - 2 * var(--space-3));
+  margin: var(--space-2) var(--space-3);
+  padding: 7px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  background: transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px dashed;
+  transition: all var(--transition-fast);
+}
+.env-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.env-add-secret { color: var(--accent-warning); border-color: color-mix(in srgb, var(--accent-warning) 50%, transparent); }
+.env-add-secret:hover:not(:disabled) { background: color-mix(in srgb, var(--accent-warning) 8%, transparent); }
+.env-add-env { color: var(--accent-success); border-color: color-mix(in srgb, var(--accent-success) 50%, transparent); }
+.env-add-env:hover:not(:disabled) { background: color-mix(in srgb, var(--accent-success) 8%, transparent); }
+
+/* Row that holds the two env actions (Add env var + Import .env) side by side.
+   The buttons drop their own full-width margin and split the row evenly. */
+.env-add-row {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-2) var(--space-3);
+}
+.env-add-row .env-add-btn {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+/* Import button is the quieter of the two (secondary action): muted border/text so
+   "Add env var" stays the primary green affordance. */
+.env-import-btn {
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+.env-import-btn:hover:not(:disabled) {
+  color: var(--accent-success);
+  border-color: color-mix(in srgb, var(--accent-success) 50%, transparent);
+  background: color-mix(in srgb, var(--accent-success) 8%, transparent);
+}
+
+/* Result notice after a .env import — colored by outcome. */
+.env-import-notice {
+  margin: 0 var(--space-3) var(--space-2);
+  padding: 6px 8px;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  animation: env-fade-in 0.15s ease;
+}
+.env-import-ok    { color: var(--accent-success); background: color-mix(in srgb, var(--accent-success) 10%, transparent); border-color: color-mix(in srgb, var(--accent-success) 30%, transparent); }
+.env-import-warn  { color: var(--accent-warning); background: color-mix(in srgb, var(--accent-warning) 10%, transparent); border-color: color-mix(in srgb, var(--accent-warning) 30%, transparent); }
+.env-import-error { color: var(--accent-danger);  background: color-mix(in srgb, var(--accent-danger) 10%, transparent);  border-color: color-mix(in srgb, var(--accent-danger) 30%, transparent); }
+
+/* Inline editor (attach secret / add env var) */
+.env-editor {
+  margin: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.env-editor-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin: 6px 0 3px;
+}
+.env-editor-label:first-child { margin-top: 0; }
+.env-editor-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 7px;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+.env-editor-input:focus { outline: none; border-color: var(--accent-primary); }
+.env-editor-row { display: flex; gap: 6px; }
+.env-editor-key { flex: 0 0 42%; }
+.env-editor-value { flex: 1; }
+.env-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.env-editor-cancel {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.env-editor-cancel:hover { color: var(--text-primary); }
+/* Primary action — mirrors the VM/Connection panel's primary button
+   (.connect-btn): accent fill, inverse text,
+   brightness+lift on hover. */
+.env-editor-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-inverse);
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.env-editor-save:hover:not(:disabled) { filter: brightness(1.1); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.env-editor-save:active:not(:disabled) { transform: translateY(0); }
+.env-editor-save:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Action banner (components/ActionBanner.jsx): a temporary message after a user
+   action finished (Outline run banner, AI panel, Notebooks, Packages, ...).
+   Tone-tinted fill: the status colour (--ab-tone) mixed 14% into surface-3, a 1px
+   border at 45% tone, a 3px solid left edge in the full tone and a soft shadow.
+   Blue (the accent) is only the action link text and the info icon, never a fill;
+   the info tone tints with a neutral grey. Text >= 12px, wraps (no ellipsis).
+   Measured text contrast on each fill is >= 4.5:1 in ember, light and dark (the
+   link uses --accent-primary-hover because the base accent is under 4.5:1 there).
+   This block is the ember (base) look; theme-light.css adjusts light and dark. */
+.action-banner {
+  --ab-tone: var(--accent-success);
+  --ab-text: var(--ab-tone);
+  --ab-icon: var(--ab-tone);
+  --ab-link: var(--accent-primary-hover);
+  display: flex;
+  flex-direction: column;
+  margin: 6px 10px;
+  padding: 0;
+  background: color-mix(in srgb, var(--ab-tone) 14%, var(--surface-3));
+  border: 1px solid color-mix(in srgb, var(--ab-tone) 45%, var(--surface-3));
+  border-left: 3px solid var(--ab-tone);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.4;
+  animation: action-banner-in 0.18s ease-out;
+}
+.action-banner-error {
+  --ab-tone: var(--accent-danger);
+  /* Ember's hot red is 3.8:1 on its own tint; lighten the count text to keep AA. */
+  --ab-text: color-mix(in srgb, var(--accent-danger) 60%, #fff);
+}
+.action-banner-warning { --ab-tone: var(--accent-warning); }
+.action-banner-info {
+  --ab-tone: var(--text-tertiary);
+  --ab-text: var(--text-secondary);
+  --ab-icon: var(--ab-link);
+}
+@keyframes action-banner-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-banner { animation: none; }
+}
+.action-banner-row { display: flex; align-items: flex-start; gap: 2px; min-width: 0; }
+.action-banner-main {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 4px 8px 10px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.action-banner-main:hover { background: rgba(0, 0, 0, 0.12); }
+.action-banner-main:focus-visible,
+.action-banner-dismiss:focus-visible,
+.action-banner-secondary:focus-visible {
+  outline: 2px solid var(--ab-link);
+  outline-offset: -2px;
+}
+.action-banner-icon { flex-shrink: 0; display: inline-flex; color: var(--ab-icon); }
+.action-banner-icon svg { width: 16px; height: 16px; }
+.action-banner-text { min-width: 0; overflow-wrap: anywhere; }
+.action-banner-lead { font-weight: 600; color: var(--text-primary); }
+.action-banner-detail { color: var(--ab-text); }
+.action-banner-error .action-banner-detail,
+.action-banner-warning .action-banner-detail { font-weight: 600; }
+.action-banner-success .action-banner-detail { color: var(--text-primary); }
+.action-banner-action { color: var(--ab-link); font-weight: 600; }
+.action-banner-main:hover .action-banner-action { text-decoration: underline; }
+.action-banner-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 4px 4px 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.action-banner-dismiss:hover { color: var(--text-primary); background: rgba(128, 128, 128, 0.22); }
+.action-banner-secondary {
+  align-self: flex-start;
+  margin: -4px 0 6px 30px;
+  padding: 2px 4px;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ab-link);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.action-banner-secondary:hover { text-decoration: underline; }
+/* Panel-wide banners (Notebooks, Live MicroVMs) sit between the header and the
+   scrolling body, so the list never scrolls or jumps when one appears. */
+.slot-banner { flex-shrink: 0; }

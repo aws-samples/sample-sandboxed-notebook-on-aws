@@ -1,0 +1,34 @@
+{
+  "name": "Train on SageMaker (managed compute)",
+  "desc": "Submit a non-blocking managed training job from a DataFrame, poll it, load the model, then score — scale out when training needs a bigger machine or GPU",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 🛰️ Train on SageMaker (managed compute)\n\n`train_model` runs **inside the VM**, bounded by its memory, CPU, and the cell timeout. When you need a **bigger/GPU machine** or training would blow the cell clock, hand the work to **SageMaker-managed compute** instead — same feature/target contract, bigger machine. This recipe trains from an **in-VM DataFrame** (`sm_train` uploads it to S3 for you). If the training set is itself **too big to pull into the VM**, use the *Train on SageMaker from S3* recipe instead — it UNLOADs the data to S3 and trains straight off a pointer, so the rows never enter the sandbox.\n\nThe key difference from `train_model`: **`sm_train` is non-blocking**. It uploads your data + a preprocessing recipe to S3, kicks off a managed Training Job, and returns a **handle in seconds** while training runs off-box. So the submit, the poll, and the load each live in their **own cell** you run in sequence — do NOT expect results in the submit cell.\n\n```mermaid\ngraph LR\n  A[\"Labelled DataFrame\"] --> T[\"sm_train (returns in seconds)\"]\n  T -. runs on managed compute .-> J[\"SageMaker Training Job\"]\n  J -->|sm_training_job_status| C{\"Completed?\"}\n  C -->|no · wait ~30s · re-run| C\n  C -->|yes| L[\"sm_load_model → model in VM\"]\n  L --> P[\"predict_batch → scored catalog\"]\n```\n\n**When to reach for this:** small/fast tabular that fits the VM → `train_model` (instant, in-VM, the default). Fits the VM but needs a GPU / long training → `sm_train(df, …)` (this recipe). Training set too big to pull into the VM → the *Train on SageMaker from S3* recipe.\n\n**Cost & timing:** a job takes minutes (instance spin-up alone is ~3–4 min) and you pay for the minutes it runs. Nothing bills after it finishes — there is **no standing endpoint** in this recipe (see the *Deploy a real-time endpoint* recipe for that). If SageMaker isn't configured in this environment, the `sm_*` helpers raise a clear error and you can fall back to `train_model`."
+    },
+    {
+      "type": "code",
+      "code": "# 1) Load your labelled data (Athena / S3 / DynamoDB). This is the SAME feature +\n#    target contract as train_model (target=, features=, categorical=, numeric=),\n#    so you can prototype in-VM with train_model and scale out with sm_train later.\ndf = read_athena(\"SELECT * FROM <your_table> LIMIT 50000\")\nprint(df.shape, \"rows × cols\")\ndf.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 2) SUBMIT the job — NON-BLOCKING. Returns a handle in ~seconds while training runs\n#    on its own instance. Do NOT put the load/score in THIS cell — it isn't ready yet.\n#    Trains a scikit-learn Pipeline (estimator='random_forest' by default — see the\n#    next cell for the estimator menu). Optional: instance= (e.g. 'ml.m5.2xlarge'),\n#    n_estimators=, max_depth=, task=, features=.\njob = sm_train(df, target=\"<target_column>\")\nprint(\"submitted:\", job)"
+    },
+    {
+      "type": "code",
+      "code": "# 2b) PICK THE ESTIMATOR — sm_train trains a complete Pipeline(preprocess ->\n#     estimator) on SageMaker and brings it back as a stock .joblib (plain\n#     joblib.load, RAW-row contract). Choose from the menu via estimator=:\n#       random_forest (default) · gradient_boosting · xgboost · lightgbm\n#       · logistic · linear · ridge      (logistic/linear/ridge are task-aware)\n#     The gradient-boosting trio (gradient_boosting/xgboost/lightgbm) are the strong\n#     tabular defaults. Optional: scale=True to StandardScaler the numerics;\n#     n_estimators=, max_depth=, C=, alpha= tune them.\n#   job = sm_train(df, target=\"<target_column>\", estimator=\"xgboost\")   # or lightgbm/...\n#   print(\"submitted:\", job)"
+    },
+    {
+      "type": "code",
+      "code": "# 3) POLL until it finishes — RE-RUN this cell every ~30s. Status walks\n#    'InProgress (Nm elapsed)' → 'Completed (Nm)' (or 'Failed: <reason>').\n#    Only move on to step 4 once it reads Completed.\nprint(sm_training_job_status(job))"
+    },
+    {
+      "type": "code",
+      "code": "# 4) Load the finished model back into the VM. sm_load_model WAITS for the job,\n#    then returns a complete scikit-learn Pipeline that takes RAW rows exactly like\n#    a train_model Pipeline (plain joblib.load — no rewrap). If the estimator is\n#    xgboost/lightgbm, its library is auto-installed in the VM on load. Inspect it:\nmodel = sm_load_model(job)\nmodel_info(model)"
+    },
+    {
+      "type": "code",
+      "code": "# 5) Score with it. predict / predict_batch accept EITHER a loaded model OR the job\n#    handle directly (a job is auto-resolved via sm_load_model), so it's the SAME\n#    prediction surface for local and SageMaker-trained models.\nscored = predict_batch(job, df, output_col=\"prediction\")\nscored.head()\n\n# Rank by probability for an action list (classification):\n# ranked = predict_batch(job, df, output_col=\"score\", proba=True)\n# ranked.sort_values(\"score\", ascending=False).head(10)"
+    }
+  ]
+}

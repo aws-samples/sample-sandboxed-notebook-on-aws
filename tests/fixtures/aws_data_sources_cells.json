@@ -1,0 +1,688 @@
+[
+ {
+  "id": "017f6525-8346-49fa-9e5b-c7f855935ea2",
+  "type": "markdown",
+  "code": "# 🛒 Q4 Product Action Plan\n\n**The decision:** the holiday peak is coming — which products do we **restock**, **promote**, **fix**, or **wind down**? Guess wrong and we stock out on winners while cash sits in losers.\n\nThis workbook builds a **360° view of every product** from all of our data, then applies a transparent rule engine you steer with sliders. It's not a tour of *how* to connect to AWS — it's a tool that produces an **action list a merchandising manager can act on today**.\n\n| Signal | Source | Service | Cell |\n|---|---|---|---|\n| Demand, revenue, margin, buyer mix | `orders` × `products` × `customers` | **Athena** | SQL |\n| Fulfillment health (cancels, returns, stuck orders) | `order_events` | **S3 Tables (Iceberg)** | SQL |\n| Margin erosion & discount depth | `product_price_history` (time-travel) | **S3 Tables (Iceberg)** | code + SQL |\n| Customer sentiment | `ecommerce-reviews` | **DynamoDB** | SQL |\n| Recommendation pipeline (future demand) | `ecommerce-recommendations` | **DynamoDB** | SQL |\n| Stock health | `inventory_daily.csv` | **S3** | code + SQL |\n| Demand momentum | `clickstream_events.csv` | **S3** | code |\n| Web-session funnel (at scale) | `web_sessions_parquet/` (4 Parquet parts) | **S3** | code + SQL |\n| Seasonality (peak proximity) | Public Holidays | **Nager.at API** | code |\n\n**How the signals fuse into a decision:**\n\n```mermaid\ngraph LR\n  A[\"Athena: orders × products × customers\"] --> V[\"360° product view\"]\n  I[\"S3 Tables: order_events + price_history\"] --> V\n  D[\"DynamoDB: reviews + recommendations\"] --> V\n  S[\"S3: inventory + clickstream\"] --> V\n  H[\"Holidays API: seasonality\"] --> V\n  K[\"Bedrock KB: product specs\"] --> V\n  V --> R{\"Rule engine (your sliders)\"}\n  R --> RS[\"Restock\"]\n  R --> PR[\"Promote\"]\n  R --> FX[\"Fix\"]\n  R --> WD[\"Wind down\"]\n```\n\n**How to use it:** Run all cells top-to-bottom, then drag the ⚙️ **@param sliders** — each sits above the step it controls — to match your risk appetite and watch the plan change. All AWS access uses the MicroVM's **execution role**; there are no credentials in the notebook.",
+  "position": 0,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "ebc5250f-ba12-40cf-8507-8e25f8e355d1",
+  "type": "markdown",
+  "code": "## Step 0 · Connect to the sandbox\n\nEverything below runs inside the MicroVM using its **execution role** — no keys in the notebook. We just confirm identity and resolve the S3 artifacts bucket.",
+  "position": 1,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "a04df9e4-797f-493a-9405-4a9e2942c427",
+  "type": "code",
+  "code": "import os, pandas as pd\ninfo = whoami()\naccount, region = info['account'], info['region']\nbucket = f\"microvm-sandbox-artifacts-{account}-{region}\"\nprint(f\"Account {account} · {region}\")\nprint(f\"Artifacts bucket: {bucket}\")",
+  "position": 2,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [
+   "bucket",
+   "info",
+   "account",
+   "region"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "8ec78ffd-9923-4147-914c-39ac357caaae",
+  "type": "code",
+  "code": "# Before querying anything: what sources does this session actually have?\n# list_datasources() is the in-cell Data Sources panel — every Athena/Iceberg\n# table, DynamoDB table, S3 file/prefix, and the Bedrock KB this notebook can\n# reach, in one DataFrame. It's how you confirm a table name + column count\n# before writing the SQL below (filter by type, e.g. list_datasources('athena')).\nlist_datasources()",
+  "position": 3,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "993662e5-1945-4768-97a9-83d18cc4e7f0",
+  "type": "markdown",
+  "code": "## Step 1 · Demand, margin & buyers — Athena (SQL)\n\nOne SQL query joins all three **Athena** tables (`orders` × `products` × `customers`) to compute, per product: revenue, units sold, margin %, distinct buyers, and the share bought by **Premium** customers. The result is saved as `product_demand` for later steps.\n\n⚙️ *Sliders below* feed the query directly via `{var}` placeholders — a **shipping market** (string → `'{market}'`) and a **minimum units** floor (number → `>= {min_units}`). Change either and, with **Reactive** on, every downstream step re-runs automatically.",
+  "position": 4,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "ac76002d-fcdf-488e-acd1-9428810df76d",
+  "type": "code",
+  "code": "# @param {\"type\": \"dropdown\", \"options\": [\"US\", \"UK\", \"DE\", \"FR\", \"JP\", \"AU\", \"CA\", \"MX\", \"BR\", \"IN\"], \"default\": \"US\", \"label\": \"Shipping market\"}\nmarket = \"US\"\n# @param {\"type\": \"slider\", \"min\": 0, \"max\": 20, \"step\": 1, \"default\": 0, \"label\": \"Min units sold\"}\nmin_units = 0\nprint(f\"Focusing on orders shipped to {market}, products with ≥ {min_units} units sold\")",
+  "position": 5,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [
+   "min_units",
+   "market"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "1b676ca8-a1eb-4bbd-9964-0cb99c0f27a9",
+  "type": "sql",
+  "code": "-- Athena: demand, revenue, margin and buyer mix per product\n-- (orders x products x customers — all three Athena tables in one query)\n-- Scalar params flow in via {var}: '{market}' (string) and {min_units} (number).\nSELECT\n  p.product_id, p.name, p.category, p.brand,\n  p.price, p.cost,\n  ROUND((p.price - p.cost) / p.price * 100, 1)                                AS margin_pct,\n  COUNT(o.order_id)                                                          AS order_count,\n  SUM(o.quantity)                                                            AS units_sold,\n  ROUND(SUM(o.total), 2)                                                     AS revenue,\n  COUNT(DISTINCT o.user_id)                                                  AS distinct_buyers,\n  ROUND(AVG(CASE WHEN c.segment = 'Premium' THEN 1.0 ELSE 0.0 END) * 100, 1) AS premium_buyer_pct\nFROM microvm_demo_db.orders o\nJOIN microvm_demo_db.products p        ON o.product_id = p.product_id\nLEFT JOIN microvm_demo_db.customers c  ON o.user_id = c.user_id\nWHERE o.shipping_country = '{market}'\nGROUP BY p.product_id, p.name, p.category, p.brand, p.price, p.cost\nHAVING SUM(o.quantity) >= {min_units}\nORDER BY revenue DESC",
+  "position": 6,
+  "output_variable": "product_demand",
+  "vars_read": [
+   "market",
+   "min_units"
+  ],
+  "vars_written": [
+   "product_demand"
+  ],
+  "sources_read": [
+   {
+    "kind": "athena",
+    "id": "microvm_demo_db.orders"
+   },
+   {
+    "kind": "athena",
+    "id": "microvm_demo_db.products"
+   },
+   {
+    "kind": "athena",
+    "id": "microvm_demo_db.customers"
+   }
+  ]
+ },
+ {
+  "id": "8012459c-05ee-43e5-94ee-61db576c0985",
+  "type": "markdown",
+  "code": "## Step 2 · Fulfillment health — S3 Tables / Apache Iceberg (SQL)\n\nRevenue only tells us what sold. **How well those orders actually went** is a different story — and it lives in `order_events`, an **Amazon S3 Tables** (Apache Iceberg) table that logs one row per **status transition** of every order (`placed → paid → packed → shipped → delivered`, with some `cancelled` / `returned`).\n\nBecause it's a real Iceberg table, it queries **exactly like any Athena table** — `database.table`, no special ceremony — but it's a mutable, append-friendly event log rather than a flat CSV. We roll it up per product into a **fulfillment scorecard**: cancel rate, return rate, and delivery completion. A product that sells well but gets **cancelled or returned a lot** is a quality/ops problem, not a promote candidate — so this signal will *hold back* PROMOTE and *flag* INVESTIGATE downstream. Saved as `product_fulfillment`.",
+  "position": 7,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "ab1efacd-8338-449d-a1ea-4427872d8174",
+  "type": "sql",
+  "code": "-- S3 Tables (Iceberg): per-product fulfillment scorecard from the order lifecycle log.\n-- order_events lives in the microvm_demo_iceberg namespace — reference it as\n-- database.table just like any Athena table; the federated catalog is resolved for you.\n-- We join each event back to its order to attribute it to a product.\nSELECT\n  o.product_id,\n  COUNT(DISTINCT oe.order_id)                                                            AS orders_seen,\n  SUM(CASE WHEN oe.status = 'cancelled' THEN 1 ELSE 0 END)                               AS cancelled_orders,\n  SUM(CASE WHEN oe.status = 'returned'  THEN 1 ELSE 0 END)                               AS returned_orders,\n  SUM(CASE WHEN oe.status = 'delivered' THEN 1 ELSE 0 END)                               AS delivered_orders,\n  ROUND(100.0 * SUM(CASE WHEN oe.status = 'cancelled' THEN 1 ELSE 0 END)\n        / NULLIF(COUNT(DISTINCT oe.order_id), 0), 1)                                     AS cancel_rate_pct,\n  ROUND(100.0 * SUM(CASE WHEN oe.status = 'returned' THEN 1 ELSE 0 END)\n        / NULLIF(COUNT(DISTINCT oe.order_id), 0), 1)                                     AS return_rate_pct\nFROM microvm_demo_iceberg.order_events oe\nJOIN microvm_demo_db.orders o ON oe.order_id = o.order_id\nGROUP BY o.product_id",
+  "position": 8,
+  "output_variable": "product_fulfillment",
+  "vars_read": [],
+  "vars_written": [
+   "product_fulfillment"
+  ],
+  "sources_read": [
+   {
+    "kind": "athena",
+    "id": "microvm_demo_iceberg.order_events"
+   },
+   {
+    "kind": "athena",
+    "id": "microvm_demo_db.orders"
+   }
+  ]
+ },
+ {
+  "id": "8b8318ed-da59-4273-9067-231e718d94a1",
+  "type": "markdown",
+  "code": "## Step 3 · Margin erosion & discount depth — S3 Tables time-travel (code + SQL)\n\nThe second thing revenue hides is **how hard we've had to discount to earn it**. `product_price_history` is an **Iceberg SCD-2 table**: every price/cost version per product, with `valid_from` / `valid_to` and `is_current`. Because Iceberg keeps **snapshots**, we can ask two kinds of questions the flat tables can't:\n\n1. **Current vs. launch price** — how far has each product drifted from its original list price? A product repeatedly marked down is eroding margin (a wind-down signal); one holding or raising price has pricing power.\n2. **Time-travel** — query the table *as of* an earlier snapshot to see the price book before the latest repricing load, proving the history is real and auditable.\n\nWe compute a per-product **discount depth** (current price ÷ launch price) as `product_pricing`, and demonstrate a snapshot read alongside it.",
+  "position": 9,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "29a1df1f-14c5-44bb-a22a-381dee601e9f",
+  "type": "sql",
+  "code": "-- S3 Tables (Iceberg) SCD-2: compare each product's CURRENT price to its LAUNCH price.\n-- price_pct_of_launch < 100 => marked down over time (margin erosion); > 100 => raised.\nWITH launch AS (\n  SELECT product_id, price AS launch_price\n  FROM microvm_demo_iceberg.product_price_history\n  WHERE change_reason = 'launch'\n),\ncurrent_price AS (\n  SELECT product_id, price AS cur_price, cost AS cur_cost\n  FROM microvm_demo_iceberg.product_price_history\n  WHERE is_current = true\n),\nversions AS (\n  SELECT product_id, COUNT(*) AS price_versions\n  FROM microvm_demo_iceberg.product_price_history\n  GROUP BY product_id\n)\nSELECT\n  c.product_id,\n  l.launch_price,\n  c.cur_price,\n  v.price_versions,\n  ROUND(100.0 * c.cur_price / NULLIF(l.launch_price, 0), 1) AS price_pct_of_launch,\n  ROUND(l.launch_price - c.cur_price, 2)                    AS markdown_amount\nFROM current_price c\nLEFT JOIN launch l   ON c.product_id = l.product_id\nLEFT JOIN versions v ON c.product_id = v.product_id\nORDER BY price_pct_of_launch ASC",
+  "position": 10,
+  "output_variable": "product_pricing",
+  "vars_read": [],
+  "vars_written": [
+   "product_pricing"
+  ],
+  "sources_read": [
+   {
+    "kind": "athena",
+    "id": "microvm_demo_iceberg.product_price_history"
+   }
+  ]
+ },
+ {
+  "id": "7637545a-54d3-4688-9d91-5f07a906e151",
+  "type": "code",
+  "code": "# Iceberg TIME-TRAVEL: prove the history is real by reading the table AS OF an\n# earlier snapshot. Every S3 Tables table exposes a \"$snapshots\" metadata table;\n# we grab the FIRST snapshot id (the initial load, before later price refreshes)\n# and query the price book as it looked then vs. now. Reference the tables by\n# database.table exactly like any Athena table — read_athena auto-resolves the\n# federated S3 Tables catalog from the namespace in the query.\nsnaps = read_athena(\n    'SELECT snapshot_id, committed_at FROM \"microvm_demo_iceberg\".\"product_price_history$snapshots\" ORDER BY committed_at'\n)\nprint(f\"product_price_history has {len(snaps)} Iceberg snapshot(s):\")\nprint(snaps.to_string(index=False))\n\nnow_rows = read_athena(\"SELECT count(*) AS n FROM microvm_demo_iceberg.product_price_history\").iloc[0]['n']\nif len(snaps) > 1:\n    first_snap = int(snaps.iloc[0]['snapshot_id'])\n    as_of = read_athena(\n        f\"SELECT count(*) AS n FROM microvm_demo_iceberg.product_price_history FOR VERSION AS OF {first_snap}\"\n    ).iloc[0]['n']\n    print(f\"\\nTime-travel: {as_of} price rows at the FIRST snapshot vs {now_rows} now \"\n          f\"(the later snapshot added the current-price refresh).\")\nelse:\n    print(f\"\\n{now_rows} price rows in the current snapshot.\")",
+  "position": 11,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [
+   "first_snap",
+   "as_of",
+   "snaps",
+   "now_rows"
+  ],
+  "sources_read": [
+   {
+    "kind": "athena",
+    "id": "microvm_demo_iceberg.product_price_history$snapshots"
+   },
+   {
+    "kind": "athena",
+    "id": "microvm_demo_iceberg.product_price_history"
+   }
+  ]
+ },
+ {
+  "id": "e8376f03-fc85-4b4d-85cf-cd8187935936",
+  "type": "markdown",
+  "code": "## Step 4 · Customer sentiment — DynamoDB (SQL)\n\nReviews live in **DynamoDB**. The SQL engine can't push a `GROUP BY` to DynamoDB, so it transparently scans the table and runs the aggregation in DuckDB — you just write SQL. We capture rating, review volume, negative-review count, and verified-purchase share as `product_sentiment`.",
+  "position": 12,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "094316b7-367c-4d24-8471-0719aa2a1d09",
+  "type": "sql",
+  "code": "-- DynamoDB reviews aggregated per product (auto-routed: scan -> DuckDB)\nSELECT\n  productId                                                             AS product_id,\n  COUNT(*)                                                              AS review_count,\n  ROUND(AVG(rating), 2)                                                 AS avg_rating,\n  SUM(CASE WHEN rating <= 2 THEN 1 ELSE 0 END)                          AS negative_reviews,\n  ROUND(AVG(CASE WHEN verified_purchase THEN 1.0 ELSE 0.0 END) * 100, 1) AS verified_pct\nFROM dynamodb.\"ecommerce-reviews\"\nGROUP BY productId",
+  "position": 13,
+  "output_variable": "product_sentiment",
+  "vars_read": [],
+  "vars_written": [
+   "product_sentiment"
+  ],
+  "sources_read": [
+   {
+    "kind": "dynamodb",
+    "id": "ecommerce-reviews"
+   }
+  ]
+ },
+ {
+  "id": "a9658a88-94ae-44a7-9dbb-b49cb2af848b",
+  "type": "markdown",
+  "code": "## Step 5 · Recommendation pipeline — DynamoDB (SQL)\n\nThe recommendation model's output (also **DynamoDB**) tells us which products are queued to be surfaced to users — a **forward-looking demand signal**. A product the model is about to push hard is a stronger restock case. Saved as `product_reco`.",
+  "position": 14,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "ffff2517-684b-4d4e-b2c9-66256dbd12d8",
+  "type": "sql",
+  "code": "-- DynamoDB recommendations: reach + strength of each product in the reco pipeline\nSELECT\n  productId              AS product_id,\n  COUNT(DISTINCT userId) AS recommended_to_users,\n  ROUND(AVG(score), 3)   AS avg_reco_score\nFROM dynamodb.\"ecommerce-recommendations\"\nGROUP BY productId",
+  "position": 15,
+  "output_variable": "product_reco",
+  "vars_read": [],
+  "vars_written": [
+   "product_reco"
+  ],
+  "sources_read": [
+   {
+    "kind": "dynamodb",
+    "id": "ecommerce-recommendations"
+   }
+  ]
+ },
+ {
+  "id": "66fd0232-e4e7-407e-832b-3aa822c476e3",
+  "type": "markdown",
+  "code": "## Step 6 · Stock health & demand momentum — S3\n\nOperational data lives as CSVs in **S3**. We load them with `read_s3_csv`, aggregate clickstream behavior in pandas (`demand_signal`), then use a **SQL cell over the inventory DataFrame** to pull each product's latest stock snapshot (`product_stock`) — SQL and code, same data.",
+  "position": 16,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "d86f2331-3304-4bcf-b00a-7f171f0dd387",
+  "type": "code",
+  "code": "inventory   = read_s3_csv(bucket, 'samples/inventory_daily.csv')\nclickstream = read_s3_csv(bucket, 'samples/clickstream_events.csv')\n\n# Demand momentum per product from clickstream behavior (S3)\ncs = clickstream[clickstream['product_id'].notna() & (clickstream['product_id'] != '')]\nviews = cs[cs['action'] == 'page_view'].groupby('product_id').size()\ncarts = cs[cs['action'] == 'add_to_cart'].groupby('product_id').size()\nbuys  = cs[cs['action'] == 'purchase'].groupby('product_id').size()\ndemand_signal = pd.DataFrame({'views': views, 'cart_adds': carts, 'purchases': buys}).fillna(0)\ndemand_signal['cart_to_buy_pct'] = (demand_signal['purchases'] / demand_signal['cart_adds'].replace(0, pd.NA) * 100).round(1)\ndemand_signal.index.name = 'product_id'\ndemand_signal = demand_signal.reset_index()\nprint(f\"Inventory snapshots: {len(inventory)} · clickstream events: {len(clickstream)} · products with behavior: {len(demand_signal)}\")\ndemand_signal.head()",
+  "position": 17,
+  "output_variable": null,
+  "vars_read": [
+   "bucket"
+  ],
+  "vars_written": [
+   "views",
+   "clickstream",
+   "inventory",
+   "carts",
+   "buys",
+   "cs",
+   "demand_signal"
+  ],
+  "sources_read": [
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/inventory_daily.csv"
+   },
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/clickstream_events.csv"
+   }
+  ]
+ },
+ {
+  "id": "f710ebdf-0b0d-4d71-9079-6b0b30a6e3ed",
+  "type": "sql",
+  "code": "-- Stock health: latest snapshot per product+warehouse, rolled up per product.\n-- S3 data (loaded above) queried with SQL — DuckDB runs it over the DataFrame.\nWITH latest AS (\n  SELECT product_id, warehouse, quantity_on_hand, reorder_point, days_of_supply,\n         ROW_NUMBER() OVER (PARTITION BY product_id, warehouse ORDER BY date DESC) AS rn\n  FROM inventory\n)\nSELECT product_id,\n       SUM(quantity_on_hand) AS on_hand,\n       MIN(days_of_supply)   AS min_days_of_supply,\n       MAX(reorder_point)    AS reorder_point\nFROM latest\nWHERE rn = 1\nGROUP BY product_id",
+  "position": 18,
+  "output_variable": "product_stock",
+  "vars_read": [
+   "inventory"
+  ],
+  "vars_written": [
+   "product_stock"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "b76d490d-ba0c-42dd-8e0d-426730fd6a3d",
+  "type": "markdown",
+  "code": "### Step 6b · Web sessions at scale — a multi-part Parquet dataset in S3\n\nThe CSVs above are single files. Real \"big data\" lands in S3 as a **folder of Parquet part files** (Spark/Athena/Glue write many parts, not one) — e.g. `samples/web_sessions_parquet/` holds ~8k raw web-session events split across **4 Parquet parts**. You read the WHOLE prefix as one table — no need to list the parts — two ways:\n\n- **Python:** `read_s3_prefix('s3://.../samples/web_sessions_parquet/')` — concatenates every part into one DataFrame.\n- **SQL:** `SELECT * FROM read_parquet('s3://.../samples/web_sessions_parquet/*')` — DuckDB globs the parts.\n\nThis is the SAME shape an `unload_athena_to_s3(...)` export produces, so the exact pattern transfers to your own big exports. We roll sessions up to a per-channel **conversion** view (`session_funnel`) — a demand-quality signal that complements the click momentum above.",
+  "position": 19,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "9d56bfe7-d4d9-42cd-ace6-7d2c26178589",
+  "type": "code",
+  "code": "# Read a whole PREFIX of Parquet part files as ONE DataFrame — the natural way to\n# load a partitioned S3 dataset. (For a big export you'd never list the parts by\n# hand; read_s3_prefix does it for you.) The seeded parts carry a .parquet\n# extension; an Athena UNLOAD's parts are extensionless, so there you'd pass\n# format='parquet' — shown in the SQL cell below, which must name read_parquet.\nsessions = read_s3_prefix(f's3://{bucket}/samples/web_sessions_parquet/')\nprint(f'{len(sessions):,} web sessions across {sessions.session_id.nunique():,} ids '\n      f'(read from a 4-part Parquet prefix)')\n# Per-channel funnel: sessions, bounce rate, conversion rate, revenue.\nsession_funnel = (sessions.groupby('channel')\n    .agg(sessions=('session_id', 'count'),\n         bounce_rate=('bounced', 'mean'),\n         conv_rate=('converted', 'mean'),\n         revenue=('revenue', 'sum'))\n    .round({'bounce_rate': 3, 'conv_rate': 3, 'revenue': 0})\n    .sort_values('conv_rate', ascending=False)\n    .reset_index())\nsession_funnel",
+  "position": 20,
+  "output_variable": "session_funnel",
+  "vars_read": [
+   "bucket"
+  ],
+  "vars_written": [
+   "sessions",
+   "session_funnel"
+  ],
+  "sources_read": [
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/web_sessions_parquet/"
+   },
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/web_sessions_parquet/part-0000.parquet"
+   },
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/web_sessions_parquet/part-0001.parquet"
+   },
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/web_sessions_parquet/part-0002.parquet"
+   },
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/web_sessions_parquet/part-0003.parquet"
+   }
+  ]
+ },
+ {
+  "id": "12dc909e-ce71-4b36-906a-5637092c9261",
+  "type": "sql",
+  "code": "-- The SAME multi-part Parquet dataset, read with SQL. read_parquet globs every\n-- part in the folder with a trailing '*'. We name read_parquet explicitly because\n-- an Athena UNLOAD writes EXTENSIONLESS parts — this is the SQL mirror of the\n-- Python read_s3_prefix(..., format='parquet') call.\n-- Here: which device + channel combos convert best, at scale, in one query.\nSELECT\n  device,\n  channel,\n  COUNT(*)                                         AS sessions,\n  ROUND(100.0 * AVG(CASE WHEN converted THEN 1 ELSE 0 END), 1) AS conv_rate_pct,\n  ROUND(SUM(revenue), 2)                           AS revenue\nFROM read_parquet('s3://{bucket}/samples/web_sessions_parquet/*')\nGROUP BY device, channel\nORDER BY conv_rate_pct DESC\nLIMIT 15",
+  "position": 21,
+  "output_variable": "session_device_channel",
+  "vars_read": [
+   "bucket"
+  ],
+  "vars_written": [
+   "session_device_channel"
+  ],
+  "sources_read": [
+   {
+    "kind": "s3",
+    "id": "s3://microvm-sandbox-artifacts-123456789012-us-west-2/samples/web_sessions_parquet/*"
+   }
+  ]
+ },
+ {
+  "id": "1c57294e-3513-474e-b394-b07c7ee01137",
+  "type": "markdown",
+  "code": "### Step 6c · Stage part-files on local disk — `to_local_prefix` / `read_local_prefix`\n\nSometimes you want a dataset **on the VM's own disk** — to hand a folder of parts to another tool, to checkpoint an intermediate result, or just to practice the partitioned round-trip without touching S3. The sandbox's only writable location is **`/tmp`**, and the pair that mirrors the S3 prefix read above is:\n\n- **`to_local_prefix(df, '/tmp/folder/', parts=N, format='parquet')`** — splits the rows into `N` roughly-equal chunks and writes `part-0000.<ext>`, `part-0001.<ext>`, … (Parquet by default; `csv`/`json` too). It clears any existing `part-*` of that format first, so a re-run replaces the dataset cleanly.\n- **`read_local_prefix('/tmp/folder/')`** — reads **every** part back and concatenates them into one DataFrame, exactly like `read_s3_prefix` does for S3.\n\nBelow we take the `sessions` frame we just read from S3, write it out as **4 local Parquet parts**, then read the whole folder back and confirm the round-trip is lossless.",
+  "position": 22,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "d012ec88-aa70-4d18-a461-23f895242819",
+  "type": "code",
+  "code": "# Write the sessions frame to /tmp as 4 Parquet part-files (the local mirror of a\n# partitioned S3 export). Writes are confined to /tmp — the VM's only writable dir.\nparts_dir = to_local_prefix(sessions, '/tmp/web_sessions_parts/', parts=4, format='parquet')\n\nimport os\nwritten = sorted(f for f in os.listdir(parts_dir) if f.startswith('part-'))\nprint(f'Wrote {len(written)} part-file(s) to {parts_dir}:')\nfor f in written:\n    size_kb = os.path.getsize(os.path.join(parts_dir, f)) / 1024\n    print(f'  {f}  ({size_kb:.1f} KB)')\n\n# Read the WHOLE folder back as one DataFrame — no need to list the parts yourself.\nreloaded = read_local_prefix(parts_dir)\nprint(f'\\nRound-trip: wrote {len(sessions):,} rows across {len(written)} parts, '\n      f'read back {len(reloaded):,} rows — match: {len(reloaded) == len(sessions)}')\nreloaded.head()",
+  "position": 23,
+  "output_variable": "reloaded",
+  "vars_read": [
+   "sessions"
+  ],
+  "vars_written": [
+   "f",
+   "parts_dir",
+   "size_kb",
+   "reloaded",
+   "written"
+  ],
+  "sources_read": [
+   {
+    "kind": "local",
+    "id": "/tmp/web_sessions_parts"
+   }
+  ]
+ },
+ {
+  "id": "e54fd40d-db7e-4075-a8b9-616c0a21b380",
+  "type": "markdown",
+  "code": "## Step 7 · How close is the peak? — Public Holidays API\n\nStock runways should tighten as a demand peak approaches. We pull the **public holiday calendar** for a target market from the free **Nager.at** API and turn the number of holidays in the planning window into a **season multiplier** that later shortens the acceptable days-of-supply.\n\n⚙️ *Sliders below:* planning horizon, target market, and expected holiday uplift.",
+  "position": 24,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "23c80267-98ca-4e9a-adfb-95588b19e1cc",
+  "type": "code",
+  "code": "# @param {\"type\": \"slider\", \"min\": 7, \"max\": 90, \"step\": 1, \"default\": 45, \"label\": \"Planning horizon (days)\"}\nplanning_horizon_days = 45\n# @param {\"type\": \"dropdown\", \"options\": [\"US\", \"GB\", \"DE\", \"FR\", \"JP\", \"CA\", \"AU\", \"IN\"], \"default\": \"US\", \"label\": \"Holiday market\"}\nholiday_market = \"US\"\n# @param {\"type\": \"slider\", \"min\": 0.0, \"max\": 1.0, \"step\": 0.05, \"default\": 0.4, \"label\": \"Holiday demand uplift\"}\nholiday_uplift = 0.4\nimport requests\nfrom datetime import date, timedelta\n\ntoday = date.today()\nhorizon_end = today + timedelta(days=planning_horizon_days)\nhols = []\nfor y in sorted({today.year, horizon_end.year}):\n    r = requests.get(f\"https://date.nager.at/api/v3/publicholidays/{y}/{holiday_market}\", timeout=30)\n    if r.ok:\n        hols += r.json()\nhol_df = pd.DataFrame(hols)\nhol_df['date'] = pd.to_datetime(hol_df['date']).dt.date\nin_window = hol_df[(hol_df['date'] >= today) & (hol_df['date'] <= horizon_end)]\nholidays_in_window = len(in_window)\n# More holidays in the window => higher expected demand => tighter stock runway\nseason_multiplier = round(1 + holiday_uplift * min(holidays_in_window, 3) / 3, 2)\nprint(f\"{holiday_market}: {holidays_in_window} public holiday(s) within {planning_horizon_days} days ({today} -> {horizon_end})\")\nif holidays_in_window:\n    print(in_window[['date', 'localName']].to_string(index=False))\nprint(f\"\\nSeason demand multiplier: x{season_multiplier}\")",
+  "position": 25,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [
+   "planning_horizon_days",
+   "date",
+   "holiday_market",
+   "timedelta",
+   "hol_df",
+   "season_multiplier",
+   "in_window",
+   "hols",
+   "r",
+   "y",
+   "holidays_in_window",
+   "horizon_end",
+   "today",
+   "holiday_uplift"
+  ],
+  "sources_read": [
+   {
+    "kind": "url",
+    "id": "https://date.nager.at"
+   }
+  ]
+ },
+ {
+  "id": "c253b15d-6fee-4acd-9df3-8c09a13b9378",
+  "type": "markdown",
+  "code": "## Step 8 · The 360° product view\n\nAll eight signals join on `product_id` into one table — `products360` — spanning **Athena + S3 Tables (Iceberg) + DynamoDB + S3**. This unified frame is what the decision engine reasons over. Products with no fulfillment / pricing / reviews / stock / behavior rows get sensible defaults.",
+  "position": 26,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "5e037238-d416-4b6f-9828-4584b3bc494c",
+  "type": "code",
+  "code": "products360 = (product_demand\n    .merge(product_fulfillment, on='product_id', how='left')\n    .merge(product_pricing,     on='product_id', how='left')\n    .merge(product_sentiment,   on='product_id', how='left')\n    .merge(product_reco,        on='product_id', how='left')\n    .merge(product_stock,       on='product_id', how='left')\n    .merge(demand_signal,       on='product_id', how='left'))\n\n# Sensible defaults where a product has no reviews / stock / behavior rows\nproducts360['review_count']         = products360['review_count'].fillna(0).astype(int)\nproducts360['negative_reviews']     = products360['negative_reviews'].fillna(0).astype(int)\nproducts360['recommended_to_users'] = products360['recommended_to_users'].fillna(0).astype(int)\nproducts360['min_days_of_supply']   = products360['min_days_of_supply'].fillna(999)  # no stock data -> not at risk\nproducts360['on_hand']              = products360['on_hand'].fillna(0)\n# Iceberg-derived signals: no lifecycle/pricing row -> treat as clean / no drift\nproducts360['cancel_rate_pct']      = products360['cancel_rate_pct'].fillna(0.0)\nproducts360['return_rate_pct']      = products360['return_rate_pct'].fillna(0.0)\nproducts360['price_pct_of_launch']  = products360['price_pct_of_launch'].fillna(100.0)  # 100% = no markdown\nprint(f\"360 view: {products360.shape[0]} products x {products360.shape[1]} signals (Athena + S3 Tables/Iceberg + DynamoDB + S3)\")\nproducts360[['product_id','name','category','revenue','margin_pct','avg_rating','return_rate_pct','price_pct_of_launch','recommended_to_users','min_days_of_supply']].head(10)",
+  "position": 27,
+  "output_variable": null,
+  "vars_read": [
+   "demand_signal",
+   "product_demand",
+   "product_fulfillment",
+   "product_pricing",
+   "product_reco",
+   "product_sentiment",
+   "product_stock"
+  ],
+  "vars_written": [
+   "products360"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "292c7c2e-9637-48b8-83b7-90853df5fc73",
+  "type": "markdown",
+  "code": "## Step 9 · The decision engine\n\nA transparent rule set turns signals into an **action** per product, plus a 0–100 **priority score**. This is where the business judgment lives — the sliders are the levers. The two **S3 Tables (Iceberg)** signals sharpen the calls the flat data can't: a **high return rate** yanks a product out of PROMOTE into INVESTIGATE, and **deep markdowns** (price well below launch) push weak sellers toward WIND_DOWN.\n\n⚙️ *Sliders below:* stockout-risk threshold, promote-quality bar, margin floor, high-demand percentile, and the **max acceptable return rate**.\n\n| Action | When |\n|---|---|\n| 🔴 **RESTOCK** | high demand **and** stock runs out within the (season-adjusted) runway |\n| 🟢 **PROMOTE** | high demand, well-rated, healthy margin **and returns under control** |\n| 🟡 **INVESTIGATE** | selling but poorly rated **or returned too often** — a quality problem |\n| ⚪ **WIND_DOWN** | weak demand and weak ratings, **or a deeply-discounted weak seller** |\n| **MONITOR** | everything else |",
+  "position": 28,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "110f3059-c5ef-4878-b4a2-0ff63734c625",
+  "type": "code",
+  "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 45, \"step\": 1, \"default\": 14, \"label\": \"Stockout risk window (days)\"}\nstockout_risk_days = 14\n# @param {\"type\": \"slider\", \"min\": 3.0, \"max\": 5.0, \"step\": 0.1, \"default\": 4.0, \"label\": \"Min rating to promote\"}\nmin_rating_to_promote = 4.0\n# @param {\"type\": \"slider\", \"min\": 0, \"max\": 60, \"step\": 5, \"default\": 30, \"label\": \"Min margin (%)\"}\nmin_margin_pct = 30\n# @param {\"type\": \"slider\", \"min\": 50, \"max\": 95, \"step\": 5, \"default\": 75, \"label\": \"High-demand percentile\"}\nhigh_demand_percentile = 75\n# @param {\"type\": \"slider\", \"min\": 2, \"max\": 30, \"step\": 1, \"default\": 12, \"label\": \"Max return rate to promote (%)\"}\nmax_return_rate_pct = 12\nimport numpy as np\n\nrev_threshold = products360['revenue'].quantile(high_demand_percentile / 100)\neff_stockout_days = stockout_risk_days * season_multiplier  # holidays tighten the runway\n\ndef decide(r):\n    high_demand   = r['revenue'] >= rev_threshold\n    at_risk       = r['min_days_of_supply'] <= eff_stockout_days\n    rated         = r['review_count'] >= 3\n    good_quality  = rated and r['avg_rating'] >= min_rating_to_promote\n    poor_quality  = rated and r['avg_rating'] < min_rating_to_promote\n    good_margin   = r['margin_pct'] >= min_margin_pct\n    high_returns  = r['return_rate_pct'] > max_return_rate_pct           # S3 Tables signal\n    deep_markdown = r['price_pct_of_launch'] < 80                        # S3 Tables signal (>20% off launch)\n    if high_demand and at_risk:                                              return 'RESTOCK'\n    if high_demand and good_quality and good_margin and not high_returns:    return 'PROMOTE'\n    if poor_quality or high_returns:                                         return 'INVESTIGATE'\n    if (not high_demand) and (poor_quality or deep_markdown or r['review_count'] == 0): return 'WIND_DOWN'\n    return 'MONITOR'\n\nproducts360['action'] = products360.apply(decide, axis=1)\n\n# Priority score (0-100): revenue + stockout urgency + margin, lifted by holiday\n# season, and DOCKED for a high return rate (fulfillment pain is real cost).\nrev_n    = products360['revenue'] / products360['revenue'].max()\nrisk_n   = (eff_stockout_days - products360['min_days_of_supply']).clip(lower=0) / eff_stockout_days\nmar_n    = (products360['margin_pct'] / 100).clip(0, 1)\nreturn_penalty = (products360['return_rate_pct'] / 100).clip(0, 0.3)  # up to -30% for chronic returns\nproducts360['priority_score'] = (((0.5 * rev_n + 0.3 * risk_n + 0.2 * mar_n) - return_penalty)\n                                 * 100 * season_multiplier).clip(lower=0, upper=100).round(1)\n\nprint('Recommended actions:')\nprint(products360['action'].value_counts().to_string())\nprint(f\"\\nHigh-demand cutoff = P{high_demand_percentile} (${rev_threshold:,.0f} revenue) · effective stock runway = {eff_stockout_days:.0f} days (season x{season_multiplier}) · max return rate to promote = {max_return_rate_pct}%\")",
+  "position": 29,
+  "output_variable": null,
+  "vars_read": [
+   "products360",
+   "season_multiplier"
+  ],
+  "vars_written": [
+   "stockout_risk_days",
+   "min_margin_pct",
+   "rev_n",
+   "return_penalty",
+   "decide",
+   "eff_stockout_days",
+   "min_rating_to_promote",
+   "high_demand_percentile",
+   "mar_n",
+   "risk_n",
+   "rev_threshold",
+   "max_return_rate_pct"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "ff2f6f30-d4d0-4167-bba9-ab791e7a53ed",
+  "type": "markdown",
+  "code": "## Step 10 · The action plan\n\nThe payoff: how many products fall into each action, where they sit on the margin/revenue map, and the ranked **restock list** to act on first. Change any slider above and re-run to see the plan shift.",
+  "position": 30,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "41917bcf-28b3-4d05-8688-62ef2ed37226",
+  "type": "code",
+  "code": "action_counts = products360['action'].value_counts().reset_index()\naction_counts.columns = ['action', 'products']\nplot_bar(action_counts, x='action', y='products', title='Q4 Action Plan — products per recommended action')",
+  "position": 31,
+  "output_variable": null,
+  "vars_read": [
+   "products360"
+  ],
+  "vars_written": [
+   "action_counts"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "ddb21c48-b46e-4175-a249-c14b3e07d1c4",
+  "type": "code",
+  "code": "# Portfolio quadrant: where does each product sit, and what should we do about it?\nplot_scatter(products360, x='margin_pct', y='revenue', size='units_sold', color='action',\n             title='Product portfolio — margin vs revenue (bubble = units sold)')",
+  "position": 32,
+  "output_variable": null,
+  "vars_read": [
+   "products360"
+  ],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "4be10479-0b07-4f67-b16b-ef3e321c8eca",
+  "type": "markdown",
+  "code": "### Fulfillment risk map — an Iceberg-powered view\n\nThe `order_events` lifecycle log lets us plot **return rate vs revenue**: the top-right is the danger zone — products selling a lot *and* coming back a lot. These are the ones the engine steers away from PROMOTE and into INVESTIGATE.",
+  "position": 33,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "9ca0a572-8990-4bb5-939c-7dce9885080b",
+  "type": "code",
+  "code": "# Fulfillment risk: revenue vs return rate, colored by the action the engine chose.\n# Both axes are Iceberg-derived (order_events) x Athena (revenue) — cross-source in one view.\nfulfil_view = products360[products360['orders_seen'].notna()] if 'orders_seen' in products360 else products360\nplot_scatter(fulfil_view, x='return_rate_pct', y='revenue', size='units_sold', color='action',\n             title='Fulfillment risk — return rate vs revenue (bubble = units sold)')",
+  "position": 34,
+  "output_variable": null,
+  "vars_read": [
+   "products360"
+  ],
+  "vars_written": [
+   "fulfil_view"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "40d0247a-138b-4477-995b-8124969d723a",
+  "type": "code",
+  "code": "# @param {\"type\": \"slider\", \"min\": 5, \"max\": 30, \"step\": 1, \"default\": 10, \"label\": \"Top N\"}\ntop_n = 10\nrestock = products360[products360['action'] == 'RESTOCK'].sort_values('priority_score', ascending=False).head(top_n)\nif len(restock):\n    plot_bar(restock, x='name', y='priority_score', color='category',\n             title=f'Top {top_n} RESTOCK priorities before the peak')\nelse:\n    print(\"No products flagged RESTOCK at current settings — try lowering 'stockout_risk_days' or 'high_demand_percentile'.\")\nrestock[['product_id','name','category','revenue','margin_pct','avg_rating','return_rate_pct','price_pct_of_launch','min_days_of_supply','recommended_to_users','priority_score']]",
+  "position": 35,
+  "output_variable": null,
+  "vars_read": [
+   "products360"
+  ],
+  "vars_written": [
+   "restock",
+   "top_n"
+  ],
+  "sources_read": []
+ },
+ {
+  "id": "d37339c0-46a5-4aa7-bd70-68b8a24b6631",
+  "type": "markdown",
+  "code": "## Step 11 · The *why* behind the plan — Bedrock Knowledge Base\n\nThe numbers tell us **what** to do; the product **spec documents** tell us **why**. Each product has a detailed PDF spec (features, positioning, materials, warranty) indexed in a **Bedrock Knowledge Base** (S3 Vectors). Two pre-loaded helpers query it — no boto3, no vector-store wiring:\n\n| Helper | Returns | Use it for |\n|---|---|---|\n| `read_bedrock_kb(query, ...)` | a **DataFrame** of the top matching chunks (`text`, `score`, `source_uri`, `source_type`, `metadata`) | pulling the raw evidence to post-process yourself |\n| `ask_bedrock_kb(query, ...)` | a dict `{answer, citations}` — a **synthesized, cited answer** (RetrieveAndGenerate) | a ready-to-read explanation grounded in the docs |\n\nBoth default to the platform KB (`BEDROCK_KB_ID`), so you usually just pass a `query`. Both also accept **metadata filtering** so semantic search stays inside the slice you care about — the sidecar metadata on every doc carries `category`, `brand`, `product_id`, `price`, and `rating_avg`.\n\n> The KB is installed by `local_install.sh` on every run. If provisioning was skipped or failed, `BEDROCK_KB_ID` is blank — the cells below will tell you so; the rest of the workbook is unaffected.",
+  "position": 36,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "92005736-619e-4a2b-aee2-9d0c463c01b5",
+  "type": "markdown",
+  "code": "### 11a · Semantic search + metadata filtering (`read_bedrock_kb`)\n\nSearch the spec library for a capability, but **scoped to one category** using a simple `filter={field: value}` (server-side metadata match) so a \"battery life\" query for Electronics never drags in a skincare doc. `min_score` drops weak matches client-side.\n\n⚙️ *Sliders:* the capability to search for, the category to stay within, and how many chunks to pull.",
+  "position": 37,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "2de4deb4-da78-41e3-9e8b-42ba17542b87",
+  "type": "code",
+  "code": "# @param {\"type\": \"text\", \"default\": \"long battery life and fast charging\", \"label\": \"Capability to search for\"}\nkb_query = \"long battery life and fast charging\"\n# @param {\"type\": \"dropdown\", \"options\": [\"Electronics\", \"Beauty\", \"Home\", \"Sports\", \"Clothing\", \"Toys\"], \"default\": \"Electronics\", \"label\": \"Restrict to category\"}\nkb_category = \"Electronics\"\n# @param {\"type\": \"slider\", \"min\": 1, \"max\": 10, \"step\": 1, \"default\": 5, \"label\": \"Chunks to retrieve (top_k)\"}\nkb_top_k = 5\n\n# Simple metadata filter: {field: value} → server-side equality match on the doc's\n# sidecar metadata. Multiple keys would AND together (e.g. category AND brand).\nchunks = read_bedrock_kb(kb_query, filter={\"category\": kb_category}, top_k=kb_top_k)\nprint(f\"{len(chunks)} chunk(s) for '{kb_query}' within category='{kb_category}'\")\nif len(chunks):\n    print(f\"score range: {chunks['score'].min():.3f} – {chunks['score'].max():.3f}\")\n# metadata is a dict per chunk — surface a couple of fields to see the filter worked\nif len(chunks):\n    chunks_view = chunks.assign(\n        product=chunks['metadata'].apply(lambda m: m.get('product_name', '')),\n        category=chunks['metadata'].apply(lambda m: m.get('category', '')),\n    )\n    chunks_view = chunks_view[['product', 'category', 'score', 'text', 'source_uri']]\nchunks_view if len(chunks) else chunks",
+  "position": 38,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [
+   "chunks_view",
+   "kb_query",
+   "kb_top_k",
+   "chunks",
+   "kb_category"
+  ],
+  "sources_read": [
+   {
+    "kind": "bedrock_kb",
+    "id": "AVSDQZX2CR"
+   }
+  ]
+ },
+ {
+  "id": "f8b4f541-5252-49b1-9bf6-e6deb74c5a89",
+  "type": "markdown",
+  "code": "### 11b · Full-power filtering with a raw Bedrock filter\n\nWhen a simple equality isn't enough, pass a **raw Bedrock filter** instead of `{field: value}` — the helper detects the operator key and passes it straight through. Here we keep only **well-rated** products with a numeric comparison, and combine two conditions with `andAll`.\n\n⚙️ *Slider:* the minimum average rating to include.",
+  "position": 39,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "3c5db48c-9376-4e58-b9e9-2cedc6b2d64c",
+  "type": "code",
+  "code": "# @param {\"type\": \"slider\", \"min\": 3.0, \"max\": 5.0, \"step\": 0.1, \"default\": 4.0, \"label\": \"Min average rating\"}\nkb_min_rating = 4.0\n\n# Raw Bedrock filter: numeric comparison + AND of two clauses. The helper sees the\n# operator key ('andAll'/'greaterThanOrEquals') and forwards it unchanged.\nrating_filter = {\n    \"andAll\": [\n        {\"equals\": {\"key\": \"category\", \"value\": kb_category}},\n        {\"greaterThanOrEquals\": {\"key\": \"rating_avg\", \"value\": kb_min_rating}},\n    ]\n}\ntop_rated_chunks = read_bedrock_kb(kb_query, filter=rating_filter, top_k=kb_top_k)\nprint(f\"{len(top_rated_chunks)} chunk(s) in {kb_category} with rating_avg >= {kb_min_rating}\")\nif len(top_rated_chunks):\n    top_rated_view = top_rated_chunks.assign(\n        product=top_rated_chunks['metadata'].apply(lambda m: m.get('product_name', '')),\n        rating=top_rated_chunks['metadata'].apply(lambda m: m.get('rating_avg')),\n    )[['product', 'rating', 'score', 'text']]\nelse:\n    print(\"No chunks matched — lower the rating slider or widen the query.\")\ntop_rated_view if len(top_rated_chunks) else top_rated_chunks",
+  "position": 40,
+  "output_variable": null,
+  "vars_read": [
+   "kb_category",
+   "kb_query",
+   "kb_top_k"
+  ],
+  "vars_written": [
+   "top_rated_view",
+   "rating_filter",
+   "kb_min_rating",
+   "top_rated_chunks"
+  ],
+  "sources_read": [
+   {
+    "kind": "bedrock_kb",
+    "id": "AVSDQZX2CR"
+   }
+  ]
+ },
+ {
+  "id": "719e76a2-7b87-4a7d-bf69-a7e1dc6c27d6",
+  "type": "markdown",
+  "code": "### 11c · A cited answer for a product on the plan (`ask_bedrock_kb`)\n\nFinally, tie it back to the plan: take a product the engine flagged (a top **RESTOCK**, else the top-priority product) and ask the KB to **explain what makes it compelling** — a synthesized answer *grounded in its spec*, with citations. This is the narrative a merchandiser can paste into the restock justification.",
+  "position": 41,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ },
+ {
+  "id": "b42a3179-5e08-4ac7-8d06-756b5a9b9531",
+  "type": "code",
+  "code": "# The KB only holds spec PDFs for a subset of the catalog (the top sellers), while\n# the plan's RESTOCK pick shifts with the sliders — so first find which of our\n# planned products actually HAVE a spec in the KB, then focus on the best of those.\n# (Asking about a product with no doc makes RetrieveAndGenerate decline — nothing to\n# ground on.) One broad pull surfaces the product_ids the KB knows about.\nkb_probe = read_bedrock_kb(\"product specification features\", top_k=50)\nkb_pids = {m.get('product_id') for m in kb_probe['metadata'] if m.get('product_id')}\nprint(f\"KB has specs for {len(kb_pids)} product(s).\")\n\n# Highest-priority planned product that also has a spec — prefer RESTOCK/PROMOTE.\nin_kb = products360[products360['product_id'].isin(kb_pids)]\n_ranked = in_kb.sort_values(\n    ['action', 'priority_score'],\n    key=lambda s: s.map({'RESTOCK': 0, 'PROMOTE': 1}).fillna(2) if s.name == 'action' else s,\n    ascending=[True, False],\n)\nif len(_ranked):\n    focus = _ranked.iloc[0]\n    focus_name, focus_pid = focus['name'], focus['product_id']\n    print(f\"Focus product: {focus_name} (id {focus_pid}, action {focus['action']}, priority {focus['priority_score']})\\n\")\n    # Ask the KB, scoped to THIS product via a metadata filter so the answer is\n    # grounded only in its own spec. Returns {answer, citations}.\n    result = ask_bedrock_kb(\n        f\"What are the standout features and ideal customer for the {focus_name}?\",\n        filter={\"product_id\": str(focus_pid)},\n    )\n    print(result['answer'])\n    print(f\"\\n— grounded in {len(result['citations'])} citation(s):\")\n    for c in result['citations']:\n        print(f\"  • {c.get('source_uri', '')}\")\nelse:\n    print(\"None of the planned products have a spec in the KB at these slider settings.\")\n    print(\"Try a different market/filters, or ask about a KB product directly:\")\n    print('  ask_bedrock_kb(\"Which products have the best battery life?\")')",
+  "position": 42,
+  "output_variable": null,
+  "vars_read": [
+   "products360"
+  ],
+  "vars_written": [
+   "c",
+   "focus",
+   "focus_name",
+   "kb_pids",
+   "kb_probe",
+   "_ranked",
+   "focus_pid",
+   "result",
+   "in_kb"
+  ],
+  "sources_read": [
+   {
+    "kind": "bedrock_kb",
+    "id": "AVSDQZX2CR"
+   }
+  ]
+ },
+ {
+  "id": "de760133-2876-4f4a-863f-87eb6fb548ae",
+  "type": "markdown",
+  "code": "## Make it yours\n\n- **App mode:** the sliders become the app's inputs — ship this as an internal *Q4 Planner* where an ops lead picks a market and risk appetite and gets an action list back.\n- **Extend it:** fold in `marketing_campaigns.csv` (S3) to weight PROMOTE by channel ROI, or bring in World Bank GDP (public API) to size international expansion.\n- **Lean on Iceberg:** `order_events` and `product_price_history` are real **S3 Tables** — append new lifecycle events or price versions and re-run; use **time-travel** (`FOR TIMESTAMP AS OF`) to reprice a past order at its as-of cost, or to audit how the plan would have looked last month.\n- **Blend structured + unstructured:** the **Bedrock KB** step turns product spec PDFs into a queryable signal — auto-draft the restock justification for every flagged product with `ask_bedrock_kb`, or pull spec chunks with `read_bedrock_kb` and join them onto `products360`.\n- **Trust it:** every number traces back to a source cell — Athena SQL, S3 Tables (Iceberg) SQL, DynamoDB SQL, S3, or a cited Bedrock KB answer — so the plan is auditable, not a black box.",
+  "position": 43,
+  "output_variable": null,
+  "vars_read": [],
+  "vars_written": [],
+  "sources_read": []
+ }
+]

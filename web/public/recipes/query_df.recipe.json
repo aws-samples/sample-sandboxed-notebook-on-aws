@@ -1,0 +1,22 @@
+{
+  "name": "Join DataFrames with SQL (query_df)",
+  "desc": "Combine frames you've already loaded with in-process DuckDB SQL — joins, group-bys, windows — no re-query, no pandas merge chains",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 🦆 Join DataFrames with SQL — `query_df`\n\nYou've loaded a few DataFrames (from Athena, S3, DynamoDB, ...). Now you need to **combine** them — a join, a group-by, a window. Instead of chaining `pd.merge` + `groupby` + `rename`, write the **SQL** and let `query_df` run it with **DuckDB in-process**.\n\n- Reference each DataFrame **by its variable name** — nothing to register.\n- Runs entirely in the VM against the frames already in memory: **no AWS call, no network**.\n- Returns a new DataFrame; your inputs are untouched.\n\n| Stage | Helper | What it does |\n|---|---|---|\n| Load | `read_athena` / `read_s3` / `read_dynamodb` | pull each table into a DataFrame |\n| Combine | `query_df(\"SELECT ... FROM a JOIN b ...\")` | SQL across the frames by name |\n| Chart | `plot_bar` / `plot_pie` / `plot_corr` | one-line view of the result |\n\n```mermaid\ngraph LR\n  A[\"frame_a (read_*)\"] --> Q[\"query_df (DuckDB in-process)\"]\n  B[\"frame_b (read_*)\"] --> Q\n  Q --> R[\"result DataFrame\"]\n  R --> V[\"plot_* / profile\"]\n```\n\nFor warehouse-scale SQL (pushdown to the engine) keep using `read_athena` / `read_aurora`; `query_df` is for frames you ALREADY have in memory. `duckdb` is baked into the image — nothing to install. Replace the `<...>` placeholders."
+    },
+    {
+      "type": "code",
+      "code": "# 1) Load the frames you want to combine. Any readers work — the point is you end\n#    up with 2+ DataFrames in your namespace. Give them clear variable names:\n#    those names become the TABLE names in your SQL.\norders   = read_athena(\"SELECT * FROM <orders_table> LIMIT 5000\")\nproducts = read_s3(\"s3://<bucket>/<products.parquet>\")\nprint(\"orders:\", orders.shape, \"· products:\", products.shape)"
+    },
+    {
+      "type": "code",
+      "code": "# 2) Combine with SQL — reference each frame by its variable name. DuckDB speaks\n#    standard SQL (joins, GROUP BY, window functions, CTEs). This runs in-process\n#    over the in-memory frames: no re-query, no pandas merge chain.\nsummary = query_df('''\n    SELECT p.<category_col>              AS category,\n           COUNT(*)                     AS orders,\n           ROUND(SUM(o.<revenue_col>), 2) AS revenue\n    FROM orders o\n    JOIN products p ON o.<product_id> = p.<id>\n    GROUP BY p.<category_col>\n    ORDER BY revenue DESC\n''')\nsummary"
+    },
+    {
+      "type": "code",
+      "code": "# 3) Chart the result with a one-line helper (dark theme + auto-display baked in).\nplot_bar(summary, x=\"category\", y=\"revenue\", title=\"Revenue by Category\")"
+    }
+  ]
+}

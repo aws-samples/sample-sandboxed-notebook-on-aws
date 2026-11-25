@@ -1,0 +1,17 @@
+# Extra deps for the sklearn SCRIPT-MODE training job. SageMaker's framework
+# container pip-installs this file (when present in the source dir) BEFORE running
+# sklearn_train.py — so an estimator the base container lacks is available at fit time.
+#
+# xgboost: needed only for estimator='xgboost'. The AWS sagemaker-scikit-learn
+# container does NOT ship xgboost, so we install it here. Use the CPU-only wheel
+# (xgboost-cpu) — the training instance is CPU, and it ships the SAME importable
+# `xgboost` module without the ~350MB CUDA stack. PIN to the SERVING container's
+# major.minor (serving/requirements.txt: xgboost-cpu==3.2.*) so a model pickled by
+# the training job loads cleanly in the serving container — tree ensembles are not
+# guaranteed cross-minor pickle-safe (same discipline as the sklearn 1.9.x pin).
+xgboost-cpu==3.2.*
+
+# lightgbm: needed only for estimator='lightgbm'. Same rationale as xgboost — the
+# sklearn container doesn't ship it. Pinned to the serving container's major
+# (serving/requirements.txt: lightgbm==4.*) for writer->reader pickle compatibility.
+lightgbm==4.*

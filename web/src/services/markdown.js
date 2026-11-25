@@ -1,0 +1,318 @@
+/**
+ * Shared markdown rendering — the single place markdown → HTML happens across the
+ * app (notebook markdown cells, AI explanations, intel report, app view, text
+ * output). Centralizing it means math (KaTeX) and diagrams (Mermaid) light up
+ * everywhere at once instead of being wired per-surface.
+ *
+ * Pipeline:
+ *   renderMarkdown(text) → HTML string with:
+ *     • inline/block LaTeX rendered by KaTeX (marked-katex-extension), and
+ *     • ```mermaid fences turned into a <div class="mermaid-diagram" data-mermaid>
+ *       PLACEHOLDER; the rendered SVG is spliced in AFTER sanitize once it's cached
+ *       (see spliceCachedMermaid + ensureMermaidRendered). Other code fences are
+ *       left as normal <pre><code>.
+ *   Use renderMarkdownSafe() for the full render→sanitize→splice pipeline.
+ *
+ * The useMermaidMarkdown() hook (hooks/useMermaidMarkdown.js) wraps renderMarkdown +
+ * sanitize + the async render-and-rebuild cycle so consumers just get a stable HTML
+ * string with diagrams baked in. The <Markdown> component builds on that hook.
+ *
+ * NOTE: this module intentionally does NOT carry AiChatPanel's code-card renderer
+ * or normalizeFences() — those are chat-specific and stay in that component.
+ */
+import { Marked } from 'marked'
+import markedKatex from 'marked-katex-extension'
+import 'katex/dist/katex.min.css'
+import { sanitizeMarkdown } from './sanitize'
+import { highlightBasic } from './basicHighlight'
+
+// Fenced-code languages we syntax-highlight in the shared renderer (via the
+// self-contained, duplication-safe highlightBasic tokenizer). Everything else —
+// incl. no language — renders as a plain (escaped) code block. Aliases map to the
+// two highlighters basicHighlight supports.
+const _HL_LANG = {
+  python: 'python', py: 'python', python3: 'python',
+  sql: 'sql', duckdb: 'sql', postgres: 'sql', postgresql: 'sql', athena: 'sql',
+}
+
+// A dedicated Marked instance (not the global `marked`) so our KaTeX + mermaid
+// config can't collide with AiChatPanel's global marked.setOptions(renderer).
+const md = new Marked({ breaks: true })
+
+// KaTeX: $inline$ and $$block$$. throwOnError:false → a malformed formula renders
+// as an error-colored inline string instead of throwing and blanking the whole doc.
+md.use(markedKatex({ throwOnError: false, nonStandard: true }))
+
+// Mermaid fences → a placeholder div carrying the raw source in a data attribute.
+// The SVG is rendered + cached by ensureMermaidRendered() and spliced into the HTML
+// by spliceCachedMermaid(). Non-mermaid fenced code uses marked's default renderer.
+md.use({
+  renderer: {
+    code(token) {
+      const lang = (token.lang || '').trim().toLowerCase()
+      if (lang === 'mermaid') {
+        // Stash the source encoded so quotes/newlines survive the attribute + the
+        // sanitizer; ensureMermaidRendered decodes it. The <pre> source shows until
+        // the SVG is rendered + spliced in (or, on failure, the raw source stays).
+        const encoded = encodeURIComponent(token.text || '')
+        return `<div class="mermaid-diagram" data-mermaid="${encoded}">`
+          + `<pre class="mermaid-src">${escapeHtml(token.text || '')}</pre></div>`
+      }
+      // Python / SQL fences → syntax-highlighted via the shared basicHighlight
+      // tokenizer (same one the AI chat code cards use), so EVERY <Markdown> surface
+      // — the entity-profile modal's "How to Query", AI explanations, intel report —
+      // gets colored keywords/strings/comments instead of flat monospace. The output
+      // is <span class="tok-*"> spans, which the markdown sanitizer already allows
+      // (span + class). Unknown/absent langs fall through to marked's plain renderer.
+      const hl = _HL_LANG[lang]
+      if (hl) {
+        const inner = highlightBasic(token.text || '', hl)
+        return `<pre><code class="language-${hl} hljs-basic">${inner}</code></pre>`
+      }
+      return false  // fall through to marked's default code rendering
+    },
+  },
+})
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * Render markdown text to an HTML string (math rendered, mermaid left as
+ * placeholders). The output still needs sanitizing + a mermaid splice — use
+ * renderMarkdownSafe() unless you need the raw pre-sanitize HTML.
+ */
+export function renderMarkdown(text) {
+  if (!text) return ''
+  try {
+    return md.parse(text)
+  } catch {
+    // Never let a markdown/KaTeX parse error blank the surface — fall back to the
+    // escaped raw text so the user still sees their content.
+    return `<pre>${escapeHtml(text)}</pre>`
+  }
+}
+
+/**
+ * The safe, ready-to-render pipeline: markdown → HTML → sanitize → splice mermaid.
+ *
+ * Mermaid SVGs are spliced in AFTER DOMPurify because DOMPurify keeps the
+ * <foreignObject> element but strips its inner XHTML label content (namespace
+ * switch), which rendered diagrams as empty boxes. The SVG is generated by mermaid
+ * from first-party source with securityLevel:'loose' (scripts/handlers stripped),
+ * so it's safe to inject without re-sanitizing. Uncached diagrams stay as their
+ * (sanitized) source placeholder until ensureMermaidRendered() caches them.
+ */
+export function renderMarkdownSafe(text) {
+  return spliceCachedMermaid(sanitizeMarkdown(renderMarkdown(text || '')))
+}
+
+// ── Mermaid: lazy, async, cache-and-splice ───────────────────────────────────
+// mermaid is large (~500KB+), so it's dynamically imported only when a diagram is
+// actually present. One shared init. ensureMermaidRendered(html) renders each
+// unique diagram source once and caches its SVG; spliceCachedMermaid(html) then
+// splices cached SVGs into the (already-sanitized) HTML so they're React-owned
+// (survive re-renders). A bad diagram caches an error and shows source + a note.
+let _mermaidMod = null
+// The theme mermaid was last initialized with (null = never initialized). Tracking
+// the theme — instead of a plain "did we init" boolean — lets getMermaid()
+// re-initialize when the app theme changes so node fills/text follow light vs dark.
+let _mermaidTheme = null
+let _mermaidSeq = 0
+// Cache rendered SVG keyed by diagram source. React owns the .md-rendered subtree
+// via dangerouslySetInnerHTML, so any parent re-render (status polls, focus, etc.)
+// recreates the placeholder from its source HTML and discards our imperatively
+// injected SVG. Caching lets us re-inject synchronously on every pass — no flicker,
+// no re-render race, and mermaid.render() only runs once per unique diagram.
+// NOTE: SVGs bake in the theme active at render time, so the cache is CLEARED on a
+// theme change (see the data-theme observer below) — otherwise old-theme colors
+// would keep getting spliced back in.
+const _mermaidCache = new Map()
+
+/**
+ * Resolve the mermaid built-in theme from the app's current theme. The app sets
+ * data-theme on <html> ('dark' | 'light' | 'ember'); mermaid has no matching named
+ * themes, so map:
+ *   'light'            → mermaid 'neutral' (its grayscale theme: white nodes, gray
+ *                                           strokes, dark text — matches the Apple-style
+ *                                           light neutrals; no lavender fills)
+ *   'dark' | 'ember'   → mermaid 'dark'    (ember is a dark surface palette, so the
+ *                                           dark diagram reads fine on it)
+ *   null / anything    → mermaid 'dark'    (matches the app's default dark surfaces)
+ * Read at render time so a theme toggle picks up the new value.
+ */
+export function resolveMermaidTheme() {
+  const appTheme =
+    (typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-theme')) || 'dark'
+  return appTheme === 'light' ? 'neutral' : 'dark'
+}
+
+async function getMermaid() {
+  const mod = _mermaidMod || (await import('mermaid'))
+  _mermaidMod = mod.default || mod
+  const theme = resolveMermaidTheme()
+  // (Re)initialize whenever the resolved theme differs from what we last used. The
+  // first call always runs (_mermaidTheme starts null); later calls re-init only on
+  // an actual theme change.
+  if (_mermaidTheme !== theme) {
+    _mermaidMod.initialize({
+      startOnLoad: false,
+      // 'loose' keeps HTML labels (foreignObject) intact. Our mermaid sources are
+      // first-party (bundled sample notebooks + the user's own markdown cells), and
+      // the surrounding markdown is DOMPurify-sanitized. 'strict' in mermaid v12
+      // renders through a sandboxed path that dropped our labeled nodes, so the
+      // diagram came back effectively empty with no thrown error.
+      securityLevel: 'loose',
+      theme,                     // follows the app theme (light → 'neutral')
+      fontFamily: 'inherit',
+    })
+    _mermaidTheme = theme
+  }
+  return _mermaidMod
+}
+
+// ── Theme-change plumbing ─────────────────────────────────────────────────────
+// Diagrams must re-theme live when the user toggles the app theme (no page reload).
+// A single module-level MutationObserver watches <html> data-theme; on an actual
+// change it invalidates the SVG cache (so diagrams re-render under the new theme)
+// and notifies subscribers (the markdown hooks) to re-run their render/splice pass.
+const _themeSubscribers = new Set()
+let _themeObserver = null
+let _lastObservedTheme = null
+
+function ensureThemeObserver() {
+  if (_themeObserver || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return
+  _lastObservedTheme = document.documentElement.getAttribute('data-theme')
+  _themeObserver = new MutationObserver(() => {
+    const next = document.documentElement.getAttribute('data-theme')
+    if (next === _lastObservedTheme) return   // only react to real data-theme changes
+    _lastObservedTheme = next
+    // Invalidate cached SVGs: they baked in the previous theme's colors. Clearing is
+    // simple and cheap (diagrams are few) and forces a re-render under the new theme.
+    _mermaidCache.clear()
+    for (const fn of _themeSubscribers) {
+      try { fn() } catch { /* a bad subscriber must not break the others */ }
+    }
+  })
+  _themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  })
+}
+
+/**
+ * Subscribe to app theme changes so mounted diagrams can refresh live. The callback
+ * fires AFTER the mermaid SVG cache has been cleared, so a subscriber should simply
+ * trigger its own re-render (which re-runs ensureMermaidRendered + the splice pass).
+ * Returns an unsubscribe function. Lazily installs one shared observer on first use.
+ */
+export function onMermaidThemeChange(fn) {
+  ensureThemeObserver()
+  _themeSubscribers.add(fn)
+  return () => { _themeSubscribers.delete(fn) }
+}
+
+// Matches the mermaid placeholder div by its data-mermaid attribute, tolerant of
+// attribute order (DOMPurify may reorder class/data-mermaid during sanitization).
+// Capture group 1 is the encodeURIComponent'd diagram source. [\s\S]*? swallows the
+// inner <pre> fallback so we replace the whole placeholder with the SVG.
+const MERMAID_PLACEHOLDER_RE =
+  /<div\b[^>]*\bdata-mermaid="([^"]*)"[^>]*>[\s\S]*?<\/div>/g
+
+/**
+ * Replace mermaid placeholders in `html` with their rendered SVG when cached
+ * (rendered or errored). Runs AFTER sanitization — the SVG is trusted (mermaid
+ * output, first-party source, securityLevel:'loose') and must bypass DOMPurify,
+ * which strips foreignObject label content. Uncached diagrams keep their sanitized
+ * source placeholder until ensureMermaidRendered() caches them + a rebuild fires.
+ * The SVG ends up in the HTML string React renders, so it survives re-renders.
+ */
+export function spliceCachedMermaid(html) {
+  if (!html || html.indexOf('mermaid-diagram') === -1) return html
+  return html.replace(MERMAID_PLACEHOLDER_RE, (whole, encoded) => {
+    // Key the cache on the RAW encoded attribute string (not the decoded source):
+    // decode round-trips can differ subtly (entity/percent-encoding of chars like
+    // '×') between the render pass and this splice pass, which caused cache misses.
+    const entry = _mermaidCache.get(encoded)
+    if (!entry) return whole                 // not rendered yet — keep placeholder
+    if (entry.error) {
+      const src = safeDecode(encoded)
+      return `<div class="mermaid-diagram mermaid-error">`
+        + `<div class="mermaid-error-note">Diagram error: ${escapeHtml(entry.error)}</div>`
+        + `<pre class="mermaid-src">${escapeHtml(src)}</pre></div>`
+    }
+    return `<div class="mermaid-diagram">${entry.svg}</div>`
+  })
+}
+
+function safeDecode(s) {
+  try { return decodeURIComponent(s) } catch { return s }
+}
+
+/**
+ * Extract [encodedKey, decodedSource] for every mermaid fence in an HTML string.
+ * The encoded key is what we cache on (stable across passes); the decoded source
+ * is what we hand to mermaid.render().
+ */
+function extractMermaidSources(html) {
+  if (!html || html.indexOf('mermaid-diagram') === -1) return []
+  const out = []
+  const re = new RegExp(MERMAID_PLACEHOLDER_RE.source, 'g')
+  let m
+  while ((m = re.exec(html)) !== null) {
+    const encoded = m[1]
+    const src = safeDecode(encoded)
+    if (src.trim()) out.push([encoded, src])
+  }
+  return out
+}
+
+/**
+ * Ensure every mermaid diagram in `html` is rendered + cached. Renders only
+ * sources we haven't seen, so it's cheap to call repeatedly. Returns true if it
+ * rendered (or errored) at least one NEW diagram — the caller uses that to force a
+ * rebuild so spliceCachedMermaid() can splice the fresh SVG into the HTML.
+ * No-op (and never loads the ~500KB mermaid bundle) when there are no diagrams.
+ */
+export async function ensureMermaidRendered(html) {
+  const sources = extractMermaidSources(html)           // [[encodedKey, decodedSrc], ...]
+  const pending = sources.filter(([key]) => !_mermaidCache.has(key))
+  if (pending.length === 0) return false
+
+  let mermaid
+  try {
+    mermaid = await getMermaid()
+  } catch (e) {
+    console.warn('[mermaid] failed to load', e)
+    return false  // couldn't load mermaid — leave the source fallbacks visible
+  }
+  let changed = false
+  for (const [key, src] of pending) {
+    if (_mermaidCache.has(key)) continue  // rendered by a concurrent call
+    const id = `mmd-${Date.now()}-${_mermaidSeq++}`
+    try {
+      const { svg } = await mermaid.render(id, src)
+      _mermaidCache.set(key, { svg })
+      changed = true
+    } catch (err) {
+      _mermaidCache.set(key, { error: err?.message || 'invalid mermaid syntax' })
+      changed = true
+    }
+  }
+  return changed
+}
+
+/**
+ * Render ONE mermaid source to SVG for a static export (exportRender.inlineMermaid).
+ * Reuses the shared, current-theme mermaid init (light → 'neutral', so nodes stay
+ * readable) and the SVG cache. Returns {svg} | {error} | null (mermaid unavailable).
+ */
+export async function renderMermaidSvg(src) {
+  const key = encodeURIComponent(src || '')
+  await ensureMermaidRendered(`<div class="mermaid-diagram" data-mermaid="${key}"></div>`)
+  return _mermaidCache.get(key) || null
+}

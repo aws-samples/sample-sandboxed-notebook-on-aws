@@ -1,0 +1,293 @@
+{
+  "name": "ML: Return-Risk Scorekeeper",
+  "description": "Train a scikit-learn model on real Athena features labelled by the Iceberg order_events lifecycle — by hand AND as a one-line train_model call — ship it to S3 with save_model/load_model, then score the catalog with predict_batch/model_info into a product action list, with an optional framework-free ONNX epilogue.",
+  "savedAt": "2026-09-20T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🎯 Return-Risk Scorekeeper\n\n**The decision:** returns and cancellations quietly bleed margin — a product that sells well but comes back a lot is a *loss* dressed up as a *win*. Merchandising wants a **risk score for every order** so ops can flag high-risk orders for review and merchandising can spot the products driving the damage.\n\nThis workbook builds that scorer end-to-end using **real sandbox data** and the pre-loaded **ML helpers**. It's the classic *bring-your-own-model* loop: assemble a labelled training table from our data catalog, train a scikit-learn model, **save it to S3 and load it back** (the way a real model artifact is shipped), then **score the whole catalog** and turn the scores into an action list.\n\n| Stage | Source | Service | ML helper |\n|---|---|---|---|\n| Features: price, margin, buyer mix | `orders` × `products` × `customers` | **Athena** | — |\n| Label: did the order cancel/return? | `order_events` lifecycle | **S3 Tables (Iceberg)** | — |\n| Persist + reload the trained model | model artifact | **S3** | `save_model` / `load_model` |\n| Inspect what the model expects | in-memory model | — | `model_info` |\n| Score every order + product | the feature table | — | `predict_batch` / `predict_proba` |\n\n```mermaid\ngraph LR\n  A[\"Athena: orders × products × customers\"] --> F[\"Feature table\"]\n  E[\"S3 Tables: order_events lifecycle\"] --> L[\"Label: returned/cancelled?\"]\n  F --> T[\"Train sklearn classifier\"]\n  L --> T\n  T --> S[\"save_model → S3\"]\n  S --> LD[\"load_model ← S3\"]\n  LD --> P[\"predict_batch: risk score per order\"]\n  P --> ACT{\"Action list\"}\n  ACT --> RV[\"Review high-risk orders\"]\n  ACT --> FX[\"Fix high-risk products\"]\n```\n\nAll AWS access uses the MicroVM's **execution role** — no credentials in the notebook. `scikit-learn` and `joblib` are pre-installed; nothing to `pip install`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 0 · Connect to the sandbox\n\nConfirm identity and resolve the S3 artifacts bucket — that's where we'll save the trained model so we can load it back like a real deployed artifact.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import pandas as pd\nimport numpy as np\n\ninfo = whoami()\naccount, region = info['account'], info['region']\nbucket = info['bucket']  # the sandbox artifacts bucket — never hardcode it\nprint(f\"Account {account} · {region}\")\nprint(f\"Model artifacts bucket: {bucket}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · Build the feature table — Athena (`orders` × `products` × `customers`)\n\nEvery order becomes one training row. We pull the signals a return-risk model would plausibly use: **order size** (quantity, unit price), **product economics** (price, cost, margin %, category rating), and **who bought it** (customer segment, lifetime value). One `read_athena` join produces the DataFrame `orders_feat`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# One Athena join → one row per order with product + customer features attached.\n# SAME 13-feature contract as the 'SageMaker: Train at Scale' sample, so a model\n# or endpoint from EITHER notebook scores the SAME raw rows.\norders_feat = read_athena(\"\"\"\n    SELECT\n        o.order_id,\n        o.product_id,\n        o.quantity,\n        o.unit_price,\n        o.total AS order_total,\n        p.price,\n        p.cost,\n        ROUND((p.price - p.cost) / p.price * 100, 1) AS margin_pct,\n        p.rating_avg,\n        COALESCE(c.lifetime_value, 0) AS lifetime_value,\n        p.category,\n        p.brand,\n        COALESCE(c.segment, 'Unknown') AS segment,\n        o.shipping_country,\n        o.payment_method\n    FROM microvm_demo_db.orders o\n    JOIN microvm_demo_db.products p       ON o.product_id = p.product_id\n    LEFT JOIN microvm_demo_db.customers c ON o.user_id = c.user_id\n\"\"\")\nprint(f\"{len(orders_feat):,} orders · {orders_feat['product_id'].nunique()} products\")\norders_feat.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · Attach the label — S3 Tables / Iceberg (`order_events`)\n\nThe **outcome** we want to predict lives in `order_events`, the Iceberg lifecycle log (one row per status transition). An order is a **bad outcome** if it ever reached `cancelled` or `returned`. We roll the event log up to one label per order and join it onto the features — this is the target column `returned`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Label = 1 if the order ever hit 'cancelled' or 'returned' in its lifecycle.\norder_outcomes = read_athena(\"\"\"\n    SELECT\n        order_id,\n        MAX(CASE WHEN status IN ('cancelled', 'returned') THEN 1 ELSE 0 END) AS returned\n    FROM microvm_demo_iceberg.order_events\n    GROUP BY order_id\n\"\"\")\ndf = orders_feat.merge(order_outcomes, on='order_id', how='inner')\n# Ensure an integer label so every model reports classes [0, 1] (not\n# [0.0, 1.0]) — a consistent output schema across all deploy formats.\ndf['returned'] = df['returned'].astype(int)\nrate = df['returned'].mean() * 100\nprint(f\"{len(df):,} labelled orders · {rate:.1f}% ended in cancel/return\")\ndf['returned'].value_counts().rename({0: 'kept', 1: 'returned/cancelled'})",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Train a classifier (scikit-learn)\nNow the model. We build it **by hand** so every moving part is visible: a `ColumnTransformer` one-hots the categorical columns (category, brand, segment, country, payment) and passes the numeric ones through, then a **RandomForestClassifier** trains on top — all wrapped in a `Pipeline` and fit on an 80/20 split of the **raw** rows. Because the encoder lives *inside* the Pipeline, the fitted `model` takes **raw rows** at inference (no `get_dummies` to reproduce, no feature-name drift). scikit-learn is pre-baked into the image — no install needed.\n\n⚙️ The **Test size** slider controls the holdout fraction; **Trees** controls forest size. Drag them (Reactive on) to retrain.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 0.1, \"max\": 0.4, \"step\": 0.05, \"default\": 0.2, \"label\": \"Test size\"}\ntest_size = 0.2\n# @param {\"type\": \"slider\", \"min\": 20, \"max\": 300, \"step\": 20, \"default\": 120, \"label\": \"Trees\"}\nn_trees = 120\nprint(f\"Holdout = {test_size:.0%} · forest = {n_trees} trees\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "from sklearn.ensemble import RandomForestClassifier\nfrom sklearn.compose import ColumnTransformer\nfrom sklearn.preprocessing import OneHotEncoder\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import roc_auc_score, classification_report\n\n# Split the columns into numeric (used as-is) and categorical (one-hot encoded).\nNUMERIC = ['quantity', 'unit_price', 'order_total', 'price', 'cost',\n           'margin_pct', 'rating_avg', 'lifetime_value']\nCATEGORICAL = ['category', 'brand', 'segment', 'shipping_country', 'payment_method']\n\n# Encoding is a step INSIDE the model, not a one-off get_dummies on the side.\n# The ColumnTransformer one-hots the categoricals and passes the numerics through;\n# wrapping it with the forest in a Pipeline means the fitted `model` takes RAW rows.\npre = ColumnTransformer([\n    ('cat', OneHotEncoder(handle_unknown='ignore'), CATEGORICAL),\n    ('num', 'passthrough', NUMERIC),\n])\nmodel = Pipeline([\n    ('pre', pre),\n    ('forest', RandomForestClassifier(n_estimators=n_trees, max_depth=8,\n                                      class_weight='balanced', random_state=42)),\n])\n\n# Split the RAW feature rows (no encoding yet) — the Pipeline encodes on fit.\nX = df[NUMERIC + CATEGORICAL]\ny = df['returned']\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=test_size, random_state=42, stratify=y)\nmodel.fit(X_train, y_train)\n\n# Honest read on a synthetic label: AUC near 0.5 just means the random seed data\n# carries little signal — the WORKFLOW is the point, not the score.\nauc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])\nprint(f\"Holdout AUC: {auc:.3f}  ({X.shape[1]} raw columns in, encoding baked into the Pipeline)\")\nprint(classification_report(y_test, model.predict(X_test),\n                            target_names=['kept', 'returned'], zero_division=0))",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3b · The one-liner: `train_model`\nStep 3 is the *honest* version — you can see every moving part. But look at how much of it is **boilerplate that never changes**: split the columns into numeric vs categorical, wire up a `ColumnTransformer` + `OneHotEncoder`, `train_test_split`, assemble the `Pipeline`, `fit`, then compute the metrics by hand. That's ~20 lines of ceremony around one real decision (*what model, on what data*).\n\nThe **`train_model`** helper collapses all of it into a single call. It infers the task, auto one-hot-encodes the categoricals, does the stratified split, fits, and prints the holdout metrics — and returns the same kind of raw-row scikit-learn **Pipeline** you just built by hand, so at inference you feed it **raw rows**.\n\n| Step 3 (manual) | Step 3b (`train_model`) |\n|---|---|\n| List NUMERIC + CATEGORICAL by hand | auto-detected (override with `numeric=` / `categorical=`) |\n| Wire up `ColumnTransformer` + `OneHotEncoder` | done inside the Pipeline |\n| `train_test_split(..., stratify=y)` | built in (`test_size=`, `stratify=`) |\n| Assemble `Pipeline([...])` + `RandomForestClassifier(...)` | sensible default (override with `estimator=` / `**kwargs`) |\n| `roc_auc_score` + `classification_report` | printed automatically |\n| Pipeline takes **raw** rows | Pipeline takes **raw** rows |\n\nSame data, same idea — one line.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# The entire Step 3 cell — column split, encoder, train_test_split, fit, and\n# metrics — as ONE call. It prints a fit report and returns a fitted Pipeline.\n# We pass the RAW df (not a pre-encoded matrix): train_model one-hots the\n# categoricals for us, and the returned Pipeline will do the same to any rows we\n# score later — exactly like the hand-built Pipeline from Step 3.\n# Train on the canonical feature ORDER (NUMERIC + CATEGORICAL) — the SAME order\n# the SageMaker sample uses — so the deployed model's schema is identical across\n# sklearn / ONNX / SageMaker (columns match by name AND order).\nrisk_model = train_model(df[NUMERIC + CATEGORICAL + ['returned']], target='returned')\n# It's a normal sklearn Pipeline — plugs straight into the other helpers.\ntype(risk_model)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3c · Score it on a test set — `evaluate_model` + `plot_confusion_matrix`\n\nStep 3 computed the holdout metrics by hand (`roc_auc_score` + `classification_report`). **`evaluate_model(model, X, y)`** is that read as a one-liner — and crucially it works on ANY fitted model, including one you just **`load_model`**'d from S3 or trained on SageMaker, not only a fresh `train_model` return. It infers the task from the labels and returns the metrics as a dict (accuracy / F1 / AUC for classification; R² / MAE for regression).\n\nThen **`plot_confusion_matrix(model, X, y)`** turns the predictions into a labeled heatmap — the picture `evaluate_model`'s numbers can't give you: *which* class the model confuses. `normalize=True` shows per-true-class proportions (read it when the classes are imbalanced). We reuse the raw `X_test` / `y_test` holdout from Step 3, so the two models are judged on the exact same rows.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# One-line holdout read on the train_model Pipeline, on the SAME test rows Step 3\n# split off. Returns a metrics dict (and prints a one-line summary).\nmetrics = evaluate_model(risk_model, X_test, y_test)\nmetrics",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# The visual companion: WHERE do the errors land? Rows = actual, cols = predicted.\n# normalize=True shows the share of each true class (handy for the imbalanced\n# kept-vs-returned split here).\nplot_confusion_matrix(risk_model, X_test, y_test, labels=[0, 1], normalize=True,\n                      title='Return-risk confusion matrix (row-normalized)')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "### Customizing the call — every default is overridable\n\n`train_model` is a one-liner for the common case, but nothing is locked down. You pass **only** what you want to change; everything else keeps its sensible default. A few of the knobs:\n\n- **`task`** — force `'classification'` or `'regression'` instead of letting it infer from the target.\n- **`features` / `numeric` / `categorical`** — pick exactly which columns train, and how each is treated.\n- **`estimator`** — drop in *any* scikit-learn-style estimator instance (LogisticRegression, GradientBoosting, XGBoost, …).\n- **`**estimator_kwargs`** — tune the *default* RandomForest inline (`n_estimators=`, `max_depth=`, …) without constructing it yourself.\n- **`test_size` / `stratify` / `scale` / `cv`** — control the holdout split, feature scaling, or switch to k-fold cross-validation.\n\nThe cell below shows several of these — most are commented so you can uncomment the one you want to try (each retrains).",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Reuse the same feature frame (drop the id columns — they aren't predictive).\n# Canonical feature order (matches Step 3 and the SageMaker sample), so every\n# downstream model (train_model / ONNX / endpoint) shares ONE column schema.\nfeat_df = df[NUMERIC + CATEGORICAL + ['returned']]\n\n# 1) Tune the DEFAULT RandomForest inline via **estimator_kwargs, and enlarge the\n#    holdout — no need to construct the estimator yourself.\nrisk_model = train_model(feat_df, target='returned',\n                         n_estimators=200, max_depth=8, class_weight='balanced',\n                         test_size=0.25)\n\n# 2) Bring your OWN estimator (any sklearn-style instance). scale=True adds a\n#    StandardScaler to the numeric features — useful for linear/SVM/KNN models.\n# from sklearn.linear_model import LogisticRegression\n# risk_model = train_model(feat_df, target='returned',\n#                          estimator=LogisticRegression(max_iter=1000), scale=True)\n\n# 3) k-fold cross-validation instead of a single split (more robust score on\n#    small/imbalanced data). Prints mean ± std of the CV metric.\n# risk_model = train_model(feat_df, target='returned', cv=5)\n\n# 4) Pin exactly which columns train and how each is treated (skip the rest).\n# risk_model = train_model(\n#     feat_df, target='returned',\n#     numeric=['unit_price', 'order_total', 'margin_pct', 'lifetime_value'],\n#     categorical=['category', 'segment'],\n# )\n\n# 5) Force the task (e.g. treat a numeric target as regression) and stay silent\n#    (return_report=False) — handy inside a loop.\n# margin_model = train_model(feat_df.drop(columns=['returned']), target='margin_pct',\n#                            task='regression', return_report=False)\n\nmodel_info(risk_model)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · Ship it: `save_model` → S3, then `load_model` back\nThis is the whole reason the ML helpers exist. A trained model is an **artifact** — you persist it once and load it wherever inference runs. `save_model` serializes with joblib and uploads to S3; `load_model` pulls it back into a live object. We save, reload into a fresh variable, and confirm the reloaded model predicts identically.\n\n> **Note** — the steps below persist and score the **`model`** from Step 3. Because that's a raw-row Pipeline (encoding baked in), everything works identically with the `train_model` Pipeline (`risk_model`) — both take the **raw** feature rows. Swap `model` → `risk_model` to run the rest on the one-liner model.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Persist the trained model to S3 (joblib under the hood) ...\nmodel_key = 'models/return_risk.joblib'\nuri = save_model(model, bucket, model_key)\nprint(f\"Saved → {uri}\")\n\n# ... and load it back like a freshly deployed artifact.\nloaded = load_model(bucket, model_key)          # or: load_model(uri)\n\n# Prove the round-trip is faithful: identical predictions on the holdout set.\nsame = (loaded.predict(X_test) == model.predict(X_test)).mean()\nprint(f\"Reloaded model agrees with the original on {same:.0%} of holdout rows\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · Inspect the artifact — `model_info`\n\nWhen you load a model someone else trained, the first question is *what does it expect?* `model_info` answers that: the estimator type, the task, how many features and their names, the target classes, and key hyperparameters — the ML equivalent of a schema.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "meta = model_info(loaded)\nprint('type      :', meta['type'])        # the container — a Pipeline\nprint('estimator :', meta['estimator'])   # the model INSIDE it that predicts\nprint('task      :', meta['task'])\nprint('n_features:', meta['n_features'])\nprint('classes   :', meta['classes'])\nprint('first 8 features:', meta['feature_names'][:8])\nprint('n_estimators    :', meta['params'].get('n_estimators'))",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 6 · Score every order — `predict_batch` + `predict_proba`\nNow put the loaded model to work. `predict_batch` runs it over the whole feature frame and appends the prediction as a new column — the notebook-friendly way to score a table. We also pull the **probability** of a return with `predict_proba` so ops can rank by risk, not just a yes/no. Since the model is a raw-row Pipeline, we feed it the **raw** feature columns — the same ones we trained on.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Hard 0/1 call for every order — predict_batch appends it as a column in one line.\n# The model is a raw-row Pipeline, so we score the RAW feature frame directly.\nraw_feats = df[NUMERIC + CATEGORICAL]\nflagged = predict_batch(loaded, raw_feats, output_col='will_return')\n# Risk PROBABILITY (class 1 = returned) so ops can RANK by risk, not just yes/no.\nproba = predict_proba(loaded, raw_feats)  # DataFrame: one column per class label\nrisk_col = proba.columns[-1]              # the '1' (returned) class column\nscored = df[['order_id', 'product_id', 'category', 'brand', 'order_total']].copy()\nscored['will_return'] = flagged['will_return'].values\nscored['return_risk'] = proba[risk_col].values\nscored = scored.sort_values('return_risk', ascending=False)\nprint(f\"Scored {len(scored):,} orders · {int(scored['will_return'].sum())} flagged high-risk\")\nscored.head(10)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 7 · Turn scores into an action list\n\nIndividual order scores are for ops triage. Merchandising cares about **which products** are systematically risky. A SQL cell rolls the scored orders up per product — average risk, order count, revenue at stake — so the worst offenders rise to the top. That's the deliverable: a ranked *fix-these-products* list, tied to dollars.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- Products ranked by average predicted return risk (min 5 orders for signal),\n-- with the revenue those risky orders represent.\nSELECT\n    product_id,\n    category,\n    brand,\n    COUNT(*)                       AS orders,\n    ROUND(AVG(return_risk), 3)     AS avg_return_risk,\n    ROUND(SUM(order_total), 2)     AS revenue_at_stake\nFROM scored\nGROUP BY product_id, category, brand\nHAVING COUNT(*) >= 5\nORDER BY avg_return_risk DESC\nLIMIT 15",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "product_risk"
+    },
+    {
+      "type": "code",
+      "code": "# Visualize the worst offenders: risk vs revenue-at-stake, sized by order volume.\nimport plotly.express as px\nfig = px.scatter(\n    product_risk, x='avg_return_risk', y='revenue_at_stake',\n    size='orders', color='category', hover_data=['product_id', 'brand'],\n    title='Where return risk meets revenue (top-right = fix first)',\n    labels={'avg_return_risk': 'Avg predicted return risk',\n            'revenue_at_stake': 'Revenue at stake ($)'},\n    color_discrete_sequence=px.colors.qualitative.Set2,\n)\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 8 · (Optional) Ship it framework-free with ONNX\n\nscikit-learn is great in the notebook, but a production endpoint often wants inference **without** the training framework. The whole ONNX round-trip is **install-free** — each helper installs its own dependency on first use: `to_onnx` pulls in `skl2onnx` to export, and `load_onnx` / `onnx_predict` pull in `onnxruntime` to run an `.onnx` model with no sklearn needed. This cell converts our model to ONNX, uploads it, then loads and runs it straight from S3 — proving the framework-free path.\n\n*The first run installs `skl2onnx` + `onnxruntime` on demand, so it takes a bit longer; after that they're cached for the VM's lifetime.*",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Convert to ONNX with the to_onnx helper (installs skl2onnx on first use — no\n# install_package() to remember). We convert the raw-row Pipeline `risk_model` and\n# pass a RAW sample: that bakes the one-hot encoding INTO the graph, so the ONNX\n# model takes the same raw columns you train/predict with — no client-side\n# get_dummies needed. (`model` from Step 3 is a raw-row Pipeline too; either works.)\nraw_sample = feat_df.drop(columns=['returned']).head(1)   # a few RAW rows (mixed str+num)\nonx = to_onnx(risk_model, raw_sample)\nonnx_key = 'models/return_risk.onnx'\n# save_model handles ONNX too — a .onnx key stores the graph's bytes (just like a\n# .joblib key stores a sklearn estimator). Same helper, format picked by extension.\nuri = save_model(onx, bucket, onnx_key)\nprint(f\"Saved {uri}\")\n# Load + run it framework-free via the helpers (installs onnxruntime on first use).\n# Feed RAW rows — onnx_predict routes each column to the graph's matching input, so\n# the encoding runs INSIDE the graph, exactly like predict(risk_model, raw_rows).\nsess = load_onnx(bucket, onnx_key)\nraw_rows = feat_df.drop(columns=['returned']).head(10)\nonnx_preds = onnx_predict(sess, raw_rows)\nsk_preds = risk_model.predict(raw_rows)\nprint('ONNX predictions on first 10 orders:', np.asarray(onnx_preds).ravel()[:10])\nprint('sklearn Pipeline matches ONNX     :', bool((np.asarray(onnx_preds).ravel() == np.asarray(sk_preds).ravel()).all()))",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 9 · (Optional) Serve it live — two endpoint flavors\nYou trained a model **in the VM** and exported it to **ONNX** — both are artifacts you can score in batch. When a consumer needs **real-time** inference instead (a standing HTTPS model, one row at a time, callable from anywhere), you deploy a SageMaker endpoint. The SAME custom serving container handles both a scikit-learn `.joblib` Pipeline and an ONNX `.onnx` graph — and SageMaker offers **two hosting flavors**, so we deploy one of each to compare:\n\n| | **`sm_deploy_serverless`** (sklearn here) | **`sm_deploy_instance`** (ONNX here) |\n|---|---|---|\n| Compute | scales to zero | dedicated, always-warm (incl. GPU types) |\n| Cost | **$0 while idle**, pay per request | **bills continuously** while running |\n| Bring-up (deploy → InService) | a few min, **variable** (managed-pool cold pull) | a few min, **predictable** — often **faster** |\n| First-invoke cold start | yes, after idle (auto-retried) | none once InService |\n| Pause | n/a (already $0 idle) | `sm_stop_endpoint` → `sm_start_endpoint` |\n\n> **Heads-up:** don't be surprised if the **instance** endpoint reaches `InService` *faster* than the serverless one. The slow part of either deploy is pulling our serving container image — serverless does that against a managed pool (slower, more variable first-activation), an instance does a direct pull onto dedicated hardware. Serverless also cold-starts again on the first invoke after idling (why `sm_predict` auto-retries it); an instance has none once warm. Serverless's win is **$0 idle**, not bring-up speed.\n\nBoth take the **raw** feature columns (encoding is baked into the artifact — no client-side `get_dummies`). In the **Data Sources** panel the serverless one shows a green **Serverless** badge and the instance one an amber **Instance · ml.m5.large** badge with **Stop/Start** buttons.\n```mermaid\ngraph LR\n  RM[\"risk_model<br/>(sklearn Pipeline)\"] --> D1[\"sm_deploy_serverless\"]\n  OX[\"onx<br/>(ONNX graph)\"] --> D2[\"sm_deploy_instance\"]\n  D1 --> EP1[\"serverless endpoint<br/>$0 idle\"]\n  D2 --> EP2[\"instance endpoint<br/>always-warm, billed\"]\n  EP1 -->|poll status| INV[\"predict(ep, raw_rows)\"]\n  EP2 -->|poll status| INV\n  INV --> R[\"live predictions\"]\n  INV ==>|when done| DEL[\"sm_delete_endpoint (both)\"]\n```\n⚠️ An endpoint is a **standing resource** (unlike everything above) — and the **instance** one bills continuously, so don't leave it running. Both deploy fns return immediately with `wait=False` (like `sm_train`); you **poll `ep.status()`** until `InService` (a few minutes). We deploy both, poll both, invoke both, demo **stop/start** on the instance one, then the **last cell deletes both** (not optional). Requires the custom serving image (`scripts/setup_sagemaker.sh`); if it isn't configured the deploy fns raise a clear error and you can skip this section. *(For deploying a SageMaker-**trained** model, see the ‘SageMaker: Train at Scale’ sample.)*"
+    },
+    {
+      "type": "code",
+      "code": "# GUARD: needs the trained Pipeline (risk_model) and its ONNX export (onx) from\n# the earlier steps. If you jumped here or restarted the kernel, run those first.\nif not ('risk_model' in dir() and 'onx' in dir()):\n    print('⏳ Missing risk_model / onx — run the train + ONNX export steps first.')\nelse:\n    # Deploy BOTH artifacts NON-BLOCKING (wait=False returns a handle in seconds,\n    # like sm_train), to the TWO hosting flavors so you can see both configurations:\n    #   • sklearn Pipeline → SERVERLESS   ($0 idle, pay per request)\n    #   • ONNX graph       → INSTANCE     (always-warm ml.m5.large, bills continuously)\n    # Same serving container; it dispatches on the artifact either way.\n    sk_ep   = sm_deploy_serverless(risk_model, name='return-risk-sklearn', wait=False)\n    onnx_ep = sm_deploy_instance(onx, name='return-risk-onnx',\n                                 instance_type='ml.m5.large', wait=False)\n    print('sklearn (serverless):', sk_ep.name, '·', sk_ep.status())\n    print('onnx    (instance)  :', onnx_ep.name, '·', onnx_ep.status())"
+    },
+    {
+      "type": "code",
+      "code": "# GUARD: needs the sk_ep / onnx_ep handles from the deploy cell above. If you\n# haven't run it (or restarted the kernel), this nudges you instead of a NameError.\nif not ('sk_ep' in dir() and 'onnx_ep' in dir()):\n    print('⏳ No endpoints yet — run the deploy cell (Step 9) first.')\nelse:\n    # Re-run this every ~30s until BOTH show 'InService' (cold start ~a few min).\n    print('sklearn:', sk_ep.status())\n    print('onnx   :', onnx_ep.status())"
+    },
+    {
+      "type": "code",
+      "code": "# GUARD: needs the deploy handles AND both endpoints InService (poll cell above).\nif not ('sk_ep' in dir() and 'onnx_ep' in dir()):\n    print('⏳ No endpoints yet — run the deploy cell (Step 9) first.')\nelif not (sk_ep.status().startswith('InService') and onnx_ep.status().startswith('InService')):\n    print('⏳ Not both ready yet — re-run the poll cell until both say InService.')\nelse:\n    # Score the SAME raw rows on each endpoint. predict() auto-routes the handle\n    # to the remote call — identical code to scoring a local model.\n    raw_sample = feat_df.drop(columns=['returned']).head(10)\n    sk_labels   = np.asarray(predict(sk_ep, raw_sample)).ravel()\n    onnx_labels = np.asarray(predict(onnx_ep, raw_sample)).ravel()\n    print('sklearn endpoint labels:', sk_labels)\n    print('onnx endpoint labels   :', onnx_labels)\n    # The two should broadly agree (ONNX is the exported form of the same Pipeline).\n    print(f'sklearn vs onnx endpoint agreement: {(sk_labels == onnx_labels).mean():.0%}')\n    # proba for ranking (explicit remote call; proba=True → probability per class).\n    sk_proba = sm_predict(sk_ep, raw_sample, proba=True)\n    print('sklearn return proba   :', np.round(np.asarray(sk_proba)[:, -1], 3))"
+    },
+    {
+      "type": "code",
+      "code": "# INSTANCE-ONLY lifecycle: pause the billed instance endpoint without losing it.\n# sm_stop_endpoint tears down the running endpoint (→ $0) but KEEPS its config +\n# model, so sm_start_endpoint recreates it under the same name. (No-op on the\n# serverless one — it's already $0 idle, so there's nothing to stop.)\n# GUARD: needs the deploy handles, and only meaningful once the instance endpoint\n# is InService (you can't stop one that's still Creating).\nif not ('sk_ep' in dir() and 'onnx_ep' in dir()):\n    print('⏳ No endpoints yet — run the deploy cell (Step 9) first.')\nelif not onnx_ep.status().startswith('InService'):\n    print(f'⏳ Instance endpoint not InService yet — {onnx_ep.status()}. '\n          'Re-run the poll cell until it says InService, then stop it.')\nelse:\n    print(sm_stop_endpoint(onnx_ep))      # onnx (instance) → Stopped\n    print('serverless stop (no-op):', sm_stop_endpoint(sk_ep))\n    # Resume it (a few minutes back to InService). Comment out if just tearing down.\n    # print(sm_start_endpoint(onnx_ep))"
+    },
+    {
+      "type": "code",
+      "code": "# What's standing right now (this project's microvm-ep-* endpoints). This ALWAYS\n# works — use it to grab a name for manual cleanup if you don't have the handles.\ndisplay(sm_endpoints())\n\n# CLEAN UP — PERMANENT teardown of BOTH endpoints (each removes endpoint + config +\n# model + S3 artifact). An endpoint is a standing resource; the instance one bills\n# while running, so always delete when you're done.\n# GUARD: only delete via handle if the deploy cell ran. After a kernel restart the\n# handles are gone — delete by name instead, e.g. sm_delete_endpoint('microvm-ep-...')\n# using a name from sm_endpoints() above (or the Data Sources panel delete button).\nif not ('sk_ep' in dir() and 'onnx_ep' in dir()):\n    print('No endpoint handles in scope — delete by name with '\n          'sm_delete_endpoint(\"microvm-ep-...\") using a name from sm_endpoints() above.')\nelif sk_ep.status().startswith('Creating') or onnx_ep.status().startswith('Creating'):\n    # Still provisioning (e.g. you just ran deploy, or did Run All). Deleting now is\n    # safe but only cancels the create — wait until InService (or at least past\n    # Creating), then run this cell to fully tear down endpoint + config + model.\n    print(f'\\u23f3 Still creating (sklearn={sk_ep.status()}, onnx={onnx_ep.status()}). '\n          'Re-run this cell once they are InService to delete them cleanly.')\nelse:\n    print(sm_delete_endpoint(sk_ep))\n    print(sm_delete_endpoint(onnx_ep))"
+    },
+    {
+      "type": "markdown",
+      "code": "## Recap\nYou built a return-risk scorer end-to-end on real sandbox data:\n- **Features** from **Athena** (`orders` × `products` × `customers`) and the **label** from **S3 Tables / Iceberg** (`order_events` lifecycle).\n- Trained a scikit-learn classifier **two ways** — by hand (a `ColumnTransformer` + forest in a `Pipeline`, every step visible) and as a single **`train_model`** call that collapses the encode → split → fit → score boilerplate. Both return a **raw-row Pipeline**. Every default is overridable (`task`, `estimator`, `features`, `cv`, `scale`, `**kwargs`).\n- Then **shipped it as an artifact**: `save_model` → S3, `load_model` ← S3, `model_info` to inspect it.\n- Scored the catalog with `predict_batch` / `predict_proba` and rolled the scores into a **product action list** tied to revenue at stake.\n- Optionally exported to **ONNX** and ran it framework-free with `load_onnx` / `onnx_predict`.\nSwap in your own trained model (`load_model(\"s3://your-bucket/model.joblib\")`) and the same `predict_batch` / `model_info` flow works unchanged.\n- **Optionally**, deployed to **real-time endpoints** in both hosting flavors — the sklearn model to a **serverless** endpoint (`sm_deploy_serverless`, $0 idle) and the ONNX export to an **instance** endpoint (`sm_deploy_instance`, always-warm) — scored them live via `predict(ep, raw_rows)` / `sm_predict`, paused the instance one with `sm_stop_endpoint` / `sm_start_endpoint`, and tore both down with `sm_delete_endpoint`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    }
+  ]
+}

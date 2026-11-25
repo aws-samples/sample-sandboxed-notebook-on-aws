@@ -1,0 +1,255 @@
+{
+  "name": "Reactive Dependencies (Test Bench)",
+  "description": "A test bench for reactive execution across Athena, S3 Tables (Iceberg), DynamoDB, and DataFrames: scalar params feeding SQL, DataFrame->SQL joins, fan-out, multi-upstream cells, transitive chains, and edge cases.",
+  "savedAt": "2026-07-16T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🔗 Reactive Dependencies — a test bench\n\nThis workbook is built to **exercise reactive execution end-to-end** across **S3**, **Athena**, and **DynamoDB**, mixing **SQL** and **Python** cells. It deliberately wires up every dependency shape so you can watch the cascade behave.\n\n**How to test:** run all cells once (populates each cell's read/write metadata), turn on the **Reactive** toggle (the ↻ button in the toolbar), then drag a slider or change a dropdown. Only the cells that actually depend on what you changed should re-run — in order, top to bottom.\n\n| Scenario | Where |\n|---|---|\n| Scalar param → SQL (`WHERE`/`HAVING`/`LIMIT` via `{var}`) | Step 1 |\n| Python DataFrame → SQL join → readers | Step 2 |\n| Fan-out: one variable read by several cells | Step 3 |\n| A cell reading multiple upstreams (df + scalar + df) | Step 4 |\n| DynamoDB → transitive chain (SQL → code → chart) | Step 5 |\n| Edge cases: reads-nothing, reassigned var, SQL reading df **and** scalar | Step 6 |\n\n**The dependency graph this builds** (change a node → everything downstream re-runs):\n\n```mermaid\ngraph TD\n  P1[\"params: focus_market, min_qty, row_cap\"] --> OF[\"orders_focus (Athena SQL)\"]\n  B[\"param: boundary\"] --> PT[\"price_tiers (DataFrame)\"]\n  OF --> OT[\"orders_tiered (df JOIN df)\"]\n  PT --> OT\n  OT --> TS[\"tier_summary\"]\n  OT --> RC[\"revenue chart\"]\n  TS --> RT[\"revenue vs target\"]\n  P1 --> RT\n  RA[\"reviews_agg (DynamoDB)\"] --> PR[\"product_report\"]\n  OT --> PR\n  PR --> SC[\"units vs revenue chart\"]\n  OS[\"order_status (S3 Tables / Iceberg)\"] --> TR[\"tier_returns\"]\n  OT --> TR\n  TR --> RRC[\"return-rate chart\"]\n```\n",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 0 · Connect\n\nResolve identity and the S3 artifacts bucket. Everything runs on the MicroVM's execution role.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import os, pandas as pd, numpy as np\ninfo = whoami()\naccount, region = info['account'], info['region']\nbucket = f\"microvm-sandbox-artifacts-{account}-{region}\"\nprint(f\"Account {account} · {region}\")\nprint(f\"Artifacts bucket: {bucket}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · Scalar params → Athena SQL\n\nThe sliders below feed the query through `{var}` placeholders: a **market** (string, quoted as `'{focus_market}'`), a **minimum quantity** floor (number, `>= {min_qty}`), and a **row cap** (`LIMIT {row_cap}`). The result is `orders_focus`.\n\n⚙️ Change any of these — with Reactive on, Steps 2–5 re-run because they all descend from `orders_focus`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"dropdown\", \"options\": [\"US\", \"UK\", \"DE\", \"FR\", \"JP\", \"AU\", \"CA\", \"MX\", \"BR\", \"IN\"], \"default\": \"US\", \"label\": \"Focus market\"}\nfocus_market = \"US\"\n# @param {\"type\": \"slider\", \"min\": 1, \"max\": 5, \"step\": 1, \"default\": 1, \"label\": \"Min quantity\"}\nmin_qty = 1\n# @param {\"type\": \"slider\", \"min\": 50, \"max\": 2000, \"step\": 50, \"default\": 500, \"label\": \"Row cap\"}\nrow_cap = 500\nprint(f\"market='{focus_market}'  min_qty={min_qty}  row_cap={row_cap}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- Athena orders for one market, filtered + capped by scalar params.\n-- '{focus_market}' is a STRING param (note the user-supplied quotes);\n-- {min_qty} and {row_cap} are NUMERIC params.\nSELECT order_id, user_id, product_id, quantity, unit_price, total, order_date, payment_method\nFROM microvm_demo_db.orders\nWHERE shipping_country = '{focus_market}'\n  AND quantity >= {min_qty}\nORDER BY total DESC\nLIMIT {row_cap}",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "orders_focus"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · DataFrame → SQL join\n\nA Python cell builds a small **price-tier lookup** DataFrame (`price_tiers`). The SQL cell then **joins the `orders_focus` DataFrame against `price_tiers`** — both are Python DataFrames queried in DuckDB — producing `orders_tiered`.\n\nThis is the `param → orders_focus (df) → SQL(reads orders_focus + price_tiers) → orders_tiered` chain. The `boundary` slider changes `price_tiers`, so the SQL cell is downstream of it too.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 20, \"max\": 200, \"step\": 10, \"default\": 60, \"label\": \"Budget/Premium boundary ($)\"}\nboundary = 60\n# price_tiers is a DataFrame the SQL cell below will JOIN against.\nprice_tiers = pd.DataFrame({\n    'tier': ['Budget', 'Premium'],\n    'lo':   [0.0, float(boundary)],\n    'hi':   [float(boundary), 1e9],\n})\nprint(f\"Tier boundary at ${boundary}\")\nprice_tiers",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- JOIN a DataFrame (orders_focus) to another DataFrame (price_tiers), both in DuckDB.\n-- Reactive edge: reads orders_focus AND price_tiers -> re-runs when either changes.\nSELECT o.order_id, o.product_id, o.quantity, o.total, t.tier\nFROM orders_focus o\nJOIN price_tiers t\n  ON o.unit_price >= t.lo AND o.unit_price < t.hi",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "orders_tiered"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Fan-out\n\n`orders_tiered` is read by **two independent cells** — a per-tier revenue summary and a chart. Both are direct dependents, so a change upstream re-runs **both** (a fan-out), not just one.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Reads orders_tiered -> tier_summary\ntier_summary = (orders_tiered.groupby('tier')\n    .agg(orders=('order_id', 'count'), revenue=('total', 'sum'), units=('quantity', 'sum'))\n    .reset_index())\ntier_summary['revenue'] = tier_summary['revenue'].round(2)\ntier_summary",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Also reads orders_tiered (independently) -> a chart. Fan-out sibling of the cell above.\nplot_bar(orders_tiered.groupby('tier', as_index=False)['total'].sum(),\n         x='tier', y='total', title='Revenue by price tier')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · One cell, multiple upstreams\n\nThis code cell reads **three** upstreams at once: the `tier_summary` DataFrame (Step 3), a scalar **target** slider, and `focus_market` (Step 1). It's a dependent of all three — change any and it re-runs.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 1000, \"max\": 100000, \"step\": 1000, \"default\": 20000, \"label\": \"Revenue target ($)\"}\nrevenue_target = 20000\ntotal_rev = float(tier_summary['revenue'].sum())\npct = round(total_rev / revenue_target * 100, 1) if revenue_target else 0.0\nverdict = 'ON TRACK' if total_rev >= revenue_target else 'BELOW TARGET'\nprint(f\"[{focus_market}] revenue ${total_rev:,.0f} vs target ${revenue_target:,.0f}  ->  {pct}%  ({verdict})\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · DynamoDB → transitive chain\n\nA SQL cell aggregates **DynamoDB** reviews into `reviews_agg`; a Python cell merges that with `orders_tiered` into a `product_report`; a final cell charts it. That's a **transitive** chain (`orders_focus → orders_tiered → product_report → chart`) — changing a Step 1 param should ripple all the way down. The `min_reviews` param also gates the merge.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- DynamoDB reviews aggregated per product (auto-routed scan -> DuckDB).\nSELECT productId AS product_id,\n       COUNT(*)              AS review_count,\n       ROUND(AVG(rating), 2) AS avg_rating\nFROM dynamodb.\"ecommerce-reviews\"\nGROUP BY productId",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "reviews_agg"
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 0, \"max\": 10, \"step\": 1, \"default\": 0, \"label\": \"Min reviews to include\"}\nmin_reviews = 0\n# Transitive: reads orders_tiered (from Step 2 chain) + reviews_agg (DynamoDB) + min_reviews.\nprod = (orders_tiered.groupby('product_id', as_index=False)\n        .agg(units=('quantity', 'sum'), revenue=('total', 'sum')))\nproduct_report = prod.merge(reviews_agg, on='product_id', how='left')\nproduct_report['review_count'] = product_report['review_count'].fillna(0).astype(int)\nproduct_report = product_report[product_report['review_count'] >= min_reviews]\nproduct_report = product_report.sort_values('revenue', ascending=False)\nprint(f\"{len(product_report)} products with >= {min_reviews} reviews\")\nproduct_report.head(10)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# End of the transitive chain — reads product_report.\nplot_scatter(product_report, x='units', y='revenue', size='review_count',\n             title='Products: units vs revenue (bubble = review count)')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5b · S3 Tables (Iceberg) → a fourth service in the cascade\n\nOne more transitive branch, this time off the **S3 Tables** Iceberg log. A SQL cell derives each order's terminal fulfillment status from `order_events` (`reviews_agg` is DynamoDB; this is the 4th backend in the graph). A Python cell then joins that onto `orders_tiered` to compute **return rate by price tier** — so a **Step 1** param change (`focus_market`, `min_qty`) ripples: `orders_focus → orders_tiered → tier_returns → chart`. Proves the reactive graph spans Athena + S3 Tables + DynamoDB + DataFrames.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- S3 Tables (Iceberg): each order's terminal fulfillment status from the lifecycle log.\n-- order_events lives in the microvm_demo_iceberg namespace — reference it as\n-- database.table like any Athena table (federated catalog resolved automatically).\nSELECT\n  order_id,\n  MAX(CASE WHEN status = 'returned'  THEN 1 ELSE 0 END) AS was_returned,\n  MAX(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS was_cancelled\nFROM microvm_demo_iceberg.order_events\nGROUP BY order_id",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "order_status"
+    },
+    {
+      "type": "code",
+      "code": "# Transitive: reads orders_tiered (Step 2 chain) + order_status (S3 Tables/Iceberg).\n# Return rate per price tier — does the Premium tier get returned more than Budget?\ntt = orders_tiered.merge(order_status, on='order_id', how='left')\ntt['was_returned'] = tt['was_returned'].fillna(0)\ntier_returns = (tt.groupby('tier', as_index=False)\n                .agg(orders=('order_id', 'count'), returns=('was_returned', 'sum')))\ntier_returns['return_rate_pct'] = (tier_returns['returns'] / tier_returns['orders'] * 100).round(1)\nprint(tier_returns.to_string(index=False))\nplot_bar(tier_returns, x='tier', y='return_rate_pct', title='Return rate by price tier (Iceberg order_events)')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 6 · Edge cases\n\nDeliberate corner cases for the dependency tracker:\n\n- **Reads nothing:** a self-contained cell (pure constant) — should **never** be marked stale by any change.\n- **Reassigned variable:** `note` is created here and *reassigned* in the next cell — the later cell owns it.\n- **SQL reading a df AND a scalar together:** proves both read-kinds combine on one SQL cell.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Edge case A — reads NOTHING from the namespace. A pure constant.\n# Changing any param must NOT mark this cell stale.\npi_approx = 355 / 113\nnote = 'first definition'\nprint(f\"pi ~= {pi_approx:.6f}; note = {note}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Edge case B — reassigns `note` (created above). This cell becomes the owner of `note`.\nnote = 'reassigned here'\nprint(note)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 1, \"max\": 10, \"step\": 1, \"default\": 3, \"label\": \"Sample size\"}\nsample_size = 3\nprint(f\"Previewing {sample_size} tiered orders below via SQL that reads a df AND a scalar\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- Edge case C — one SQL cell reading a DataFrame (orders_tiered) AND a scalar ({sample_size}).\n-- variables_read for this cell should include BOTH orders_tiered and sample_size.\nSELECT tier, product_id, quantity, total\nFROM orders_tiered\nORDER BY total DESC\nLIMIT {sample_size}",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "tiered_preview"
+    },
+    {
+      "type": "markdown",
+      "code": "## What to watch\n\n- Turn **Reactive** on and change **Focus market** (Step 1): every downstream step re-runs, the edge-case *reads-nothing* cell does **not**.\n- Change **boundary** (Step 2): the join + everything below re-runs; Step 1 does **not** (it's upstream).\n- Change **sample size** (Step 6): only the last SQL preview re-runs.\n- With Reactive **off**, the same changes light up amber dots and a count on the ↻ button — click to run them.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    }
+  ]
+}

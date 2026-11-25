@@ -1,0 +1,810 @@
+.notebook {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+}
+
+/* Restore pending: "Reinstalling N packages (...)..." above the cells. The colours
+   are the Connect dialog's launch line (.connection-launching); the full package
+   list wraps instead of being cut. */
+.notebook > .restore-progress {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 16px 0;
+  padding: 8px 12px;
+  line-height: 1.45;
+  animation: none;
+  min-width: 0;
+}
+.notebook > .restore-progress .cp-spinner { margin-top: 2px; }
+.restore-progress-text { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---- Toolbar ---- */
+.notebook-toolbar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  z-index: 5;
+  min-height: 40px;
+  gap: 0;
+  transition: min-height 0.2s ease, padding 0.2s ease;
+}
+
+.notebook-toolbar:hover {
+  min-height: 46px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.notebook-toolbar:hover .toolbar-btn {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.notebook-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-scrollable {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+  padding-right: 24px;
+}
+
+.toolbar-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-pinned {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: var(--space-2);
+}
+
+.toolbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-primary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.toolbar-notebook-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.toolbar-theme-btn {
+  background: var(--accent-warning-subtle);
+  border: 1px solid rgba(226, 184, 107, 0.3);
+  color: var(--accent-warning);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  margin-left: 4px;
+  /* Gentle resting glow pulse so users notice the theme toggle exists. */
+  animation: theme-btn-glow 2.8s ease-in-out infinite;
+}
+
+/* Pulsing halo — a warm ring that breathes in/out around the button. */
+@keyframes theme-btn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(226, 184, 107, 0.0); }
+  50%      { box-shadow: 0 0 10px 1px rgba(226, 184, 107, 0.45); }
+}
+
+.toolbar-theme-btn:hover {
+  background: var(--accent-warning-subtle);
+  color: var(--accent-warning);
+  border-color: rgba(226, 184, 107, 0.55);
+  /* Steady, stronger glow on hover; pause the idle pulse. */
+  animation: none;
+  box-shadow: 0 0 12px 2px rgba(226, 184, 107, 0.5);
+}
+
+.toolbar-theme-btn:hover svg {
+  transform: rotate(180deg);
+  transition: transform 0.4s ease;
+}
+
+.toolbar-theme-btn svg {
+  transition: transform 0.4s ease;
+}
+
+/* Respect users who prefer reduced motion — no idle pulse or icon spin. */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-theme-btn { animation: none; }
+  .toolbar-theme-btn:hover svg { transform: none; }
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.toolbar-group-notebook {
+  background: rgba(166, 227, 161, 0.06);
+  border-color: rgba(166, 227, 161, 0.2);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-default);
+  margin: 0 var(--space-2);
+}
+
+.toolbar-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.toolbar-btn:hover {
+  background: var(--accent-primary-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.toolbar-btn-open:hover {
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary-muted);
+}
+
+.toolbar-btn-find:hover {
+  background: var(--accent-warning-subtle);
+  color: var(--accent-warning);
+  border-color: rgba(226, 184, 107, 0.3);
+}
+
+.toolbar-btn-loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.toolbar-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--text-muted);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: toolbar-spin 0.6s linear infinite;
+}
+
+@keyframes toolbar-spin {
+  to { transform: rotate(360deg); }
+}
+
+.toolbar-btn:active {
+  transform: scale(0.97);
+}
+
+.toolbar-btn-run-all {
+  color: var(--text-secondary);
+}
+
+.toolbar-btn-run-all:hover {
+  background: var(--accent-success-subtle);
+  color: var(--accent-success);
+  border-color: var(--accent-success-muted);
+}
+
+.toolbar-btn-run-all:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar-progress {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent-success);
+  margin-left: 2px;
+}
+
+/* Single "dependents" button with three states:
+   1) default (reactive OFF, nothing stale) — neutral toggle, not pressed.
+   2) .has-stale (reactive OFF, N dependents stale) — amber + count; click RUNS them.
+   3) .reactive (reactive ON) — pressed look: amber fill + outline + slow spin;
+      no count (dependents auto-run on change). Click turns it off. */
+.toolbar-btn-run-stale {
+  color: var(--text-secondary);
+}
+.toolbar-btn-run-stale:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+.toolbar-btn-run-stale.has-stale {
+  color: var(--accent-warning);
+}
+.toolbar-btn-run-stale.has-stale:hover {
+  background: var(--accent-warning-subtle, rgba(249, 168, 37, 0.15));
+  color: var(--accent-warning);
+}
+/* Reactive ON = a PRESSED toggle. Solid amber fill with dark text (filled/active,
+   not merely outlined) + a strong inset shadow and a 1px downward nudge so it
+   clearly reads as "held down". Overrides base .toolbar-btn transition/hover. */
+.toolbar-btn-run-stale.reactive,
+.toolbar-btn-run-stale.reactive:hover {
+  color: var(--surface-0);
+  background: var(--accent-warning);
+  border: 1px solid var(--accent-warning);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+  transform: translateY(1px);
+}
+.toolbar-btn-run-stale.reactive svg { stroke: var(--surface-0); }
+.toolbar-stale-count {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent-warning);
+  margin-left: 2px;
+}
+
+.toolbar-btn-delete {
+  color: var(--text-secondary);
+}
+
+.toolbar-btn-stop {
+  color: var(--accent-danger);
+}
+
+.toolbar-btn-stop:hover:not(:disabled) {
+  background: var(--accent-danger-subtle);
+  color: var(--accent-danger);
+  border-color: var(--accent-danger-muted);
+}
+
+.toolbar-btn-stop:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.toolbar-btn-delete:hover:not(:disabled) {
+  background: var(--accent-danger-subtle);
+  color: var(--accent-danger);
+  border-color: var(--accent-danger-muted);
+}
+
+.toolbar-btn-delete:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.toolbar-btn svg {
+  flex-shrink: 0;
+}
+
+/* ---- Install section ---- */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ---- Toolbar status ---- */
+.toolbar-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: 4px 10px;
+  background: var(--surface-3);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  white-space: nowrap;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.toolbar-status:hover {
+  background: var(--surface-4);
+  border-color: var(--border-default);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.status-connected {
+  background: var(--accent-success);
+  box-shadow: 0 0 6px var(--accent-success-muted);
+}
+
+.status-disconnected {
+  background: var(--accent-danger);
+  animation: pulse-disconnect 2s ease-in-out infinite;
+}
+
+.status-connecting, .status-launching {
+  background: var(--accent-warning);
+  animation: pulse-disconnect 1s ease-in-out infinite;
+}
+
+.status-suspended {
+  background: var(--accent-warning) !important;
+  box-shadow: 0 0 6px rgba(249, 168, 37, 0.4) !important;
+  animation: pulse-disconnect 3s ease-in-out infinite;
+}
+
+.status-terminated {
+  background: var(--accent-danger) !important;
+  box-shadow: 0 0 6px rgba(243, 139, 168, 0.3) !important;
+}
+
+@keyframes pulse-disconnect {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.5; box-shadow: 0 0 8px 2px currentColor; }
+}
+
+.status-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.status-id {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Cells container ---- */
+.notebook-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.cells-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  padding-bottom: 100px;
+  min-width: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection inside CodeMirror editors and output areas */
+.cells-container .cm-editor,
+.cells-container .cell-output,
+.cells-container .cell-markdown-rendered {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.add-cell-row {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.add-cell-btn {
+  background: none;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.add-cell-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.notebook-identity {
+  display: flex;
+  align-items: flex-start;   /* top-align so the chevron sits at the first line of a wrapped/edited description */
+  gap: var(--space-2);
+  padding: 5px var(--space-4);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+/* Collapsed row is a single line — center the chevron with the (hidden) text baseline. */
+.notebook-identity-collapsed { align-items: center; }
+
+.notebook-description {
+  font-size: var(--font-size-sm);
+  color: var(--accent-primary);
+  font-style: italic;
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+  cursor: text;              /* clicking the text opens inline edit */
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  margin: -1px -4px;         /* keep layout identical to the un-padded text */
+  transition: background var(--transition-fast);
+}
+.notebook-description:hover { background: var(--accent-primary-subtle); }
+
+/* Collapse chevron — quiet icon button on the left of the description row. */
+.notebook-desc-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.notebook-desc-toggle:hover:not(:disabled) { color: var(--text-primary); background: var(--surface-3); }
+.notebook-desc-toggle:disabled { opacity: 0.4; cursor: default; }
+
+/* When collapsed the row still occupies one line, so show the FIRST line of the
+   description clamped to a single line with an ellipsis instead of hiding it —
+   the chevron then just toggles between this one-line preview and the full text. */
+.notebook-identity-collapsed .notebook-description {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Edit (pencil) button — appears at the right of the row, revealed on hover so
+   the bar stays clean at rest. */
+.notebook-desc-edit-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.notebook-identity:hover .notebook-desc-edit-btn { opacity: 1; }
+.notebook-desc-edit-btn:hover { color: var(--accent-primary); border-color: var(--accent-primary); }
+
+/* Inline edit form: textarea + save/cancel, fills the row. */
+.notebook-desc-edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.notebook-desc-textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  line-height: 1.4;
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+.notebook-desc-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+.notebook-desc-textarea::placeholder { color: var(--text-muted); font-style: italic; }
+.notebook-desc-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+.notebook-desc-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.notebook-desc-save:hover { filter: brightness(1.08); }
+.notebook-desc-cancel {
+  background: none;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.notebook-desc-cancel:hover { color: var(--text-primary); border-color: var(--text-muted); }
+
+/* ============================================================
+   NOTEBOOK SEARCH BAR
+   ============================================================ */
+
+.notebook-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-default);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Single-row find+replace: find group shares width with the replace group, a thin
+   divider separates them, and a flexible spacer pushes Close to the far right. */
+.notebook-search-find {
+  flex: 1 1 260px;
+}
+
+.notebook-search-replace-field {
+  flex: 1 1 260px;
+}
+
+/* Thin vertical divider between the find and replace groups. */
+.notebook-search-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 0;
+  background: var(--border-default);
+  flex: none;
+}
+
+/* Flexible gap that pushes the Close button to the far right of the whole bar. */
+.notebook-search-spacer {
+  flex: 1 1 0;
+  min-width: 8px;
+}
+
+/* Replace / Replace All buttons — text buttons matching the nav button chrome. */
+.notebook-search-replace-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.notebook-search-replace-btn:hover:not(:disabled) {
+  background: var(--surface-4);
+  color: var(--text-primary);
+}
+.notebook-search-replace-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.notebook-search-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 360px;
+  padding: 6px 10px;
+  background: var(--surface-0);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.notebook-search-field:focus-within {
+  border-color: var(--accent-primary-muted);
+  box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+
+.notebook-search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.notebook-search-input {
+  flex: 1;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.notebook-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.notebook-search-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.notebook-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.notebook-search-nav {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.notebook-search-nav:hover:not(:disabled) {
+  background: var(--surface-4);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.notebook-search-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.notebook-search-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.notebook-search-close:hover {
+  color: var(--text-primary);
+  background: var(--surface-4);
+}
+
+/* Portal-based dropdown (escapes overflow:hidden parents) */
+.toolbar-portal-menu {
+  position: fixed;
+}
+
+.toolbar-portal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+.toolbar-portal-options {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.toolbar-portal-options button {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toolbar-portal-options button:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+/* Section header inside a portal menu (e.g. "Source · re-runnable" /
+   "Rendered · read-only" / "Version"). Non-interactive, quiet, uppercase. */
+.toolbar-portal-group-label {
+  padding: 6px 16px 2px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.toolbar-portal-group-label:not(:first-child) {
+  margin-top: 2px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 6px;
+}
+
+/* Transient autosave hint next to the notebook title (Colab/Docs pattern):
+   muted "Saving…" / brief "Saved", then it disappears. No dot, no button. */
+.toolbar-save-hint {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  user-select: none;
+  animation: saveHintFade 0.2s ease-in;
+}
+@keyframes saveHintFade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-save-hint { animation: none; }
+}

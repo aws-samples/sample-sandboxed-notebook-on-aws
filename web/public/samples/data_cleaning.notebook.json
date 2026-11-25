@@ -1,0 +1,126 @@
+{
+  "name": "Data Cleaning & Transform",
+  "description": "Reconcile real customers and orders (Athena) into one tidy per-customer table — parse dates, handle non-buyers (join nulls), derive segments and value tiers, validate with SQL, and visualize with Plotly.",
+  "savedAt": "2026-09-20T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🧹 Data Cleaning & Transform\n\nReal data is rarely analysis-ready on arrival — it's split across tables, dates arrive as strings, and joins leave holes. This workbook takes two **real** sandbox tables, `customers` and `orders` (both in **Athena**), and reconciles them into **one tidy per-customer table** you can trust.\n\n**The transforms you'll practice**\n- Parse `order_date` / `signup_date` strings into real datetimes\n- **Left-join** customers to their order history so **non-buyers surface as nulls** — then handle that missingness deliberately (the #1 real-world join gotcha)\n- Derive analysis columns: order counts, total spend, a **value tier** from `lifetime_value`, and a tenure bucket\n- **Validate** every step with SQL, then visualize\n\nEverything runs on the MicroVM's **execution role** — no credentials in the notebook.\n\n```mermaid\ngraph LR\n  C[\"Athena: customers\"] --> J[\"Left-join (non-buyers → nulls)\"]\n  O[\"Athena: orders\"] --> J\n  J --> P[\"Parse dates + handle nulls\"]\n  P --> D[\"Derive: order count, spend, value tier, tenure\"]\n  D --> Q[\"Validate with SQL\"]\n  Q --> V[\"Visualize (Plotly)\"]\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · Load the two raw tables — Athena\n\nPull `customers` (500 rows) and `orders` (2000 rows) into DataFrames with **`read_athena`**. We inspect them as-is first: note the dates are **strings**, and not every customer will have an order — both are things we fix downstream.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "import pandas as pd\nimport numpy as np\nimport plotly.express as px\n\ncustomers = read_athena(\"\"\"\n    SELECT user_id, name, email, signup_date, signup_channel, segment, lifetime_value\n    FROM microvm_demo_db.customers\n\"\"\")\norders = read_athena(\"\"\"\n    SELECT order_id, user_id, total, order_date\n    FROM microvm_demo_db.orders\n\"\"\")\nprint(f\"customers: {customers.shape[0]} rows · orders: {orders.shape[0]} rows\")\nprint(f\"\\nsignup_date dtype BEFORE parse: {customers['signup_date'].dtype}  (it's a string)\")\nprint(f\"order_date  dtype BEFORE parse: {orders['order_date'].dtype}\")\ncustomers.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · Parse dates & roll up each customer's orders\n\nTwo transforms: (1) coerce the date strings to real datetimes with `pd.to_datetime` (so we can do date math), and (2) aggregate `orders` **per customer** into order count, total spend, and last-order date. This `order_rollup` is what we'll attach to every customer next.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# (1) Parse date strings -> datetime (errors='coerce' turns anything unparseable into NaT)\ncustomers['signup_date'] = pd.to_datetime(customers['signup_date'], errors='coerce')\norders['order_date'] = pd.to_datetime(orders['order_date'], errors='coerce')\ncustomers['lifetime_value'] = pd.to_numeric(customers['lifetime_value'], errors='coerce')\norders['total'] = pd.to_numeric(orders['total'], errors='coerce')\n\n# (2) Roll orders up to one row per customer\norder_rollup = (orders.groupby('user_id')\n    .agg(order_count=('order_id', 'count'),\n         total_spend=('total', 'sum'),\n         last_order=('order_date', 'max'))\n    .reset_index())\norder_rollup['total_spend'] = order_rollup['total_spend'].round(2)\nprint(f\"{len(order_rollup)} of {len(customers)} customers placed at least one order\")\norder_rollup.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Reconcile — the left join & its nulls\n\nThe key step: **left-join** every customer to their `order_rollup`. Customers who never ordered come back with **NaN** order counts/spend — the real-world join gotcha. We handle it deliberately: non-buyers get `0` orders / `$0` spend and an explicit `has_ordered` flag, so downstream aggregates are correct instead of silently dropping people.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Left join keeps ALL customers, even those with no orders (-> NaN, which we fix).\ncust = customers.merge(order_rollup, on='user_id', how='left')\nn_missing = int(cust['order_count'].isna().sum())\nprint(f\"Customers with NO orders (NaN after join): {n_missing}\")\n\n# Deliberate missing-value handling\ncust['has_ordered'] = cust['order_count'].notna()\ncust['order_count'] = cust['order_count'].fillna(0).astype(int)\ncust['total_spend'] = cust['total_spend'].fillna(0.0)\n\n# Derived analysis columns\ncust['value_tier'] = pd.cut(cust['lifetime_value'],\n                            bins=[-1, 500, 1500, 3000, 1e9],\n                            labels=['Low', 'Mid', 'High', 'VIP'])\ncust['tenure_days'] = (pd.Timestamp('2025-01-01') - cust['signup_date']).dt.days\ncust['tenure_years'] = (cust['tenure_days'] / 365).round(1)\nprint(f\"Tidy table: {cust.shape[0]} customers x {cust.shape[1]} columns · \"\n      f\"missing values remaining: {int(cust.isnull().sum().sum())}\")\ncust[['user_id', 'segment', 'value_tier', 'order_count', 'total_spend', 'has_ordered', 'tenure_years']].head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · Validate with SQL\n\nNever trust a transform you haven't checked. SQL cells over the tidy `cust` DataFrame confirm the reconciliation held up: a **coverage check** (buyers vs non-buyers, any nulls left?), then a **per-segment rollup** of value and spend to make sure the numbers are sane.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "sql",
+      "code": "-- Coverage / quality check on the reconciled table\nSELECT\n    COUNT(*)                                          AS total_customers,\n    SUM(CASE WHEN has_ordered THEN 1 ELSE 0 END)      AS buyers,\n    SUM(CASE WHEN NOT has_ordered THEN 1 ELSE 0 END)  AS non_buyers,\n    SUM(CASE WHEN signup_date IS NULL THEN 1 ELSE 0 END) AS unparsed_signup_dates,\n    SUM(CASE WHEN value_tier IS NULL THEN 1 ELSE 0 END)  AS missing_value_tier\nFROM cust",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "quality_check"
+    },
+    {
+      "type": "sql",
+      "code": "-- Per-segment rollup: does each customer segment behave as its name implies?\nSELECT\n    segment,\n    COUNT(*)                       AS customers,\n    ROUND(AVG(lifetime_value), 0)  AS avg_ltv,\n    ROUND(AVG(total_spend), 2)     AS avg_order_spend,\n    ROUND(AVG(order_count), 1)     AS avg_orders,\n    SUM(CASE WHEN has_ordered THEN 1 ELSE 0 END) AS buyers\nFROM cust\nGROUP BY segment\nORDER BY avg_ltv DESC",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null,
+      "outputVariable": "segment_summary"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · Visualize the reconciled table — Plotly\n\nThe cleaned data pays off in charts: a **treemap** of lifetime value by segment and tier, then an interactive **scatter** of tenure vs spend you can filter — surfacing, for example, long-tenure customers who've stopped buying.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive: lifetime value by segment -> value tier (treemap)\nby_tier = (cust.groupby(['segment', 'value_tier'], observed=True)\n           .agg(total_ltv=('lifetime_value', 'sum'), customers=('user_id', 'count'))\n           .reset_index())\nby_tier = by_tier[by_tier['total_ltv'] > 0]\nfig = px.treemap(\n    by_tier, path=['segment', 'value_tier'], values='total_ltv',\n    color='total_ltv', color_continuous_scale='Blues',\n    title='Lifetime value by segment & value tier', hover_data=['customers'],\n)\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"dropdown\", \"options\": [\"all\", \"Premium\", \"Standard\", \"New\", \"At-Risk\", \"Churned\"], \"default\": \"all\", \"label\": \"Segment\"}\nsegment_filter = \"all\"\n# @param {\"type\": \"slider\", \"min\": 0, \"max\": 5000, \"step\": 250, \"default\": 0, \"label\": \"Min lifetime value\"}\nmin_ltv = 0\n# Interactive: tenure vs total spend, filtered — spot high-tenure low-spend churn risk\nview = cust[cust['lifetime_value'].fillna(0) >= min_ltv]\nif segment_filter != 'all':\n    view = view[view['segment'] == segment_filter]\nfig = px.scatter(\n    view, x='tenure_years', y='total_spend', color='segment', size='lifetime_value',\n    hover_data=['user_id', 'order_count', 'has_ordered'],\n    title=f'Tenure vs total spend (segment={segment_filter}, min LTV=${min_ltv})',\n    labels={'tenure_years': 'Tenure (years)', 'total_spend': 'Total order spend ($)'},\n    opacity=0.75,\n)\nfig.show()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    }
+  ]
+}

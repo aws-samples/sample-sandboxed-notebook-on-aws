@@ -1,0 +1,14 @@
+Collecting pandas==1.5.3
+  Using cached pandas-1.5.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (12.0 MB)
+INFO: pip is looking at multiple versions of pandas to determine which version is compatible with other requirements. This could take a while.
+ERROR: Cannot install pandas==1.5.3 and numpy==2.0.0 because these package versions have conflicting dependencies.
+
+The conflict is caused by:
+    The user requested numpy==2.0.0
+    pandas 1.5.3 depends on numpy>=1.21.0; python_version >= "3.10"
+
+To fix this you could try to:
+1. loosen the range of package versions you've specified
+2. remove package versions to allow pip attempt to solve the dependency conflict
+
+ERROR: ResolutionImpossible: for help visit https://pip.pypa.io/en/latest/topics/dependency-resolution/#dealing-with-dependency-conflicts

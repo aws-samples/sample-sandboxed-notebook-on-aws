@@ -1,0 +1,1081 @@
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+/* ---- Header ---- */
+/* ---- Body layout ---- */
+.app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  /* Positioning anchor for the AI panel's fullscreen-expand overlay
+     (.ai-panel-expanded), so it pins to this row's right/top/bottom edges. */
+  position: relative;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  background: var(--surface-2);
+}
+
+/* Bottom tabbed panel container (Terminal + Logs) */
+.bottom-panel-container {
+  flex-shrink: 0;
+  min-height: 100px;
+  max-height: 70vh;
+  /* Stronger separation from the notebook above: a definite top border plus a soft
+     upward shadow so the panel reads as a distinct docked layer, not flush content
+     (the faint --border-subtle line alone disappeared against the dark editor). */
+  border-top: 1px solid var(--border-strong, var(--border-default));
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-0);
+  position: relative;
+  z-index: 5;
+}
+
+.bottom-panel-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+}
+
+.bottom-panel-resize-handle:hover {
+  background: var(--accent-primary);
+  opacity: 0.4;
+}
+
+.bottom-panel-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
+.bottom-panel-tab {
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bottom-panel-tab:hover {
+  color: var(--text-secondary);
+}
+
+.bottom-panel-tab-active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+.bottom-panel-tab-close {
+  margin-left: 6px;
+  font-size: 14px;
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.bottom-panel-tab-close:hover {
+  opacity: 1;
+}
+
+.bottom-panel-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.bottom-panel-close:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+/* Wrapper that keeps a bottom panel (terminal/logs) MOUNTED while inactive.
+   It's a flex child of the container that grows to fill the space below the
+   tab bar, and lays out its single panel child as a column so the panel fills
+   it. The inactive wrapper is display:none (set inline), which collapses it to
+   0x0 — the terminal's ResizeObserver re-fits when it flips back to flex. */
+.bottom-panel-content {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* When embedded in the tabbed container, panels fill the remaining space */
+.bottom-panel-container .terminal-bottom-panel,
+.bottom-panel-container .logs-bottom-panel {
+  border-top: none;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+}
+
+/* When embedded in the tabbed container with multiple tabs, hide redundant elements */
+.bottom-panel-container .terminal-bottom-panel .terminal-panel-header .terminal-panel-title,
+.bottom-panel-container .logs-bottom-panel .logs-panel-header .logs-panel-title {
+  display: none;  /* Title handled by container tabs */
+}
+
+.bottom-panel-container .terminal-bottom-panel .terminal-panel-header .terminal-panel-btn:last-child,
+.bottom-panel-container .logs-bottom-panel .logs-panel-header .logs-panel-btn:last-child {
+  display: none;  /* Close button handled by container */
+}
+
+.bottom-panel-container .terminal-resize-handle,
+.bottom-panel-container .logs-resize-handle {
+  display: none;  /* Resize on the container, not individual panels */
+}
+
+/* Bottom terminal panel */
+.terminal-bottom-panel {
+  flex-shrink: 0;
+  min-height: 120px;
+  max-height: 70vh;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-0);
+  position: relative;
+}
+
+.terminal-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+}
+.terminal-resize-handle:hover {
+  background: var(--accent-primary);
+  opacity: 0.4;
+}
+
+.terminal-bottom-panel .terminal-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--surface-1);
+  border-bottom: none;
+  flex-shrink: 0;
+}
+
+.terminal-bottom-panel .terminal-panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.terminal-bottom-panel .terminal-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: auto;
+}
+.terminal-status-connected { background: var(--accent-success); }
+.terminal-status-connecting { background: var(--accent-warning); animation: pulse 1s infinite; }
+.terminal-status-disconnected { background: var(--text-muted); }
+.terminal-status-error { background: var(--accent-danger); }
+
+.terminal-bottom-panel .terminal-panel-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+.terminal-bottom-panel .terminal-panel-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.terminal-bottom-panel .terminal-container {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: inherit;
+}
+
+.terminal-bottom-panel .terminal-container .xterm {
+  height: 100% !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.terminal-bottom-panel .terminal-container .xterm-viewport {
+  border: none !important;
+  outline: none !important;
+  background-color: inherit !important;
+}
+
+.terminal-bottom-panel .terminal-container .xterm-screen {
+  border: none !important;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Terminal AI suggest bar */
+.terminal-ai-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.terminal-ai-input {
+  flex: 1;
+  background: var(--surface-0);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  outline: none;
+}
+.terminal-ai-input:focus {
+  border-color: var(--accent-primary);
+}
+.terminal-ai-input::placeholder {
+  color: var(--text-muted);
+}
+
+.terminal-ai-submit {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.terminal-ai-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terminal-ai-result {
+  flex: 1;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: var(--surface-0);
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: var(--text-primary);
+  overflow-x: auto;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.terminal-ai-run {
+  background: var(--accent-success);
+  color: var(--text-inverse);
+}
+
+.terminal-ai-discard {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+
+.terminal-panel-btn-active {
+  color: var(--accent-primary) !important;
+  background: var(--surface-3) !important;
+}
+
+.terminal-ai-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Empty state ---- */
+.app-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* `safe center` keeps the welcome content vertically centered when it fits,
+     but falls back to start-alignment when it's taller than the available
+     space (e.g. the bottom Logs/Terminal panel was dragged tall) — otherwise
+     plain `center` would push the top off-screen where it can't be scrolled to. */
+  justify-content: safe center;
+  gap: var(--space-3);
+  color: var(--text-muted);
+  padding: var(--space-8);
+  position: relative;
+  /* Let the content scroll instead of being clipped by .app-main's overflow:hidden
+     when it exceeds the shrunken height. min-height:0 lets this flex child shrink
+     below its content size so the overflow actually engages. */
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.app-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  margin-bottom: var(--space-2);
+  border-radius: 18px;
+  color: var(--accent-primary);
+  background: linear-gradient(145deg, rgba(137, 180, 250, 0.18), rgba(137, 180, 250, 0.04));
+  border: 1px solid rgba(137, 180, 250, 0.25);
+  box-shadow: 0 0 30px rgba(137, 180, 250, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.app-empty-theme-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--accent-warning-subtle);
+  border: 1px solid rgba(226, 184, 107, 0.3);
+  color: var(--accent-warning);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  /* Same gentle glow pulse as the toolbar toggle, for discoverability. */
+  animation: theme-btn-glow 2.8s ease-in-out infinite;
+}
+
+@keyframes theme-btn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(226, 184, 107, 0.0); }
+  50%      { box-shadow: 0 0 12px 1px rgba(226, 184, 107, 0.45); }
+}
+
+.app-empty-theme-btn:hover {
+  background: var(--accent-warning-subtle);
+  color: var(--accent-warning);
+  border-color: rgba(226, 184, 107, 0.55);
+  animation: none;
+  box-shadow: 0 0 14px 2px rgba(226, 184, 107, 0.5);
+}
+
+.app-empty-theme-btn:hover svg {
+  transform: rotate(180deg);
+  transition: transform 0.4s ease;
+}
+
+.app-empty-theme-btn svg {
+  transition: transform 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-empty-theme-btn { animation: none; }
+  .app-empty-theme-btn:hover svg { transform: none; }
+}
+
+.app-empty-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.app-empty-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+/* Feature pills echoing the About panel badges. */
+.app-empty-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: var(--space-5);
+}
+
+.app-empty-badge {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+}
+
+.app-empty-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.app-empty-btn {
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-weight: 500;
+}
+
+.app-empty-btn:hover {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary-muted);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-empty-btn-primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-inverse);
+}
+
+.app-empty-btn-primary:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.app-empty-hints {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 460px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  max-height: 360px;  /* generous cap so the 5 hints show fully; animates to 0 when hidden */
+  transition:
+    max-height 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.22s ease,
+    margin 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    border-width 0.34s ease;
+}
+
+/* Hidden while the sample gallery is open — collapse to nothing (and fade) so the
+   gallery gets the vertical space instead of the two competing. */
+.app-empty-hints-hidden {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+
+/* Git import input */
+.app-empty-git-import {
+  display: flex;
+  gap: 8px;
+  margin-top: var(--space-3);
+  max-width: 600px;
+  width: 100%;
+}
+.app-empty-git-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.app-empty-git-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+.app-empty-git-input::placeholder {
+  color: var(--text-muted);
+}
+.app-empty-git-btn {
+  padding: 8px 16px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.app-empty-git-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Active state for a toggled action button (e.g. Open Sample) */
+.app-empty-btn-active {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary-muted);
+  color: var(--accent-primary);
+}
+
+/* Dropdown chevron on the Open Sample button — rotates when the gallery is open */
+.app-empty-btn { display: inline-flex; align-items: center; gap: 6px; }
+.app-empty-btn-chevron {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0.7;
+}
+.app-empty-btn-active .app-empty-btn-chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* ---- Sample gallery (animated drop-down) ----
+   Uses the grid-template-rows 0fr↔1fr technique so it smoothly expands AND
+   collapses (the content stays mounted, unlike a conditional render). */
+.app-empty-samples-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  width: 100%;
+  max-width: 760px;
+  opacity: 0;
+  margin: 0;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.26s ease,
+    margin 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-empty-samples-wrap.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin: var(--space-4) 0 var(--space-6);
+}
+
+.app-empty-samples-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.app-empty-samples {
+  display: grid;
+  /* Responsive to the CONTAINER, not the viewport: auto-fill packs as many ~210px
+     columns as fit (3 when wide, 2 or 1 when the center column is squeezed between
+     the open side panels) and cards wrap instead of overflowing/clipping. This
+     replaces the fixed repeat(3,...) + viewport media query, which forced 3 columns
+     even when the available width was far less than the viewport. */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+  box-sizing: border-box;
+  /* The getting-started hints collapse when the gallery opens (see
+     .app-empty-hints-hidden), so the gallery can take more height. Scale with the
+     VIEWPORT height — use ~48vh on tall screens for more rows, but never exceed
+     ~460px so it stays a gallery (not a full-height list), and the min() keeps it
+     from getting oversized. Still scrollable so a huge sample list can't push the
+     layout off-screen. */
+  max-height: min(48vh, 460px);
+  overflow-y: auto;
+  padding-right: 6px;  /* breathing room so the scrollbar doesn't overlap cards */
+}
+
+.app-empty-samples-loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--space-4);
+}
+
+.sample-card {
+  display: flex;
+  /* Top-align the icon with the title so a 3-line description doesn't leave the
+     icon floating in the vertical center. Grid default align-items:stretch already
+     makes every card in a row the same height; clamping the desc to 3 lines caps
+     that height so the whole grid reads as a uniform set of cards. */
+  align-items: flex-start;
+  gap: var(--space-3);
+  text-align: left;
+  padding: var(--space-3);
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  min-width: 0;  /* let the card shrink to its grid track so long text wraps, not overflows */
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sample-card:hover {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary-muted);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.sample-card-icon {
+  font-size: 20px;
+  line-height: 1;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.sample-card:hover .sample-card-icon {
+  border-color: var(--accent-primary-muted);
+}
+
+.sample-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sample-card-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sample-card-desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.35;
+  /* Clamp to 3 lines with an ellipsis so cards stay a consistent height no matter
+     how long the description is — the FULL text is still available via the card's
+     title tooltip (set in WelcomeScreen.jsx). Same -webkit-line-clamp technique the
+     Samples side panel uses (2 lines there; 3 here for the roomier gallery cards). */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* No viewport media query needed — the auto-fill grid above wraps by CONTAINER
+   width, so the gallery adapts correctly even when the center column is narrowed
+   by the open side panels (which a viewport-width query can't detect). */
+
+.app-empty-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 11px 14px;
+  transition: background var(--transition-fast);
+}
+
+.app-empty-hint + .app-empty-hint {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.app-empty-hint:hover {
+  background: var(--surface-2);
+}
+
+.app-empty-hint-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-empty-hint kbd {
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+/* AI Chat floating action button */
+.ai-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99, 144, 240, 0.4);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  cursor: grab;
+  touch-action: none;
+  /* Gentle breathing glow so users notice the assistant is here (matches the
+     theme-switcher pulse). Uses the button's own accent color. */
+  animation: ai-fab-glow 2.8s ease-in-out infinite;
+}
+
+/* Pulsing halo — a soft accent ring that grows/fades around the button. The base
+   drop-shadow is kept as the ring's resting layer so it never fully disappears. */
+@keyframes ai-fab-glow {
+  0%, 100% { box-shadow: 0 4px 12px rgba(99, 144, 240, 0.35), 0 0 0 0 var(--accent-primary); }
+  50%      { box-shadow: 0 4px 12px rgba(99, 144, 240, 0.35), 0 0 16px 3px var(--accent-primary); }
+}
+
+.ai-fab:hover {
+  transform: scale(1.1);
+  /* Steady, stronger glow on hover; pause the idle pulse. */
+  animation: none;
+  box-shadow: 0 6px 20px rgba(99, 144, 240, 0.5), 0 0 18px 4px var(--accent-primary);
+}
+
+/* While dragging, hold the grabbing cursor and skip the hover-scale + pulse so the
+   button tracks the pointer 1:1. */
+.ai-fab-dragging,
+.ai-fab-dragging:hover {
+  cursor: grabbing;
+  transform: none;
+  transition: none;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab { animation: none; }
+}
+
+/* Attention badge — a count pill pinned to the FAB's top-right, surfacing the
+   number of Workbook Intel items that need attention (Alerts + Investigate) while
+   the panel is closed. Color encodes the highest alert severity. Styled as a small
+   "lit chip": subtle vertical gradient, a thin ring in the app background to lift
+   it off the round button, and a soft colored glow matching the severity. */
+.ai-fab-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;   /* digits keep an even width */
+  text-align: center;
+  box-sizing: border-box;
+  /* Thin ring in the app background separates the chip from the glowing button.
+     A hairline top highlight + soft drop + severity glow give it depth. */
+  border: 1.5px solid var(--surface-0, #08080f);
+  pointer-events: none;   /* clicks fall through to the FAB */
+  /* Default (accent) glow; severity variants override the color below. */
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.4),
+    0 0 0 0.5px rgba(255, 255, 255, 0.08) inset,
+    0 0 8px 0 color-mix(in srgb, var(--accent-primary) 55%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-primary) 85%, white 15%),
+    var(--accent-primary)
+  );
+  /* Pop in so the badge appears intentional, not bolted on. Re-fires whenever the
+     count changes (the component re-keys the element on count change). */
+  transform-origin: center;
+  animation: ai-fab-badge-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Scoped to the badge PILL specifically (compound selector) so the shared
+   severity modifier classes don't leak their gradient/glow onto other elements
+   that reuse them as a plain tint (e.g. the preview count chip). */
+.ai-fab-badge.ai-fab-badge-high {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent-danger, #ff5c5c) 82%, white 18%),
+    var(--accent-danger, #ff5c5c));
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.4),
+    0 0 0 0.5px rgba(255, 255, 255, 0.1) inset,
+    0 0 9px 0 color-mix(in srgb, var(--accent-danger, #ff5c5c) 60%, transparent);
+}
+
+@keyframes ai-fab-badge-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Generating state: a small pulsing dot instead of a number, so a mid-generation
+   "0" never reads as "all clear". */
+.ai-fab-badge-working {
+  min-width: 11px;
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--surface-0, #08080f);
+  top: -3px;
+  right: -3px;
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px 0 color-mix(in srgb, var(--accent-primary) 70%, transparent);
+  animation: ai-fab-badge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ai-fab-badge-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab-badge { animation: none; }
+  .ai-fab-badge-working { animation: none; }
+}
+
+/* ── FAB hover/focus preview ─────────────────────────────────────────────────
+   A compact popover that reveals the attention items (Alerts + Investigate)
+   without opening the panel. Anchored to the FAB and rendered in a body portal so
+   it's never clipped by app stacking contexts. Rows are clickable and run the
+   item's prompt in chat. */
+.ai-fab-preview {
+  z-index: 101;                 /* above the FAB (100) */
+  width: 300px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default, var(--border-subtle));
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transform-origin: bottom right;
+  animation: ai-fab-preview-in 0.16s ease-out;
+}
+.ai-fab-preview-down { transform-origin: top right; }
+
+@keyframes ai-fab-preview-in {
+  from { opacity: 0; transform: scale(0.96) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ai-fab-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ai-fab-preview-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+.ai-fab-preview-count {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  /* Color matches the FAB badge's severity so the two read as one signal. The
+     severity classes below (shared with the badge) override these defaults; the
+     accent variant is the fallback (e.g. investigations-only, no alerts). */
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+}
+/* The FIRST chip pushes the cluster to the right edge of the header; subsequent
+   chips sit beside it with a small gap. */
+.ai-fab-preview-count:first-of-type { margin-left: auto; }
+.ai-fab-preview-count + .ai-fab-preview-count { margin-left: 6px; }
+/* Investigate chip — accent tone, matching the panel's "suggestions" framing
+   (Investigate is a suggestion, not an alert). */
+.ai-fab-preview-count-investigate {
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+}
+/* Severity tint for the count chip — reuses the badge's modifier classes but only
+   as a flat text+tint (the pill gradient/glow from .ai-fab-badge-* doesn't apply
+   here because those rules are scoped to .ai-fab-badge). */
+.ai-fab-preview-count.ai-fab-badge-high {
+  color: var(--accent-danger, #ff5c5c);
+  background: color-mix(in srgb, var(--accent-danger, #ff5c5c) 15%, transparent);
+}
+
+.ai-fab-preview-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ai-fab-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.ai-fab-preview-row:hover {
+  background: var(--surface-3);
+  border-color: var(--accent-primary-muted, rgba(91, 159, 255, 0.3));
+}
+/* Severity accent stripe on alert rows, matching the accordion's alert coloring. */
+.ai-fab-preview-alert-high   { border-left: 3px solid var(--accent-danger, #ff5c5c); }
+.ai-fab-preview-alert-medium { border-left: 3px solid var(--accent-warning, #f9a825); }
+.ai-fab-preview-alert-low    { border-left: 3px solid var(--text-muted); }
+.ai-fab-preview-investigate  { border-left: 3px solid var(--accent-primary); }
+
+.ai-fab-preview-icon { flex-shrink: 0; font-size: 13px; line-height: 1; }
+.ai-fab-preview-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.ai-fab-preview-row-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  /* Clamp to two lines so a long alert message stays tidy. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ai-fab-preview-row-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-fab-preview-run {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.ai-fab-preview-row:hover .ai-fab-preview-run { opacity: 1; color: var(--accent-primary); }
+
+.ai-fab-preview-more {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  text-align: left;
+}
+.ai-fab-preview-more:hover { color: var(--text-primary); }
+
+.ai-fab-preview-open {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle, color-mix(in srgb, var(--accent-primary) 12%, transparent));
+  border: 1px solid var(--accent-primary-muted, rgba(91, 159, 255, 0.3));
+  border-radius: 8px;
+  padding: 7px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ai-fab-preview-open:hover { background: color-mix(in srgb, var(--accent-primary) 22%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-fab-preview { animation: none; }
+}
+
+/* Actioned (clicked) preview row — mirror the in-panel actioned card: green tint,
+   green left accent (overriding the severity stripe), and a filled green ✓ in place
+   of the play hint. Keeps the FAB preview consistent with the AI panel. */
+.ai-fab-preview-row-actioned {
+  background: color-mix(in srgb, var(--accent-success, #34eaad) 14%, var(--surface-2));
+  border-left: 3px solid var(--accent-success, #34eaad) !important;
+}
+.ai-fab-preview-row-actioned:hover {
+  background: color-mix(in srgb, var(--accent-success, #34eaad) 20%, var(--surface-3));
+}
+.ai-fab-preview-check {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--accent-success, #34eaad);
+}

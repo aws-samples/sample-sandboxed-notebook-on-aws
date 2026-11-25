@@ -1,0 +1,2937 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (proxy/notebook/dag.py builder output)",
+ "scenarios": {
+  "with_provenance": {
+   "cells": [
+    {
+     "id": "demand",
+     "type": "code",
+     "code": "product_demand = read_athena(\"q\")"
+    },
+    {
+     "id": "reco",
+     "type": "sql",
+     "code": "SELECT 1",
+     "outputVariable": "product_reco"
+    },
+    {
+     "id": "holiday",
+     "type": "code",
+     "code": "season_multiplier = 1.2"
+    },
+    {
+     "id": "builder",
+     "type": "code",
+     "code": "products360 = product_demand.merge(product_reco)\nproducts360['x'] = 0"
+    },
+    {
+     "id": "mutator",
+     "type": "code",
+     "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 45, \"default\": 14, \"label\": \"Stockout risk window (days)\"}\nstockout_risk_days = 14\neff = stockout_risk_days * season_multiplier\nproducts360['action'] = products360.apply(lambda r: 'RESTOCK', axis=1)\nproducts360['priority_score'] = products360['revenue'] * season_multiplier"
+    },
+    {
+     "id": "r31",
+     "type": "code",
+     "code": "action_counts = products360['action'].value_counts()"
+    },
+    {
+     "id": "r32",
+     "type": "code",
+     "code": "products360.head()"
+    },
+    {
+     "id": "kbparams",
+     "type": "code",
+     "code": "kb_query = \"x\"\nkb_top_k = 5"
+    },
+    {
+     "id": "kb",
+     "type": "code",
+     "code": "chunks = read_bedrock_kb(kb_query, top_k=kb_top_k)"
+    },
+    {
+     "id": "r42",
+     "type": "code",
+     "code": "in_kb = products360[products360['product_id'].isin([])]\nresult = ask_bedrock_kb('q')"
+    },
+    {
+     "id": "unrelated",
+     "type": "code",
+     "code": "z = 5"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 11,
+    "nodes": [
+     {
+      "cell_id": "demand",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_output_variable": null,
+      "facts_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_demand"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "reco",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "product_reco",
+      "output_variable_explicit": true,
+      "code_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_output_variable": "product_reco",
+      "facts_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_reco"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "dynamodb",
+        "id": "ecommerce-recommendations"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "holiday",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_output_variable": null,
+      "facts_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "season_multiplier"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "url",
+        "id": "https://date.nager.at"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "builder",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_output_variable": null,
+      "facts_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "facts_origin": "runtime",
+      "reads": [
+       "product_demand",
+       "product_reco"
+      ],
+      "writes": [
+       "products360"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "mutator",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_output_variable": null,
+      "facts_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360",
+       "season_multiplier"
+      ],
+      "writes": [
+       "eff",
+       "products360",
+       "stockout_risk_days"
+      ],
+      "mutates": [
+       "products360"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r31",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_output_variable": null,
+      "facts_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "action_counts"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 6,
+      "last_ok_seq": 6,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r32",
+      "position": 6,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_output_variable": null,
+      "facts_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 7,
+      "last_ok_seq": 7,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kbparams",
+      "position": 7,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_output_variable": null,
+      "facts_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 8,
+      "last_ok_seq": 8,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kb",
+      "position": 8,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_output_variable": null,
+      "facts_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "facts_origin": "runtime",
+      "reads": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "writes": [
+       "chunks"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 9,
+      "last_ok_seq": 9,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r42",
+      "position": 9,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_output_variable": null,
+      "facts_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "in_kb",
+       "result"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 10,
+      "last_ok_seq": 10,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "unrelated",
+      "position": 10,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_output_variable": null,
+      "facts_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 11,
+      "last_ok_seq": 11,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "demand",
+      "to": "builder",
+      "var": "product_demand",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "reco",
+      "to": "builder",
+      "var": "product_reco",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "builder",
+      "to": "mutator",
+      "var": "products360",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "holiday",
+      "to": "mutator",
+      "var": "season_multiplier",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r31",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r32",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_query",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_top_k",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r42",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "holiday",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "url",
+       "id": "https://date.nager.at"
+      },
+      "detail": "reads url https://date.nager.at; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "mutator",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "products360",
+      "related": [
+       "builder"
+      ],
+      "source": null,
+      "detail": "mutates products360 defined in cell builder"
+     }
+    ],
+    "runtime": {
+     "clock": 11,
+     "vars": {
+      "product_demand": {
+       "defined_by": "demand",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "demand",
+       "last_exec": 1
+      },
+      "product_reco": {
+       "defined_by": "reco",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "reco",
+       "last_exec": 2
+      },
+      "season_multiplier": {
+       "defined_by": "holiday",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "holiday",
+       "last_exec": 3
+      },
+      "products360": {
+       "defined_by": "builder",
+       "defined_at": 4,
+       "modified_by": [
+        "mutator"
+       ],
+       "last_cell": "mutator",
+       "last_exec": 5
+      },
+      "stockout_risk_days": {
+       "defined_by": "mutator",
+       "defined_at": 5,
+       "modified_by": [],
+       "last_cell": "mutator",
+       "last_exec": 5
+      },
+      "kb_query": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      },
+      "kb_top_k": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "b5bbc472b0de92cb6397932b67d9a19c8ec1d9fd0a7f1b8a5b03bf509169d906",
+    "runtime_hash": "bd589c95109aea006aabc5deeb86436ad2edd9eb58bbf4abc91881b99f6c36e6",
+    "runtime_version": 1
+   }
+  },
+  "no_provenance": {
+   "cells": [
+    {
+     "id": "demand",
+     "type": "code",
+     "code": "product_demand = read_athena(\"q\")"
+    },
+    {
+     "id": "reco",
+     "type": "sql",
+     "code": "SELECT 1",
+     "outputVariable": "product_reco"
+    },
+    {
+     "id": "holiday",
+     "type": "code",
+     "code": "season_multiplier = 1.2"
+    },
+    {
+     "id": "builder",
+     "type": "code",
+     "code": "products360 = product_demand.merge(product_reco)\nproducts360['x'] = 0"
+    },
+    {
+     "id": "mutator",
+     "type": "code",
+     "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 45, \"default\": 14, \"label\": \"Stockout risk window (days)\"}\nstockout_risk_days = 14\neff = stockout_risk_days * season_multiplier\nproducts360['action'] = products360.apply(lambda r: 'RESTOCK', axis=1)\nproducts360['priority_score'] = products360['revenue'] * season_multiplier"
+    },
+    {
+     "id": "r31",
+     "type": "code",
+     "code": "action_counts = products360['action'].value_counts()"
+    },
+    {
+     "id": "r32",
+     "type": "code",
+     "code": "products360.head()"
+    },
+    {
+     "id": "kbparams",
+     "type": "code",
+     "code": "kb_query = \"x\"\nkb_top_k = 5"
+    },
+    {
+     "id": "kb",
+     "type": "code",
+     "code": "chunks = read_bedrock_kb(kb_query, top_k=kb_top_k)"
+    },
+    {
+     "id": "r42",
+     "type": "code",
+     "code": "in_kb = products360[products360['product_id'].isin([])]\nresult = ask_bedrock_kb('q')"
+    },
+    {
+     "id": "unrelated",
+     "type": "code",
+     "code": "z = 5"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 11,
+    "nodes": [
+     {
+      "cell_id": "demand",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_output_variable": null,
+      "facts_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_demand"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "reco",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "product_reco",
+      "output_variable_explicit": true,
+      "code_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_output_variable": "product_reco",
+      "facts_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_reco"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "dynamodb",
+        "id": "ecommerce-recommendations"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "holiday",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_output_variable": null,
+      "facts_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "season_multiplier"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "url",
+        "id": "https://date.nager.at"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "builder",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_output_variable": null,
+      "facts_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "facts_origin": "runtime",
+      "reads": [
+       "product_demand",
+       "product_reco"
+      ],
+      "writes": [
+       "products360"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "mutator",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_output_variable": null,
+      "facts_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360",
+       "season_multiplier"
+      ],
+      "writes": [
+       "eff",
+       "products360",
+       "stockout_risk_days"
+      ],
+      "mutates": [
+       "products360"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r31",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_output_variable": null,
+      "facts_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "action_counts"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 6,
+      "last_ok_seq": 6,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r32",
+      "position": 6,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_output_variable": null,
+      "facts_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 7,
+      "last_ok_seq": 7,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kbparams",
+      "position": 7,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_output_variable": null,
+      "facts_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 8,
+      "last_ok_seq": 8,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kb",
+      "position": 8,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_output_variable": null,
+      "facts_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "facts_origin": "runtime",
+      "reads": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "writes": [
+       "chunks"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 9,
+      "last_ok_seq": 9,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r42",
+      "position": 9,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_output_variable": null,
+      "facts_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "in_kb",
+       "result"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 10,
+      "last_ok_seq": 10,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "unrelated",
+      "position": 10,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_output_variable": null,
+      "facts_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 11,
+      "last_ok_seq": 11,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "demand",
+      "to": "builder",
+      "var": "product_demand",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "reco",
+      "to": "builder",
+      "var": "product_reco",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "builder",
+      "to": "mutator",
+      "var": "products360",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "holiday",
+      "to": "mutator",
+      "var": "season_multiplier",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r31",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r32",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_query",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_top_k",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r42",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "holiday",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "url",
+       "id": "https://date.nager.at"
+      },
+      "detail": "reads url https://date.nager.at; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "mutator",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "products360",
+      "related": [
+       "builder"
+      ],
+      "source": null,
+      "detail": "mutates products360 defined in cell builder"
+     }
+    ],
+    "runtime": {
+     "clock": 11,
+     "vars": {},
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "b5bbc472b0de92cb6397932b67d9a19c8ec1d9fd0a7f1b8a5b03bf509169d906",
+    "runtime_hash": "2579710236b20fb880734c6fd08e734533f4c302706025231be514041930fc8c",
+    "runtime_version": 2
+   }
+  },
+  "after_mutator": {
+   "cells": [
+    {
+     "id": "demand",
+     "type": "code",
+     "code": "product_demand = read_athena(\"q\")"
+    },
+    {
+     "id": "reco",
+     "type": "sql",
+     "code": "SELECT 1",
+     "outputVariable": "product_reco"
+    },
+    {
+     "id": "holiday",
+     "type": "code",
+     "code": "season_multiplier = 1.2"
+    },
+    {
+     "id": "builder",
+     "type": "code",
+     "code": "products360 = product_demand.merge(product_reco)\nproducts360['x'] = 0"
+    },
+    {
+     "id": "mutator",
+     "type": "code",
+     "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 45, \"default\": 14, \"label\": \"Stockout risk window (days)\"}\nstockout_risk_days = 14\neff = stockout_risk_days * season_multiplier\nproducts360['action'] = products360.apply(lambda r: 'RESTOCK', axis=1)\nproducts360['priority_score'] = products360['revenue'] * season_multiplier"
+    },
+    {
+     "id": "r31",
+     "type": "code",
+     "code": "action_counts = products360['action'].value_counts()"
+    },
+    {
+     "id": "r32",
+     "type": "code",
+     "code": "products360.head()"
+    },
+    {
+     "id": "kbparams",
+     "type": "code",
+     "code": "kb_query = \"x\"\nkb_top_k = 5"
+    },
+    {
+     "id": "kb",
+     "type": "code",
+     "code": "chunks = read_bedrock_kb(kb_query, top_k=kb_top_k)"
+    },
+    {
+     "id": "r42",
+     "type": "code",
+     "code": "in_kb = products360[products360['product_id'].isin([])]\nresult = ask_bedrock_kb('q')"
+    },
+    {
+     "id": "unrelated",
+     "type": "code",
+     "code": "z = 5"
+    }
+   ],
+   "baseline_clock": 11,
+   "doc": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:03.000Z",
+    "run_seq": 12,
+    "nodes": [
+     {
+      "cell_id": "demand",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_output_variable": null,
+      "facts_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_demand"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "reco",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "product_reco",
+      "output_variable_explicit": true,
+      "code_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_output_variable": "product_reco",
+      "facts_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_reco"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "dynamodb",
+        "id": "ecommerce-recommendations"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "holiday",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_output_variable": null,
+      "facts_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "season_multiplier"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "url",
+        "id": "https://date.nager.at"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "builder",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_output_variable": null,
+      "facts_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "facts_origin": "runtime",
+      "reads": [
+       "product_demand",
+       "product_reco"
+      ],
+      "writes": [
+       "products360"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "mutator",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_output_variable": null,
+      "facts_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360",
+       "season_multiplier"
+      ],
+      "writes": [
+       "eff",
+       "products360",
+       "stockout_risk_days"
+      ],
+      "mutates": [
+       "products360"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 12,
+      "last_ok_seq": 12,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r31",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_output_variable": null,
+      "facts_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "action_counts"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "products360"
+       ],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 6,
+      "last_ok_seq": 6,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r32",
+      "position": 6,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_output_variable": null,
+      "facts_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "products360"
+       ],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 7,
+      "last_ok_seq": 7,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kbparams",
+      "position": 7,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_output_variable": null,
+      "facts_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 8,
+      "last_ok_seq": 8,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kb",
+      "position": 8,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_output_variable": null,
+      "facts_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "facts_origin": "runtime",
+      "reads": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "writes": [
+       "chunks"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 9,
+      "last_ok_seq": 9,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r42",
+      "position": 9,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_output_variable": null,
+      "facts_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "in_kb",
+       "result"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "products360"
+       ],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 10,
+      "last_ok_seq": 10,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "unrelated",
+      "position": 10,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_output_variable": null,
+      "facts_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 11,
+      "last_ok_seq": 11,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "demand",
+      "to": "builder",
+      "var": "product_demand",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "reco",
+      "to": "builder",
+      "var": "product_reco",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "builder",
+      "to": "mutator",
+      "var": "products360",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "holiday",
+      "to": "mutator",
+      "var": "season_multiplier",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r31",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r32",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_query",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_top_k",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r42",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "holiday",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "url",
+       "id": "https://date.nager.at"
+      },
+      "detail": "reads url https://date.nager.at; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "mutator",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "products360",
+      "related": [
+       "builder"
+      ],
+      "source": null,
+      "detail": "mutates products360 defined in cell builder"
+     }
+    ],
+    "runtime": {
+     "clock": 12,
+     "vars": {
+      "product_demand": {
+       "defined_by": "demand",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "demand",
+       "last_exec": 1
+      },
+      "product_reco": {
+       "defined_by": "reco",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "reco",
+       "last_exec": 2
+      },
+      "season_multiplier": {
+       "defined_by": "holiday",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "holiday",
+       "last_exec": 3
+      },
+      "products360": {
+       "defined_by": "builder",
+       "defined_at": 4,
+       "modified_by": [
+        "mutator"
+       ],
+       "last_cell": "mutator",
+       "last_exec": 12
+      },
+      "stockout_risk_days": {
+       "defined_by": "mutator",
+       "defined_at": 5,
+       "modified_by": [],
+       "last_cell": "mutator",
+       "last_exec": 12
+      },
+      "kb_query": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      },
+      "kb_top_k": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "d389184a9b150fb17ba21c3bfda6b0c231d30985091412ef8649c18bae46bb0d",
+    "runtime_hash": "fc307e5d9857dc413bc1e0cbc8995eff178664436045567466b385957d3ca8f2",
+    "runtime_version": 3
+   }
+  },
+  "after_builder": {
+   "cells": [
+    {
+     "id": "demand",
+     "type": "code",
+     "code": "product_demand = read_athena(\"q\")"
+    },
+    {
+     "id": "reco",
+     "type": "sql",
+     "code": "SELECT 1",
+     "outputVariable": "product_reco"
+    },
+    {
+     "id": "holiday",
+     "type": "code",
+     "code": "season_multiplier = 1.2"
+    },
+    {
+     "id": "builder",
+     "type": "code",
+     "code": "products360 = product_demand.merge(product_reco)\nproducts360['x'] = 0"
+    },
+    {
+     "id": "mutator",
+     "type": "code",
+     "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 45, \"default\": 14, \"label\": \"Stockout risk window (days)\"}\nstockout_risk_days = 14\neff = stockout_risk_days * season_multiplier\nproducts360['action'] = products360.apply(lambda r: 'RESTOCK', axis=1)\nproducts360['priority_score'] = products360['revenue'] * season_multiplier"
+    },
+    {
+     "id": "r31",
+     "type": "code",
+     "code": "action_counts = products360['action'].value_counts()"
+    },
+    {
+     "id": "r32",
+     "type": "code",
+     "code": "products360.head()"
+    },
+    {
+     "id": "kbparams",
+     "type": "code",
+     "code": "kb_query = \"x\"\nkb_top_k = 5"
+    },
+    {
+     "id": "kb",
+     "type": "code",
+     "code": "chunks = read_bedrock_kb(kb_query, top_k=kb_top_k)"
+    },
+    {
+     "id": "r42",
+     "type": "code",
+     "code": "in_kb = products360[products360['product_id'].isin([])]\nresult = ask_bedrock_kb('q')"
+    },
+    {
+     "id": "unrelated",
+     "type": "code",
+     "code": "z = 5"
+    }
+   ],
+   "baseline_clock": 11,
+   "doc": {
+    "schema": 1,
+    "version": 3,
+    "built_at": "2026-05-01T10:00:04.000Z",
+    "run_seq": 12,
+    "nodes": [
+     {
+      "cell_id": "demand",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_output_variable": null,
+      "facts_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_demand"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "reco",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "product_reco",
+      "output_variable_explicit": true,
+      "code_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_output_variable": "product_reco",
+      "facts_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_reco"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "dynamodb",
+        "id": "ecommerce-recommendations"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "holiday",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_output_variable": null,
+      "facts_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "season_multiplier"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "url",
+        "id": "https://date.nager.at"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "builder",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_output_variable": null,
+      "facts_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "facts_origin": "runtime",
+      "reads": [
+       "product_demand",
+       "product_reco"
+      ],
+      "writes": [
+       "products360"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 12,
+      "last_ok_seq": 12,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "mutator",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_output_variable": null,
+      "facts_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360",
+       "season_multiplier"
+      ],
+      "writes": [
+       "eff",
+       "products360",
+       "stockout_risk_days"
+      ],
+      "mutates": [
+       "products360"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "products360"
+       ],
+       "via": [
+        "builder"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r31",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_output_variable": null,
+      "facts_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "action_counts"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 6,
+      "last_ok_seq": 6,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r32",
+      "position": 6,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_output_variable": null,
+      "facts_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 7,
+      "last_ok_seq": 7,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kbparams",
+      "position": 7,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_output_variable": null,
+      "facts_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 8,
+      "last_ok_seq": 8,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kb",
+      "position": 8,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_output_variable": null,
+      "facts_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "facts_origin": "runtime",
+      "reads": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "writes": [
+       "chunks"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 9,
+      "last_ok_seq": 9,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r42",
+      "position": 9,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_output_variable": null,
+      "facts_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "in_kb",
+       "result"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 10,
+      "last_ok_seq": 10,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "unrelated",
+      "position": 10,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_output_variable": null,
+      "facts_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 11,
+      "last_ok_seq": 11,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "demand",
+      "to": "builder",
+      "var": "product_demand",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "reco",
+      "to": "builder",
+      "var": "product_reco",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "builder",
+      "to": "mutator",
+      "var": "products360",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "holiday",
+      "to": "mutator",
+      "var": "season_multiplier",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r31",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r32",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_query",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_top_k",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r42",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "holiday",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "url",
+       "id": "https://date.nager.at"
+      },
+      "detail": "reads url https://date.nager.at; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "mutator",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "products360",
+      "related": [
+       "builder"
+      ],
+      "source": null,
+      "detail": "mutates products360 defined in cell builder"
+     }
+    ],
+    "runtime": {
+     "clock": 12,
+     "vars": {
+      "product_demand": {
+       "defined_by": "demand",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "demand",
+       "last_exec": 1
+      },
+      "product_reco": {
+       "defined_by": "reco",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "reco",
+       "last_exec": 2
+      },
+      "season_multiplier": {
+       "defined_by": "holiday",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "holiday",
+       "last_exec": 3
+      },
+      "products360": {
+       "defined_by": "builder",
+       "defined_at": 4,
+       "modified_by": [
+        "mutator"
+       ],
+       "last_cell": "builder",
+       "last_exec": 12
+      },
+      "stockout_risk_days": {
+       "defined_by": "mutator",
+       "defined_at": 5,
+       "modified_by": [],
+       "last_cell": "mutator",
+       "last_exec": 5
+      },
+      "kb_query": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      },
+      "kb_top_k": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "34a33fb38268ceebab154f15cc627863e3ee6d15b0b8a390c159a379b310aa9c",
+    "runtime_hash": "8b8093c706439e34ccec38421ef6d288c0a95a10857ceced90faccb4b21ac95d",
+    "runtime_version": 4
+   }
+  },
+  "after_holiday": {
+   "cells": [
+    {
+     "id": "demand",
+     "type": "code",
+     "code": "product_demand = read_athena(\"q\")"
+    },
+    {
+     "id": "reco",
+     "type": "sql",
+     "code": "SELECT 1",
+     "outputVariable": "product_reco"
+    },
+    {
+     "id": "holiday",
+     "type": "code",
+     "code": "season_multiplier = 1.2"
+    },
+    {
+     "id": "builder",
+     "type": "code",
+     "code": "products360 = product_demand.merge(product_reco)\nproducts360['x'] = 0"
+    },
+    {
+     "id": "mutator",
+     "type": "code",
+     "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 45, \"default\": 14, \"label\": \"Stockout risk window (days)\"}\nstockout_risk_days = 14\neff = stockout_risk_days * season_multiplier\nproducts360['action'] = products360.apply(lambda r: 'RESTOCK', axis=1)\nproducts360['priority_score'] = products360['revenue'] * season_multiplier"
+    },
+    {
+     "id": "r31",
+     "type": "code",
+     "code": "action_counts = products360['action'].value_counts()"
+    },
+    {
+     "id": "r32",
+     "type": "code",
+     "code": "products360.head()"
+    },
+    {
+     "id": "kbparams",
+     "type": "code",
+     "code": "kb_query = \"x\"\nkb_top_k = 5"
+    },
+    {
+     "id": "kb",
+     "type": "code",
+     "code": "chunks = read_bedrock_kb(kb_query, top_k=kb_top_k)"
+    },
+    {
+     "id": "r42",
+     "type": "code",
+     "code": "in_kb = products360[products360['product_id'].isin([])]\nresult = ask_bedrock_kb('q')"
+    },
+    {
+     "id": "unrelated",
+     "type": "code",
+     "code": "z = 5"
+    }
+   ],
+   "baseline_clock": 11,
+   "doc": {
+    "schema": 1,
+    "version": 4,
+    "built_at": "2026-05-01T10:00:05.000Z",
+    "run_seq": 12,
+    "nodes": [
+     {
+      "cell_id": "demand",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "run_output_variable": null,
+      "facts_hash": "e80aa0a94bee6ddf8e0971341498d333cf6ecc489bea97bf380a71f5a370b6cf",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_demand"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "reco",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "product_reco",
+      "output_variable_explicit": true,
+      "code_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "run_output_variable": "product_reco",
+      "facts_hash": "b435f02192508d9809b6402ba085bde6dc4c2e7609292945916122e404efb4ce",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "product_reco"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "dynamodb",
+        "id": "ecommerce-recommendations"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "holiday",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "run_output_variable": null,
+      "facts_hash": "5a7d8ccaeb5ca561540c3507cdbefe619823de7f78da55a5b6b6bd4d1bc7002a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "season_multiplier"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "url",
+        "id": "https://date.nager.at"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 12,
+      "last_ok_seq": 12,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "builder",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "run_output_variable": null,
+      "facts_hash": "12c913e99d8b2c0b16a2d861ba320ca708da0b7becae893623fcac98cbcd4959",
+      "facts_origin": "runtime",
+      "reads": [
+       "product_demand",
+       "product_reco"
+      ],
+      "writes": [
+       "products360"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "mutator",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "run_output_variable": null,
+      "facts_hash": "3808d0b5df8dbb08d6a572b8dd251eeba30f646c70411b7209aa0a8d75bf3c3a",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360",
+       "season_multiplier"
+      ],
+      "writes": [
+       "eff",
+       "products360",
+       "stockout_risk_days"
+      ],
+      "mutates": [
+       "products360"
+      ],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "season_multiplier"
+       ],
+       "via": [
+        "holiday"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r31",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "run_output_variable": null,
+      "facts_hash": "b9eabe0d7b3c8f9a797a3517dca4e0b6dd840ee2ab8ddc83cc5009439099e41c",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "action_counts"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 6,
+      "last_ok_seq": 6,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r32",
+      "position": 6,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "run_output_variable": null,
+      "facts_hash": "a7c6c6cd66449ad06ac7eb03e3f89d0a6c37856d19c0c6bb3c17f1f2fbbf9868",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 7,
+      "last_ok_seq": 7,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kbparams",
+      "position": 7,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "run_output_variable": null,
+      "facts_hash": "cd175bffa71976ae283a68a4a1bd4db25e4a70e59b8841ba885f293e88deda05",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 8,
+      "last_ok_seq": 8,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "kb",
+      "position": 8,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "run_output_variable": null,
+      "facts_hash": "807e917ea66c8d2dd2c12d9b50dc839703a49af75f63c9c7bcbfb43fddc43e3d",
+      "facts_origin": "runtime",
+      "reads": [
+       "kb_query",
+       "kb_top_k"
+      ],
+      "writes": [
+       "chunks"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 9,
+      "last_ok_seq": 9,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "r42",
+      "position": 9,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "run_output_variable": null,
+      "facts_hash": "9c991a75cab9cf2caae4c9afd4742179bc5871f12a37ca28c7161b42d5ab3162",
+      "facts_origin": "runtime",
+      "reads": [
+       "products360"
+      ],
+      "writes": [
+       "in_kb",
+       "result"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "bedrock_kb",
+        "id": "AVSDQZX2CR"
+       }
+      ],
+      "dynamic": [],
+      "level": 3,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "mutator"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 10,
+      "last_ok_seq": 10,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "unrelated",
+      "position": 10,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "run_output_variable": null,
+      "facts_hash": "7f289eb621e486e4e6f82ea0c7d48cb52e1030b683e58518466583af3d6531e7",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 11,
+      "last_ok_seq": 11,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "demand",
+      "to": "builder",
+      "var": "product_demand",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "reco",
+      "to": "builder",
+      "var": "product_reco",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "builder",
+      "to": "mutator",
+      "var": "products360",
+      "kind": "defines",
+      "use": "mutate",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "holiday",
+      "to": "mutator",
+      "var": "season_multiplier",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r31",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r32",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_query",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "kbparams",
+      "to": "kb",
+      "var": "kb_top_k",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "mutator",
+      "to": "r42",
+      "var": "products360",
+      "kind": "mutates",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "holiday",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "url",
+       "id": "https://date.nager.at"
+      },
+      "detail": "reads url https://date.nager.at; the cell won't re-run when the source changes"
+     },
+     {
+      "cell_id": "mutator",
+      "code": "cross_cell_mutation",
+      "severity": "info",
+      "var": "products360",
+      "related": [
+       "builder"
+      ],
+      "source": null,
+      "detail": "mutates products360 defined in cell builder"
+     }
+    ],
+    "runtime": {
+     "clock": 12,
+     "vars": {
+      "product_demand": {
+       "defined_by": "demand",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "demand",
+       "last_exec": 1
+      },
+      "product_reco": {
+       "defined_by": "reco",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "reco",
+       "last_exec": 2
+      },
+      "season_multiplier": {
+       "defined_by": "holiday",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "holiday",
+       "last_exec": 12
+      },
+      "products360": {
+       "defined_by": "builder",
+       "defined_at": 4,
+       "modified_by": [
+        "mutator"
+       ],
+       "last_cell": "mutator",
+       "last_exec": 5
+      },
+      "stockout_risk_days": {
+       "defined_by": "mutator",
+       "defined_at": 5,
+       "modified_by": [],
+       "last_cell": "mutator",
+       "last_exec": 5
+      },
+      "kb_query": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      },
+      "kb_top_k": {
+       "defined_by": "kbparams",
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": "kbparams",
+       "last_exec": 6
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "1a63072a4845879845e8c33e1a1a1e1962c8513ba6395e02dad92b85036c3c9a",
+    "runtime_hash": "6ebc6535245f67a88d8ddff4f88e74afed1be026a72b9a99f1efae444676e503",
+    "runtime_version": 5
+   }
+  }
+ }
+}

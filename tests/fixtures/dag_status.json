@@ -1,0 +1,522 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (proxy/notebook/dag.py builder output)",
+ "scenarios": {
+  "edited_unsaved": {
+   "cells": [
+    {
+     "id": "c1",
+     "type": "code",
+     "code": "x = 1"
+    },
+    {
+     "id": "c2",
+     "type": "code",
+     "code": "y = x + 1"
+    },
+    {
+     "id": "c3",
+     "type": "code",
+     "code": "z = y"
+    }
+   ],
+   "live_code": {
+    "c2": "y = x + 2"
+   },
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 3,
+    "nodes": [
+     {
+      "cell_id": "c1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_output_variable": null,
+      "facts_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "c2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "8883f4cb443d1091beadcdcd95f9a3d8be5a921cf94ab66ac02ca021da6d7598",
+      "run_hash": "6300b479dc80cbf769b6e7ebd98bc676b10e3f895a9e344de47609ac62b23b99",
+      "run_output_variable": null,
+      "facts_hash": "6300b479dc80cbf769b6e7ebd98bc676b10e3f895a9e344de47609ac62b23b99",
+      "facts_origin": "runtime",
+      "reads": [
+       "x"
+      ],
+      "writes": [
+       "y"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "edited",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "c3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "run_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "run_output_variable": null,
+      "facts_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "facts_origin": "runtime",
+      "reads": [
+       "y"
+      ],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "c1",
+      "to": "c2",
+      "var": "x",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "c2",
+      "to": "c3",
+      "var": "y",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 3,
+     "vars": {
+      "x": {
+       "defined_by": "c1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "c1",
+       "last_exec": 1
+      },
+      "y": {
+       "defined_by": "c2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "c2",
+       "last_exec": 2
+      },
+      "z": {
+       "defined_by": "c3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "c3",
+       "last_exec": 3
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "5c609d9cb9749b16a963b97b83e02f9678f42d7d08aefad317dd974751364454",
+    "runtime_hash": "53ec70eaaf2d22e6e0be9742a9840f8987eb1b3b5515fe467b4b4a8245c3bf4f",
+    "runtime_version": 1
+   }
+  },
+  "edited_with_reason": {
+   "cells": [
+    {
+     "id": "c1",
+     "type": "code",
+     "code": "x = 1"
+    },
+    {
+     "id": "c2",
+     "type": "code",
+     "code": "y = x + 1"
+    },
+    {
+     "id": "c3",
+     "type": "code",
+     "code": "z = y"
+    }
+   ],
+   "live_code": {
+    "c2": "y = x + 2"
+   },
+   "baseline_clock": 3,
+   "doc": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "c1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_output_variable": null,
+      "facts_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "c2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "8883f4cb443d1091beadcdcd95f9a3d8be5a921cf94ab66ac02ca021da6d7598",
+      "run_hash": "6300b479dc80cbf769b6e7ebd98bc676b10e3f895a9e344de47609ac62b23b99",
+      "run_output_variable": null,
+      "facts_hash": "6300b479dc80cbf769b6e7ebd98bc676b10e3f895a9e344de47609ac62b23b99",
+      "facts_origin": "runtime",
+      "reads": [
+       "x"
+      ],
+      "writes": [
+       "y"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "edited",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "x"
+       ],
+       "via": [
+        "c1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "c3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "run_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "run_output_variable": null,
+      "facts_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "facts_origin": "runtime",
+      "reads": [
+       "y"
+      ],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "c2"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "c1",
+      "to": "c2",
+      "var": "x",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "c2",
+      "to": "c3",
+      "var": "y",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "x": {
+       "defined_by": "c1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "c1",
+       "last_exec": 4
+      },
+      "y": {
+       "defined_by": "c2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "c2",
+       "last_exec": 2
+      },
+      "z": {
+       "defined_by": "c3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "c3",
+       "last_exec": 3
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "5dd18ea6d48a4b504d012ddbb5f9dd6db7ffd1af1b907f4790394fc25ca19547",
+    "runtime_hash": "d12e9fbdcab3f1be505878c11cfc9e54bca114da95f01389201b1154e0fe834a",
+    "runtime_version": 2
+   }
+  },
+  "not_in_checkpoint": {
+   "cells": [
+    {
+     "id": "c1",
+     "type": "code",
+     "code": "x = 1"
+    },
+    {
+     "id": "c2",
+     "type": "code",
+     "code": "y = x + 1"
+    },
+    {
+     "id": "c3",
+     "type": "code",
+     "code": "z = y"
+    }
+   ],
+   "live_code": {
+    "c2": "y = x + 2"
+   },
+   "doc": {
+    "schema": 1,
+    "version": 3,
+    "built_at": "2026-05-01T10:00:03.000Z",
+    "run_seq": 3,
+    "nodes": [
+     {
+      "cell_id": "c1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_output_variable": null,
+      "facts_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "not_in_checkpoint",
+       "vars": [],
+       "via": []
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": true
+     },
+     {
+      "cell_id": "c2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "8883f4cb443d1091beadcdcd95f9a3d8be5a921cf94ab66ac02ca021da6d7598",
+      "run_hash": "6300b479dc80cbf769b6e7ebd98bc676b10e3f895a9e344de47609ac62b23b99",
+      "run_output_variable": null,
+      "facts_hash": "6300b479dc80cbf769b6e7ebd98bc676b10e3f895a9e344de47609ac62b23b99",
+      "facts_origin": "runtime",
+      "reads": [
+       "x"
+      ],
+      "writes": [
+       "y"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "edited",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "c1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": true
+     },
+     {
+      "cell_id": "c3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "run_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "run_output_variable": null,
+      "facts_hash": "c31de8e9b41e16321d28a619b29e363db144c9cb9e00afdf9153f91fb5c0df4b",
+      "facts_origin": "runtime",
+      "reads": [
+       "y"
+      ],
+      "writes": [
+       "z"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "not_in_checkpoint",
+       "vars": [],
+       "via": []
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": true
+     }
+    ],
+    "edges": [
+     {
+      "from": "c1",
+      "to": "c2",
+      "var": "x",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "c2",
+      "to": "c3",
+      "var": "y",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 0,
+     "vars": {},
+     "runs": {},
+     "vm_id": "vm-fixture-2"
+    },
+    "pending": {},
+    "trigger": "attach",
+    "notebook_id": 1,
+    "graph_hash": "a2bfc0dcbfa21ec71045a91f834239477609ad7217d6de027c1f70b279248ca7",
+    "runtime_hash": "ba928c53f8e1d35831d5437acde6ac3a4ecf3fb65eb230bfe15231a846ee9691",
+    "runtime_version": 3
+   }
+  }
+ }
+}

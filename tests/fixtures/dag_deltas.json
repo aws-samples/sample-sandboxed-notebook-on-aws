@@ -1,0 +1,5108 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (stamp_doc + dag_contract.diff_docs over proxy/notebook/dag.py builder output)",
+ "cases": {
+  "leaf_rerun": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 1,
+    "runtime_version": 2,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "1b33b37db07ae3919298f4ea3f90920c53b8dcb8c181c67372933c8cba1d33ca",
+    "unchanged": true,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "trigger": "execute",
+    "clocks": {
+     "run_seq": 5,
+     "nodes": {
+      "5": {
+       "executed_at": "2026-05-01T10:00:00.000Z",
+       "last_run_seq": 5,
+       "last_ok_seq": 5
+      }
+     }
+    },
+    "runtime": {
+     "set": {
+      "clock": 5
+     },
+     "unset": [],
+     "vars_upsert": {
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 5
+      }
+     }
+    }
+   },
+   "next": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 5,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 5,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 5
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "1b33b37db07ae3919298f4ea3f90920c53b8dcb8c181c67372933c8cba1d33ca",
+    "runtime_version": 2
+   },
+   "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434"
+  },
+  "upstream_rerun": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 2,
+    "graph_hash": "d660c0d4d4b3234ca7fd6959c2084d26014138315604f85b00713bf4b82ac785",
+    "runtime_hash": "cb645f79bd604e424b53caf40cc8cc563ef7c5e7bc6c6e0551f270b04521a09e",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "execute",
+    "nodes_upsert": [
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "region"
+       ],
+       "via": [
+        "1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "2"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "clocks": {
+     "run_seq": 5,
+     "nodes": {
+      "1": {
+       "executed_at": "2026-05-01T10:00:00.000Z",
+       "last_run_seq": 5,
+       "last_ok_seq": 5
+      }
+     }
+    },
+    "runtime": {
+     "set": {
+      "clock": 5
+     },
+     "unset": [],
+     "vars_upsert": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 5
+      }
+     }
+    }
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 5,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "region"
+       ],
+       "via": [
+        "1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "2"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 5,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 5
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "d660c0d4d4b3234ca7fd6959c2084d26014138315604f85b00713bf4b82ac785",
+    "runtime_hash": "cb645f79bd604e424b53caf40cc8cc563ef7c5e7bc6c6e0551f270b04521a09e",
+    "runtime_version": 2
+   },
+   "graph_hash": "d660c0d4d4b3234ca7fd6959c2084d26014138315604f85b00713bf4b82ac785"
+  },
+  "edit_changes_reads": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 1,
+    "graph_hash": "7aa4ba6dfc412dd67ca555eee73ef771f6b2545b692e1421e1ea3cd7a360b48a",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "save",
+    "nodes_upsert": [
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "65c13b7fb93ae30872a7652acb315e68954bfeb90c2624bf69ff96d6b9fb5111",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "65c13b7fb93ae30872a7652acb315e68954bfeb90c2624bf69ff96d6b9fb5111",
+      "facts_origin": "static",
+      "reads": [
+       "orders_df",
+       "region"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": null,
+      "dynamic": [],
+      "level": 2,
+      "status": "edited",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges_add": [
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     },
+     {
+      "from": "1",
+      "to": "3",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     }
+    ],
+    "edges_remove": [
+     [
+      "2",
+      "3",
+      "orders_df",
+      "defines"
+     ]
+    ]
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "65c13b7fb93ae30872a7652acb315e68954bfeb90c2624bf69ff96d6b9fb5111",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "65c13b7fb93ae30872a7652acb315e68954bfeb90c2624bf69ff96d6b9fb5111",
+      "facts_origin": "static",
+      "reads": [
+       "orders_df",
+       "region"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": null,
+      "dynamic": [],
+      "level": 2,
+      "status": "edited",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     },
+     {
+      "from": "1",
+      "to": "3",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "save",
+    "notebook_id": 1,
+    "graph_hash": "7aa4ba6dfc412dd67ca555eee73ef771f6b2545b692e1421e1ea3cd7a360b48a",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "graph_hash": "7aa4ba6dfc412dd67ca555eee73ef771f6b2545b692e1421e1ea3cd7a360b48a"
+  },
+  "node_insert": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 2,
+    "graph_hash": "222240b4df30513e23368ffc50f920c22c3fc6a370e532009ff191429e5234dd",
+    "runtime_hash": "7fcc57aa28a251c4f3bbd31c3a0af566e70a1626e21d94568b8c2082f73e1e62",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "save",
+    "nodes_upsert": [
+     {
+      "cell_id": "2b",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "706b4a60aa577c9224e9982ce75034e817e96787fcb180a5329d9c4a8a7915ed",
+      "run_hash": null,
+      "run_output_variable": null,
+      "facts_hash": "706b4a60aa577c9224e9982ce75034e817e96787fcb180a5329d9c4a8a7915ed",
+      "facts_origin": "static",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "extra"
+      ],
+      "mutates": [],
+      "sources": null,
+      "dynamic": [],
+      "level": 2,
+      "status": "never_run",
+      "stale_reason": null,
+      "executed_at": null,
+      "last_run_seq": null,
+      "last_ok_seq": null,
+      "last_run_ok": null,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges_add": [
+     {
+      "from": "2",
+      "to": "2b",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     }
+    ]
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2b",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "706b4a60aa577c9224e9982ce75034e817e96787fcb180a5329d9c4a8a7915ed",
+      "run_hash": null,
+      "run_output_variable": null,
+      "facts_hash": "706b4a60aa577c9224e9982ce75034e817e96787fcb180a5329d9c4a8a7915ed",
+      "facts_origin": "static",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "extra"
+      ],
+      "mutates": [],
+      "sources": null,
+      "dynamic": [],
+      "level": 2,
+      "status": "never_run",
+      "stale_reason": null,
+      "executed_at": null,
+      "last_run_seq": null,
+      "last_ok_seq": null,
+      "last_run_ok": null,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "2b",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "save",
+    "notebook_id": 1,
+    "graph_hash": "222240b4df30513e23368ffc50f920c22c3fc6a370e532009ff191429e5234dd",
+    "runtime_hash": "7fcc57aa28a251c4f3bbd31c3a0af566e70a1626e21d94568b8c2082f73e1e62",
+    "runtime_version": 2
+   },
+   "graph_hash": "222240b4df30513e23368ffc50f920c22c3fc6a370e532009ff191429e5234dd"
+  },
+  "node_delete": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 2,
+    "graph_hash": "79bd2161b08357c1a7228b95557f95fc2108aa1dca3bfb32368eb34b5b87bfc0",
+    "runtime_hash": "f502adbc78dc3fe78d3e6a78ab5b525a3af0d1118dde0c5b407da04134980447",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "save",
+    "nodes_upsert": [
+     {
+      "cell_id": "3",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "nodes_remove": [
+     "2"
+    ],
+    "edges_remove": [
+     [
+      "1",
+      "2",
+      "region",
+      "defines"
+     ],
+     [
+      "2",
+      "3",
+      "orders_df",
+      "defines"
+     ]
+    ],
+    "issues": [
+     {
+      "cell_id": "3",
+      "code": "missing_producer",
+      "severity": "amber",
+      "var": "orders_df",
+      "related": [],
+      "source": null,
+      "detail": "reads orders_df, which no cell in this notebook defines"
+     }
+    ]
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [],
+    "issues": [
+     {
+      "cell_id": "3",
+      "code": "missing_producer",
+      "severity": "amber",
+      "var": "orders_df",
+      "related": [],
+      "source": null,
+      "detail": "reads orders_df, which no cell in this notebook defines"
+     }
+    ],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "save",
+    "notebook_id": 1,
+    "graph_hash": "79bd2161b08357c1a7228b95557f95fc2108aa1dca3bfb32368eb34b5b87bfc0",
+    "runtime_hash": "f502adbc78dc3fe78d3e6a78ab5b525a3af0d1118dde0c5b407da04134980447",
+    "runtime_version": 2
+   },
+   "graph_hash": "79bd2161b08357c1a7228b95557f95fc2108aa1dca3bfb32368eb34b5b87bfc0"
+  },
+  "node_reorder": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 1,
+    "graph_hash": "be0f6b618f7569fa0ae94303c64986ef4512fef4f26e7a50f425bd7645f0ca1a",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "save",
+    "nodes_upsert": [
+     {
+      "cell_id": "5",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 2,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ]
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 2,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 3,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "save",
+    "notebook_id": 1,
+    "graph_hash": "be0f6b618f7569fa0ae94303c64986ef4512fef4f26e7a50f425bd7645f0ca1a",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "graph_hash": "be0f6b618f7569fa0ae94303c64986ef4512fef4f26e7a50f425bd7645f0ca1a"
+  },
+  "cycle_introduced": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 1,
+    "graph_hash": "3a67c84d2a0e23dc8f5a960610842625fab261b6f92aeb320649721fb30611e7",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "save",
+    "nodes_upsert": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3f3dbc081dbcd8d151b41f76c91176fc07a3690f6c3a2156c3fc610a5328e12a",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "3f3dbc081dbcd8d151b41f76c91176fc07a3690f6c3a2156c3fc610a5328e12a",
+      "facts_origin": "static",
+      "reads": [
+       "monthly",
+       "print"
+      ],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": null,
+      "dynamic": [],
+      "level": 0,
+      "status": "edited",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "monthly"
+       ],
+       "via": [
+        "3"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "2"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges_add": [
+     {
+      "from": "3",
+      "to": "1",
+      "var": "monthly",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": true
+     },
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     }
+    ],
+    "edges_remove": [
+     [
+      "1",
+      "2",
+      "region",
+      "defines"
+     ]
+    ],
+    "issues": [
+     {
+      "cell_id": "1",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "2",
+       "3"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells 2, 3"
+     },
+     {
+      "cell_id": "1",
+      "code": "out_of_order",
+      "severity": "amber",
+      "var": "monthly",
+      "related": [
+       "3"
+      ],
+      "source": null,
+      "detail": "reads monthly from cell 3, which comes after it in the notebook"
+     },
+     {
+      "cell_id": "2",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "1",
+       "3"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells 1, 3"
+     },
+     {
+      "cell_id": "3",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "1",
+       "2"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells 1, 2"
+     }
+    ]
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "3f3dbc081dbcd8d151b41f76c91176fc07a3690f6c3a2156c3fc610a5328e12a",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "3f3dbc081dbcd8d151b41f76c91176fc07a3690f6c3a2156c3fc610a5328e12a",
+      "facts_origin": "static",
+      "reads": [
+       "monthly",
+       "print"
+      ],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": null,
+      "dynamic": [],
+      "level": 0,
+      "status": "edited",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "monthly"
+       ],
+       "via": [
+        "3"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_stale",
+       "vars": [],
+       "via": [
+        "2"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "3",
+      "to": "1",
+      "var": "monthly",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": true
+     },
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "static",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "1",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "2",
+       "3"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells 2, 3"
+     },
+     {
+      "cell_id": "1",
+      "code": "out_of_order",
+      "severity": "amber",
+      "var": "monthly",
+      "related": [
+       "3"
+      ],
+      "source": null,
+      "detail": "reads monthly from cell 3, which comes after it in the notebook"
+     },
+     {
+      "cell_id": "2",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "1",
+       "3"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells 1, 3"
+     },
+     {
+      "cell_id": "3",
+      "code": "cycle",
+      "severity": "amber",
+      "var": null,
+      "related": [
+       "1",
+       "2"
+      ],
+      "source": null,
+      "detail": "is part of a dependency cycle with cells 1, 2"
+     }
+    ],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "save",
+    "notebook_id": 1,
+    "graph_hash": "3a67c84d2a0e23dc8f5a960610842625fab261b6f92aeb320649721fb30611e7",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "graph_hash": "3a67c84d2a0e23dc8f5a960610842625fab261b6f92aeb320649721fb30611e7"
+  },
+  "runtime_only": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 1,
+    "runtime_version": 2,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "0e3007f0ef0e27629e78b023bfdec56641a921a4af0c34fc9c0720d40aeb7124",
+    "unchanged": true,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "trigger": "execute",
+    "runtime": {
+     "set": {
+      "clock": 6
+     },
+     "unset": [],
+     "vars_upsert": {
+      "tmp": {
+       "defined_by": null,
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": null,
+       "last_exec": 6
+      }
+     },
+     "vars_remove": [
+      "other"
+     ]
+    }
+   },
+   "next": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 6,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "tmp": {
+       "defined_by": null,
+       "defined_at": 6,
+       "modified_by": [],
+       "last_cell": null,
+       "last_exec": 6
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "0e3007f0ef0e27629e78b023bfdec56641a921a4af0c34fc9c0720d40aeb7124",
+    "runtime_version": 2
+   },
+   "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434"
+  },
+  "pending_adoption": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 5,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 5,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {
+     "6": {
+      "captured_at": "2026-05-01T10:00:00.000Z",
+      "cell_type": "code",
+      "code_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "output_variable": null,
+      "run_seq": 5,
+      "ok": true,
+      "facts": {
+       "reads": [
+        "monthly"
+       ],
+       "writes": [
+        "late"
+       ],
+       "mutates": [],
+       "dynamic": []
+      },
+      "sources": [],
+      "executed_at": "2026-05-01T10:00:00.000Z"
+     }
+    },
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "d4961c1dbb90da482001e0c22ae3eb54bef54224c5a749c844fdaefe1ef4de71",
+    "runtime_version": 2
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 2,
+    "version": 2,
+    "runtime_version": 3,
+    "graph_hash": "eed0fe31a3983d3d8dbe4701152ae029edf44045c2d3ed6c66defabbd3189c40",
+    "runtime_hash": "527c4d94f772949c429eb5dc1c7a7ee0b9179a33435c706286d55f1552e60d85",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:03.000Z",
+    "trigger": "save",
+    "nodes_upsert": [
+     {
+      "cell_id": "6",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "run_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "run_output_variable": null,
+      "facts_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "facts_origin": "runtime",
+      "reads": [
+       "monthly"
+      ],
+      "writes": [
+       "late"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges_add": [
+     {
+      "from": "3",
+      "to": "6",
+      "var": "monthly",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "pending": {}
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:03.000Z",
+    "run_seq": 5,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "6",
+      "position": 5,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "run_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "run_output_variable": null,
+      "facts_hash": "0cd1f4766a55a8a458cd5ba35bf27c24a359c39bbe0f26c220099c2fb04fab23",
+      "facts_origin": "runtime",
+      "reads": [
+       "monthly"
+      ],
+      "writes": [
+       "late"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 3,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 5,
+      "last_ok_seq": 5,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "3",
+      "to": "6",
+      "var": "monthly",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 5,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "save",
+    "notebook_id": 1,
+    "graph_hash": "eed0fe31a3983d3d8dbe4701152ae029edf44045c2d3ed6c66defabbd3189c40",
+    "runtime_hash": "527c4d94f772949c429eb5dc1c7a7ee0b9179a33435c706286d55f1552e60d85",
+    "runtime_version": 3
+   },
+   "graph_hash": "eed0fe31a3983d3d8dbe4701152ae029edf44045c2d3ed6c66defabbd3189c40"
+  },
+  "non_ascii": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 2,
+    "nodes": [
+     {
+      "cell_id": "u1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b991286063314a50f4b5ea724e6bc56cd00d1cc0cf56f23d9ffdf72e3d07d20a",
+      "run_hash": "b991286063314a50f4b5ea724e6bc56cd00d1cc0cf56f23d9ffdf72e3d07d20a",
+      "run_output_variable": null,
+      "facts_hash": "b991286063314a50f4b5ea724e6bc56cd00d1cc0cf56f23d9ffdf72e3d07d20a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "données"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "s3",
+        "id": "s3://bucket/🚀/données.csv"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "u2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "run_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "run_output_variable": null,
+      "facts_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "facts_origin": "runtime",
+      "reads": [
+       "données"
+      ],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "u1",
+      "to": "u2",
+      "var": "données",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "u1",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "s3",
+       "id": "s3://bucket/🚀/données.csv"
+      },
+      "detail": "reads s3 s3://bucket/🚀/données.csv; the cell won't re-run when the source changes"
+     }
+    ],
+    "runtime": {
+     "clock": 2,
+     "vars": {
+      "données": {
+       "defined_by": "u1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "u1",
+       "last_exec": 1
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "6741f116667fc36b6010b37b12e6dafb5c96acd35bf4115cb056b68c9a5adc0b",
+    "runtime_hash": "7b0e43ee3edfcca57f6716f28ab8ed642d58d1e28189819fafd620539d1a41d7",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 2,
+    "runtime_version": 2,
+    "graph_hash": "ed1a79f255a1342e957048746263a0619d29e06bb20b20eb917847d966627a80",
+    "runtime_hash": "7b72295d9ef5ebd7e1012f7206470b190c850394129e82f824d7e2df31115072",
+    "unchanged": false,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "trigger": "execute",
+    "nodes_upsert": [
+     {
+      "cell_id": "u2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "run_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "run_output_variable": null,
+      "facts_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "facts_origin": "runtime",
+      "reads": [
+       "données"
+      ],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "données"
+       ],
+       "via": [
+        "u1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "clocks": {
+     "run_seq": 3,
+     "nodes": {
+      "u1": {
+       "executed_at": "2026-05-01T10:00:00.000Z",
+       "last_run_seq": 3,
+       "last_ok_seq": 3
+      }
+     }
+    },
+    "runtime": {
+     "set": {
+      "clock": 3
+     },
+     "unset": [],
+     "vars_upsert": {
+      "données": {
+       "defined_by": "u1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "u1",
+       "last_exec": 3
+      }
+     }
+    }
+   },
+   "next": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 3,
+    "nodes": [
+     {
+      "cell_id": "u1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b991286063314a50f4b5ea724e6bc56cd00d1cc0cf56f23d9ffdf72e3d07d20a",
+      "run_hash": "b991286063314a50f4b5ea724e6bc56cd00d1cc0cf56f23d9ffdf72e3d07d20a",
+      "run_output_variable": null,
+      "facts_hash": "b991286063314a50f4b5ea724e6bc56cd00d1cc0cf56f23d9ffdf72e3d07d20a",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "données"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "s3",
+        "id": "s3://bucket/🚀/données.csv"
+       }
+      ],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "u2",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "run_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "run_output_variable": null,
+      "facts_hash": "74ebb5e6933759127614e6e3581e91f4d26a4e4555cdfd91621ee31b582733a4",
+      "facts_origin": "runtime",
+      "reads": [
+       "données"
+      ],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 1,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "données"
+       ],
+       "via": [
+        "u1"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "u1",
+      "to": "u2",
+      "var": "données",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "u1",
+      "code": "external_state",
+      "severity": "info",
+      "var": null,
+      "related": [],
+      "source": {
+       "kind": "s3",
+       "id": "s3://bucket/🚀/données.csv"
+      },
+      "detail": "reads s3 s3://bucket/🚀/données.csv; the cell won't re-run when the source changes"
+     }
+    ],
+    "runtime": {
+     "clock": 3,
+     "vars": {
+      "données": {
+       "defined_by": "u1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "u1",
+       "last_exec": 3
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "ed1a79f255a1342e957048746263a0619d29e06bb20b20eb917847d966627a80",
+    "runtime_hash": "7b72295d9ef5ebd7e1012f7206470b190c850394129e82f824d7e2df31115072",
+    "runtime_version": 2
+   },
+   "graph_hash": "ed1a79f255a1342e957048746263a0619d29e06bb20b20eb917847d966627a80"
+  },
+  "nothing_changed": {
+   "prev": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "delta": {
+    "delta": 1,
+    "schema": 1,
+    "base_version": 1,
+    "base_runtime_version": 1,
+    "version": 1,
+    "runtime_version": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "unchanged": true,
+    "notebook_id": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "trigger": "execute"
+   },
+   "next": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 4,
+    "nodes": [
+     {
+      "cell_id": "1",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "run_output_variable": null,
+      "facts_hash": "b78063c3e5ec9e7eafa1d33b88c5d84059c6467e5dea398d62def7a58de6f324",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "region"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "2",
+      "position": 1,
+      "cell_type": "sql",
+      "output_variable": "orders_df",
+      "output_variable_explicit": true,
+      "code_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "run_output_variable": "orders_df",
+      "facts_hash": "5b281c364f0ef3749bf0c0bfe6a0d30dfd9d57645df14393cfe4c4e751decfaf",
+      "facts_origin": "runtime",
+      "reads": [
+       "region"
+      ],
+      "writes": [
+       "orders_df"
+      ],
+      "mutates": [],
+      "sources": [
+       {
+        "kind": "athena",
+        "id": "microvm_demo_db.orders"
+       }
+      ],
+      "dynamic": [],
+      "level": 1,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "3",
+      "position": 2,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "run_output_variable": null,
+      "facts_hash": "631aea7a367e07551e909f36c865195fe1945c1a3408f2db01b0e6696aea51f4",
+      "facts_origin": "runtime",
+      "reads": [
+       "orders_df"
+      ],
+      "writes": [
+       "monthly"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 2,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 3,
+      "last_ok_seq": 3,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "5",
+      "position": 4,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "run_output_variable": null,
+      "facts_hash": "ad2a0156dec110b583a1de7852278c51434410e91f938ce2b958ad90aef9e967",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "other"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 4,
+      "last_ok_seq": 4,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "1",
+      "to": "2",
+      "var": "region",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     },
+     {
+      "from": "2",
+      "to": "3",
+      "var": "orders_df",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": false
+     }
+    ],
+    "issues": [],
+    "runtime": {
+     "clock": 4,
+     "vars": {
+      "region": {
+       "defined_by": "1",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "1",
+       "last_exec": 1
+      },
+      "orders_df": {
+       "defined_by": "2",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "2",
+       "last_exec": 2
+      },
+      "monthly": {
+       "defined_by": "3",
+       "defined_at": 3,
+       "modified_by": [],
+       "last_cell": "3",
+       "last_exec": 3
+      },
+      "other": {
+       "defined_by": "5",
+       "defined_at": 4,
+       "modified_by": [],
+       "last_cell": "5",
+       "last_exec": 4
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434",
+    "runtime_hash": "287d59ad3614596561a53a98d50e68d109958f2f7f26c750177750e7b4b239a6",
+    "runtime_version": 1
+   },
+   "graph_hash": "4155e94b575d7e40d3f9d98b6f9c665b22d7f4cdee1d025008ee70833369f434"
+  }
+ }
+}

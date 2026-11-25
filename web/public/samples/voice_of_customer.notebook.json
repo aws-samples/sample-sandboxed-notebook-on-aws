@@ -1,0 +1,104 @@
+{
+  "name": "Voice of the Customer (LLM)",
+  "description": "Mine 200 raw product reviews with Bedrock LLMs — sentiment, issue themes, structured extraction, and semantic search — then join the signals back to Athena revenue to build a product action plan. Shows invoke_llm, llm_sentiment, llm_classify, llm_extract, embed_texts, semantic_search, llm_summarize and count_tokens tied to real DynamoDB + Athena + S3 data.",
+  "savedAt": "2026-09-26T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🗣️ Voice of the Customer\n\n**The problem:** Athena tells us *what* sells and *how much*. It cannot tell us **why** customers are unhappy — that story is locked in **free-text reviews** no SQL `GROUP BY` can read. So a product can be a **top seller with a quietly rising churn risk**, and the dashboards never show it.\n\nThis workbook mines the raw review text with **Amazon Bedrock LLMs** (via the pre-loaded `llm_*` helpers — no API keys, the MicroVM's execution role does the auth), turns it into **structured signals**, and joins those back to the revenue data to produce a **product action plan a merchandising manager can act on today**.\n\n| Step | Question | Source | Helper |\n|---|---|---|---|\n| Revenue | Which products drive the money? | `orders` × `products` (**Athena**) | SQL |\n| Raw voice | What are customers actually saying? | `ecommerce-reviews` (**DynamoDB**) | `read_dynamodb` |\n| Sentiment | Is each review positive or negative? | review text | `llm_sentiment` |\n| Themes | What KIND of problem is it? | review text | `llm_classify` |\n| Structure | Pull issue + aspect + recommend flag | review text | `llm_extract` |\n| Search | Find a specific complaint, no keywords | review text | `embed_texts` + `semantic_search` |\n| Brief | Summarize the worst product's reviews | review text | `llm_summarize` |\n\n```mermaid\ngraph LR\n  A[\"Athena: orders × products\"] --> J[\"Revenue × Voice join\"]\n  D[\"DynamoDB: review text\"] --> S[\"llm_sentiment\"]\n  D --> C[\"llm_classify: issue theme\"]\n  D --> E[\"llm_extract: aspect + recommend\"]\n  S --> J\n  C --> J\n  E --> J\n  J --> R{\"Action plan\"}\n  R --> FX[\"Fix quality\"]\n  R --> PR[\"Promote winners\"]\n  R --> WD[\"Watch / wind down\"]\n```\n\n**Run all cells top-to-bottom.** Every LLM call is metered per token — this notebook works on the 200-row sample; `count_tokens` (Step 2) shows the size before the big calls."
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 0 · Connect to the sandbox\n\nConfirm identity and resolve the artifacts bucket. Everything runs inside the MicroVM using its **execution role** — the same role authorizes Athena, DynamoDB, and Bedrock, so there are no credentials in the notebook."
+    },
+    {
+      "type": "code",
+      "code": "import pandas as pd\ninfo = whoami()\naccount, region = info['account'], info['region']\nbucket = info['bucket']\nprint(f\"\\nReady on account {account} · {region}\")"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · The money — top products by revenue (Athena)\n\nOne SQL query joins **Athena** `orders` × `products` to rank products by revenue and margin. This is the *structured* half of the picture — the half every dashboard already shows. Saved as `product_revenue`."
+    },
+    {
+      "type": "sql",
+      "code": "-- Athena: revenue, units, and margin per product\nSELECT\n  p.product_id,\n  p.name,\n  p.category,\n  p.brand,\n  ROUND((p.price - p.cost) / p.price * 100, 1) AS margin_pct,\n  COUNT(o.order_id)                            AS order_count,\n  SUM(o.quantity)                              AS units_sold,\n  ROUND(SUM(o.total), 2)                       AS revenue\nFROM microvm_demo_db.orders o\nJOIN microvm_demo_db.products p ON o.product_id = p.product_id\nGROUP BY p.product_id, p.name, p.category, p.brand, p.price, p.cost\nORDER BY revenue DESC",
+      "outputVariable": "product_revenue"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · The voice — raw review text (DynamoDB)\n\nThe *why* lives in **DynamoDB** `ecommerce-reviews`: one row per review with a 1–5 `rating`, a `title`, and free-text `text`. We pull them all into a DataFrame, join each review to its product name/category from Step 1 (so themes are grounded in a real product), and use **`count_tokens`** to size the review corpus **before** we spend any LLM calls on it."
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 20, \"max\": 200, \"step\": 10, \"default\": 80, \"label\": \"Reviews to analyze\"}\nmax_reviews = 80\n\n# Pull the raw reviews from DynamoDB (full scan of the 200-row sample table)\nreviews = read_dynamodb('ecommerce-reviews')\nreviews = reviews.rename(columns={'productId': 'product_id'})\nreviews['rating'] = pd.to_numeric(reviews['rating'], errors='coerce')\n\n# Attach product name/category from the Athena result so signals are grounded\nprod_lookup = product_revenue[['product_id', 'name', 'category']]\nreviews = reviews.merge(prod_lookup, on='product_id', how='left')\n\n# The llm_* helpers run one Bedrock call per row (CONCURRENTLY, so ~80 rows finish\n# in a few seconds). We still cap the sample so a demo cell stays snappy and cheap —\n# drag the slider up to analyze more, or remove the cap for the full table.\nreviews = reviews.head(max_reviews).reset_index(drop=True)\n\nprint(f\"{len(reviews)} reviews across {reviews['product_id'].nunique()} products\")\n# Size the text corpus BEFORE the LLM passes — tokens drive cost + latency\ntotal_tokens = count_tokens(reviews['text'].tolist())\nprint(f\"~{total_tokens:,} tokens of review text to process\")\nreviews[['product_id', 'name', 'rating', 'title', 'text']].head()"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Sentiment every review can't lie about — `llm_sentiment`\n\nThe star rating is a blunt instrument (plenty of 3-star reviews are scathing in the text, and some 4-star reviews flag a real defect). **`llm_sentiment`** reads the actual prose and labels each review **negative / neutral / positive** — something no SQL aggregate can do. We then compare the LLM's read to the star rating to find **rating/text mismatches** (the reviews that need a human)."
+    },
+    {
+      "type": "code",
+      "code": "# LLM sentiment over the review TEXT (one Bedrock call per review, with backoff)\nsent = llm_sentiment(reviews['text'])\nreviews['sentiment'] = sent['sentiment'].values\n\nprint('Sentiment mix (from the text, not the stars):')\nprint(reviews['sentiment'].value_counts().to_string())\n\n# Where the text disagrees with the star rating — the reviews worth reading\nmismatch = reviews[((reviews['rating'] >= 4) & (reviews['sentiment'] == 'negative')) |\n                   ((reviews['rating'] <= 2) & (reviews['sentiment'] == 'positive'))]\nprint(f\"\\n{len(mismatch)} rating/text MISMATCHES (high stars but negative text, or vice-versa)\")\nmismatch[['product_id', 'name', 'rating', 'sentiment', 'text']].head(8)"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · What KIND of problem? — `llm_classify`\n\nKnowing a review is negative isn't actionable; knowing it's a **sizing** problem vs a **shipping** problem is. **`llm_classify`** buckets each review into a fixed set of issue themes. We only classify the **negative** reviews (that's where the action is), which also keeps the token spend down."
+    },
+    {
+      "type": "code",
+      "code": "ISSUE_LABELS = ['quality', 'sizing/fit', 'shipping/packaging', 'value/price', 'usability', 'customer service', 'other']\n\nneg = reviews[reviews['sentiment'] == 'negative'].copy()\nif len(neg):\n    themed = llm_classify(\n        neg['text'],\n        labels=ISSUE_LABELS,\n        instructions=\"Pick the single dominant complaint. If it's about defects or breakage, use 'quality'.\",\n    )\n    neg['issue'] = themed['label'].values\n    print('Complaint themes across negative reviews:')\n    print(neg['issue'].value_counts().to_string())\nelse:\n    print('No negative reviews to classify at this sample.')\nneg[['name', 'rating', 'issue', 'text']].head(8)"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · Turn prose into columns — `llm_extract`\n\nFor a tidy, joinable table we need **structure**, not paragraphs. **`llm_extract`** pulls a fixed schema out of each negative review — the specific product **aspect**, a one-line **issue summary**, and a **would_recommend** flag — so free text becomes columns you can pivot, filter, and join like any other DataFrame."
+    },
+    {
+      "type": "code",
+      "code": "if len(neg):\n    fields = llm_extract(\n        neg['text'],\n        schema={\n            'aspect': 'the specific product aspect at fault (e.g. battery, zipper, screen, fabric), or null',\n            'issue': 'a 6-word summary of the complaint',\n            'would_recommend': 'true or false — would this reviewer recommend the product',\n        },\n    )\n    neg = pd.concat([neg.reset_index(drop=True), fields.reset_index(drop=True)], axis=1)\n    print('Most-cited failing aspects:')\n    print(neg['aspect'].value_counts().head(10).to_string())\nneg[['name', 'issue', 'aspect', 'would_recommend']].head(10)"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 6 · The danger zone — join voice back to revenue\n\nNow the payoff: fuse the **LLM voice signals** with the **Athena revenue** from Step 1. A product that sells a lot **and** carries a high negative-sentiment share is the one bleeding future revenue while today's dashboard still looks green. Saved as `product_voice`."
+    },
+    {
+      "type": "code",
+      "code": "# Per-product voice metrics from the LLM signals\nvoice = reviews.groupby('product_id').agg(\n    reviews=('sentiment', 'size'),\n    negative=('sentiment', lambda s: (s == 'negative').sum()),\n    avg_rating=('rating', 'mean'),\n).reset_index()\nvoice['negative_pct'] = (voice['negative'] / voice['reviews'] * 100).round(1)\n\n# Fuse with Athena revenue → one row per product, money + mood together\nproduct_voice = product_revenue.merge(voice, on='product_id', how='left')\nproduct_voice['negative_pct'] = product_voice['negative_pct'].fillna(0)\nproduct_voice['reviews'] = product_voice['reviews'].fillna(0).astype(int)\n\n# Danger zone: top-half revenue AND above-average negativity\nrev_median = product_voice['revenue'].median()\nneg_bar = product_voice.loc[product_voice['reviews'] > 0, 'negative_pct'].mean()\ndanger = product_voice[(product_voice['revenue'] >= rev_median) &\n                       (product_voice['negative_pct'] > neg_bar)].sort_values('revenue', ascending=False)\nprint(f\"{len(danger)} high-revenue products with above-average negative sentiment (>{neg_bar:.0f}%):\")\ndanger[['name', 'category', 'revenue', 'reviews', 'negative_pct', 'avg_rating']].head(10)"
+    },
+    {
+      "type": "code",
+      "code": "# Portfolio map: revenue vs negativity. Top-right = sells well AND complained about.\nplot_scatter(product_voice[product_voice['reviews'] > 0],\n             x='negative_pct', y='revenue', size='reviews', color='category',\n             title='Revenue vs negative-sentiment share (bubble = # reviews)')"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 7 · Ask the reviews a question — semantic search\n\nKeyword search misses paraphrases (\"died after a week\" never contains the word *battery*). **`embed_texts`** turns every review into a vector once, and **`semantic_search`** finds the closest reviews to a natural-language query — reusing the cached vectors so only the query is embedded on each search.\n\n⚙️ *Slider:* how many matches to return."
+    },
+    {
+      "type": "code",
+      "code": "# Embed the review corpus ONCE, then reuse the vectors for any number of searches\ncorpus = reviews['text'].tolist()\nreview_vecs = embed_texts(corpus)\nprint(f\"Embedded {review_vecs.shape[0]} reviews into {review_vecs.shape[1]}-dim vectors\")"
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 15, \"step\": 1, \"default\": 5, \"label\": \"Matches to return\"}\ntop_k = 5\n# @param {\"type\": \"dropdown\", \"options\": [\"stopped working after a short time\", \"cheaper than it looks / feels flimsy\", \"wrong size or poor fit\", \"arrived damaged in the box\", \"great value, exceeded expectations\"], \"default\": \"stopped working after a short time\", \"label\": \"Search the reviews for...\"}\nquery = \"stopped working after a short time\"\n\n# Only the query is embedded here — corpus vectors are reused (fast + cheap)\nhits = semantic_search(query, corpus, corpus_vectors=review_vecs, top_k=top_k)\n# Attach the product name for context\nhits = hits.merge(reviews[['text', 'name', 'rating']].drop_duplicates('text'),\n                  on='text', how='left')\nprint(f\"Closest reviews to: \\\"{query}\\\"\")\nhits[['score', 'name', 'rating', 'text']]"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 8 · The brief — summarize the worst product's reviews\n\nFinally, take the single highest-revenue product in the danger zone and hand a manager a **decision-ready brief**: **`llm_summarize`** condenses all of its negative reviews into a few bullet points, and **`invoke_llm`** turns that into one recommended action. This is the last mile — from 200 raw reviews to a sentence someone acts on."
+    },
+    {
+      "type": "code",
+      "code": "if len(danger):\n    target = danger.iloc[0]\n    target_reviews = reviews[(reviews['product_id'] == target['product_id']) &\n                             (reviews['sentiment'] == 'negative')]['text'].tolist()\n    print(f\"Target: {target['name']}  (${target['revenue']:,.0f} revenue · {target['negative_pct']:.0f}% negative)\")\n    print(f\"Summarizing {len(target_reviews)} negative reviews...\\n\")\n\n    # Summarize the complaints into bullets\n    brief = llm_summarize('\\n\\n'.join(target_reviews), style='bullets', max_words=90)\n    print('WHAT CUSTOMERS ARE SAYING:')\n    print(brief)\n\n    # Turn the brief into a single recommended action\n    action = invoke_llm(\n        f\"A top-selling product has these recurring complaints:\\n{brief}\\n\\n\"\n        f\"In ONE sentence, recommend the single highest-impact action for the merchandising team.\",\n        system=\"You are a pragmatic retail merchandising advisor. Be specific and concise.\",\n    )\n    print('\\nRECOMMENDED ACTION:')\n    print(action)\nelse:\n    print('No danger-zone product at this sample — try re-running; the review sample varies.')"
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 9 · Ship it to regional teams — `llm_translate`\n\nThe brief and the recommended action are in English, but the merchandising teams that act on them are global. **`llm_translate`** localizes the action into the languages your regional owners read — a string → a string, or a whole column → a DataFrame(`text`, `translation`). Target language is required; the source is auto-detected.\n\n⚙️ *Slider:* which markets to localize for."
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"dropdown\", \"options\": [\"French,Spanish,Japanese\", \"French,German\", \"Spanish,Portuguese\", \"Japanese,Korean\"], \"default\": \"French,Spanish,Japanese\", \"label\": \"Localize for markets\"}\nmarkets = \"French,Spanish,Japanese\"\nlangs = [m.strip() for m in markets.split(',') if m.strip()]\n\nif 'action' in dir() and action:\n    # One target language → a string.\n    print(f\"EN: {action}\\n\")\n    for lang in langs:\n        print(f\"{lang}: {llm_translate(action, to=lang)}\\n\")\n\n    # A whole LIST of languages at once → a tidy DataFrame(text, translation).\n    localized = llm_translate([action] * len(langs), to=langs[0]) if False else None\n    # (Per-language above is clearer here; llm_translate on a list translates every\n    #  item into ONE target — use it when you have many SOURCE texts, one target.)\nelse:\n    print('Run Step 8 first so there is a recommended `action` to translate.')"
+    },
+    {
+      "type": "markdown",
+      "code": "## Recap\n\nWe went from **structured revenue** (Athena) + **unstructured reviews** (DynamoDB) to an **action** — using LLMs for exactly the part SQL can't do: reading text at scale.\n\n- **`llm_sentiment`** graded the prose and exposed rating/text mismatches.\n- **`llm_classify`** bucketed complaints into themes; **`llm_extract`** turned prose into joinable columns.\n- The **join back to revenue** surfaced high-revenue products with a rising negativity problem — the danger zone.\n- **`embed_texts` + `semantic_search`** answered plain-language questions over the reviews with no keywords.\n- **`llm_summarize` + `invoke_llm`** produced a manager-ready brief and a single recommended action.\n- **`llm_translate`** localized that action for regional teams.\n\nEvery LLM call ran on Amazon Bedrock through the MicroVM's execution role — no keys in the notebook. Swap the model with the `model=` argument on any `llm_*` helper (see `list_bedrock_models()` for what's available), and point the same pattern at **your** review, ticket, or feedback text."
+    }
+  ]
+}

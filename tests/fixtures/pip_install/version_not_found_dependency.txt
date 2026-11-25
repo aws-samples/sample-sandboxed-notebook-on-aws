@@ -1,0 +1,5 @@
+Collecting oldtool==1.0
+  Downloading oldtool-1.0-py3-none-any.whl (12 kB)
+INFO: pip is looking at multiple versions of oldtool to determine which version is compatible with other requirements. This could take a while.
+ERROR: Could not find a version that satisfies the requirement numpy<1.20 (from oldtool) (from versions: 1.23.2, 1.23.3, 1.23.4, 1.23.5, 1.24.0, 1.24.1, 1.24.2, 1.24.3, 1.24.4, 1.25.0, 1.25.1, 1.25.2, 1.26.0, 1.26.1, 1.26.2, 1.26.3, 1.26.4, 2.0.0, 2.0.1, 2.0.2, 2.1.0, 2.1.1)
+ERROR: No matching distribution found for numpy<1.20

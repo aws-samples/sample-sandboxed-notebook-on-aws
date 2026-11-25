@@ -1,0 +1,16 @@
+# Secrets (local environment files are never committed)
+.env.local
+
+# CDK Build Artifacts
+cdk/cdk.out/
+cdk/node_modules/
+
+# CLI Internals
+.cli/*
+
+# Ephemeral Staging
+.cache/*
+
+# .cli/deployed-state.json is NOT committed: it is account-specific state that
+# `agentcore deploy` writes on first deploy (the CDK app and CLI tolerate its
+# absence). aws-targets.json stays committed — `agentcore validate` requires it.

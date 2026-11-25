@@ -1,0 +1,75 @@
+@import './theme.css';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Native controls use the app's system UI font (SF Pro) in every theme instead of
+   the browser's default control font. Zero specificity, so component rules win. */
+:where(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+/* CodeMirror's base theme sets `.cm-scroller { font-family: monospace }`, which beats
+   the editor theme's font; use the system mono stack (SF Mono) in every theme. */
+.cm-editor .cm-scroller {
+  font-family: var(--font-mono);
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Utility: icon spin animation */
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.icon-spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+/* CPU architecture badge (ArchBadge in components/Icons.jsx): icon + label.
+   Only the icon is coloured (per-theme tokens in theme.css); the label keeps
+   the surrounding text colour and font. Spacing is a margin, never a text node.
+   Plain inline (not inline-flex): flex items are blockified, which makes
+   innerText / copied text break the line before the label ("1 vCPU · \nx86_64"). */
+.arch-badge {
+  display: inline;
+  white-space: nowrap;
+}
+.arch-badge svg { vertical-align: middle; margin-right: 3px; }
+/* Icon-only badges (aria-hidden span, no label) need no trailing space. */
+.arch-badge[aria-hidden="true"] svg { margin-right: 0; }
+.arch-badge-arm64 svg { color: var(--arch-arm64); }
+.arch-badge-x86_64 svg { color: var(--arch-x86); }
+/* Icon pair next to the VM sort select while an arch sort is active. */
+.vm-sort-arch-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+/* Global focus-visible ring */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}

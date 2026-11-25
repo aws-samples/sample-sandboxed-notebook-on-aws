@@ -1,0 +1,458 @@
+/* Version history — right-side drawer. Dim backdrop + a wide panel that slides
+   in from the right, giving the version list + diff real room (the sidebar can't). */
+.vhd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  animation: vhdFade 0.15s ease-out;
+}
+@keyframes vhdFade { from { opacity: 0; } to { opacity: 1; } }
+
+.vhd-drawer {
+  position: relative;
+  /* width is set inline (resizable + persisted); this is just an upper guard. */
+  max-width: 95vw;
+  height: 100%;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border-default);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  animation: vhdSlide 0.2s ease-out;
+}
+
+/* Left-edge grab handle to resize the whole drawer. */
+.vhd-drawer-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+}
+.vhd-drawer-resize:hover,
+.vhd-drawer-resize:active { background: var(--accent-primary); }
+
+/* Splitter between the version list and the diff pane. */
+.vhd-split {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: transparent;
+  border-left: 1px solid var(--border-subtle);
+}
+.vhd-split:hover,
+.vhd-split:active { background: var(--accent-primary); }
+@keyframes vhdSlide { from { transform: translateX(24px); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .vhd-overlay, .vhd-drawer { animation: none; }
+}
+
+/* Header */
+.vhd-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.vhd-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.vhd-title svg { color: var(--accent-primary); }
+.vhd-subtitle {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+/* "+ Save version" — the drawer's primary action. Matches the main notebook
+   toolbar button conventions (.toolbar-btn): --font-size-sm / weight 500 /
+   6px 10px padding / --radius-sm / all-0.15s transition / active scale, with the
+   primary-accent hover treatment used for primary toolbar actions. */
+.vhd-icon-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.vhd-icon-btn:hover { background: var(--accent-primary-muted); color: var(--text-primary); }
+.vhd-icon-btn:active { transform: scale(0.97); }
+.vhd-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Inline save form — revealed by "+ Save version", collapses on save/cancel. */
+.vhd-save-form {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vhd-save-input {
+  width: 200px;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--input-bg, var(--surface-0));
+  border: 1px solid var(--input-focus-border, var(--accent-primary));
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  outline: none;
+}
+.vhd-save-input::placeholder { color: var(--text-muted); }
+/* Quiet icon buttons (cancel, close) — mirror the toolbar's neutral .toolbar-btn:
+   transparent, --text-secondary, --radius-sm, all-0.15s transition, subtle-accent
+   hover, active scale. */
+.vhd-save-cancel {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+.vhd-save-cancel:hover { color: var(--text-primary); background: var(--accent-primary-subtle); border-color: var(--border-subtle); }
+.vhd-save-cancel:active { transform: scale(0.97); }
+.vhd-close {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+.vhd-close:hover { color: var(--text-primary); background: var(--accent-primary-subtle); border-color: var(--border-subtle); }
+.vhd-close:active { transform: scale(0.97); }
+
+/* Body: two panes */
+.vhd-body {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+.vhd-list {
+  /* flex-basis/width set inline (resizable). */
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vhd-detail {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.vhd-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 16px 8px;
+  text-align: center;
+}
+
+/* Version list items */
+.vhd-item {
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.vhd-item:hover { border-color: var(--accent-primary-muted); }
+.vhd-item-selected {
+  background: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+}
+.vhd-item-manual { border-left-color: var(--accent-primary); }
+.vhd-item-auto { border-left-color: var(--border-strong); }
+.vhd-item-guard { border-left-color: var(--accent-warning); }
+
+.vhd-item-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.vhd-trigger {
+  flex: 0 0 auto;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.vhd-trigger-manual { color: var(--accent-primary); background: var(--accent-primary-subtle); }
+.vhd-trigger-auto { color: var(--text-muted); background: var(--surface-0); }
+.vhd-trigger-guard { color: var(--accent-warning); background: color-mix(in srgb, var(--accent-warning) 14%, transparent); }
+.vhd-item-label {
+  flex: 1 1 auto;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Trash button — quiet by default, reveals on row hover, reddens on its own hover. */
+.vhd-item-delete {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+.vhd-item:hover .vhd-item-delete,
+.vhd-item-selected .vhd-item-delete { opacity: 0.7; }
+.vhd-item-delete:hover { opacity: 1; color: var(--accent-danger); background: color-mix(in srgb, var(--accent-danger) 14%, transparent); }
+.vhd-item-delete:disabled { opacity: 0.3; cursor: default; }
+.vhd-item-untitled { color: var(--text-muted); font-style: italic; }
+.vhd-item-meta {
+  display: flex;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Detail / diff pane — directional compare bar: [Base ▾] → Target [Restore]. */
+.vhd-compare-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.vhd-compare-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.vhd-compare-cap {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.vhd-base-select {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-0);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  max-width: 260px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vhd-base-select:hover { border-color: var(--accent-primary-muted); }
+.vhd-compare-arrow { color: var(--text-muted); font-size: 13px; }
+.vhd-compare-target {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Restore — primary action in the compare bar. Aligned to the toolbar button
+   conventions (--font-size-sm / weight 500 / 6px 10px / all-0.15s / active scale)
+   with the primary-accent treatment. */
+.vhd-restore-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--accent-primary);
+  background: transparent;
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.vhd-restore-btn:hover { background: var(--accent-primary-subtle); color: var(--text-primary); }
+.vhd-restore-btn:active { transform: scale(0.97); }
+.vhd-restore-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.vhd-nochange { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
+
+/* Summary line above the full-notebook diff. */
+.vhd-diff-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.vhd-diff { display: flex; flex-direction: column; gap: 12px; }
+
+/* Collapsible header for unchanged / removed cells. */
+.vhd-diff-cell-head-toggle { cursor: pointer; }
+.vhd-diff-cell-head-toggle:hover { background: var(--surface-1); }
+.vhd-caret {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+.vhd-caret.open { transform: rotate(90deg); }
+
+/* Unchanged cells recede so the diffs pop — dimmer than before, lifting to full
+   opacity on hover so they're still inspectable. */
+.vhd-diff-collapsed { opacity: 0.55; }
+.vhd-diff-collapsed:hover { opacity: 1; }
+
+/* Per-status color for the status word in the cell header. */
+.vhd-diff-status-changed { color: var(--accent-warning); font-weight: 700; }
+.vhd-diff-status-added { color: var(--accent-success, #3fb950); font-weight: 700; }
+.vhd-diff-status-removed { color: var(--accent-danger); font-weight: 700; }
+.vhd-diff-status-same { color: var(--text-muted); }
+
+/* One diff cell — framed like a notebook cell. The left border is driven by DIFF
+   STATUS (added/changed/removed/same), not cell type, so scanning by color tells
+   you WHAT HAPPENED. Cell type still shows via the colored PY/SQL/MD badge. */
+.vhd-diff-cell {
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+/* Status → left border + subtle row tint. */
+.vhd-diff-changed { border-left-color: var(--accent-warning); }
+.vhd-diff-added { border-left-color: var(--accent-success, #3fb950); }
+.vhd-diff-removed {
+  border-left-color: var(--accent-danger);
+  /* Destructive: this cell is DELETED on restore. Tint the whole row so it can't
+     be mistaken for a benign/unchanged one. */
+  background: color-mix(in srgb, var(--accent-danger) 8%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent-danger) 30%, var(--border-subtle));
+}
+.vhd-diff-removed .vhd-diff-cell-head {
+  background: color-mix(in srgb, var(--accent-danger) 10%, var(--surface-0));
+}
+/* Unchanged recedes: flatter (no card fill), dimmer, thin muted rule — it's
+   context, not content, so the real changes stand out. */
+.vhd-diff-same {
+  background: transparent;
+  border-color: var(--border-subtle);
+  border-left-color: var(--border-subtle);
+}
+
+/* Status glyph — a tiny mono symbol before the status word (+ added, ~ changed,
+   − removed) so state is legible at a glance and color-blind-safe. */
+.vhd-diff-glyph {
+  flex: 0 0 auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  width: 14px;
+  text-align: center;
+}
+.vhd-diff-glyph-added { color: var(--accent-success, #3fb950); }
+.vhd-diff-glyph-changed { color: var(--accent-warning); }
+.vhd-diff-glyph-removed { color: var(--accent-danger); }
+/* Unchanged: muted so the icon column aligns without pulling the eye. */
+.vhd-diff-glyph-same { color: var(--text-muted); opacity: 0.6; }
+.vhd-diff-cell-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border-subtle);
+}
+/* Type badge — same color language as the in-cell PY/SQL/MD badge. */
+.vhd-diff-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--cell-accent, var(--entity-code));
+  background: var(--cell-accent-subtle, var(--entity-code-subtle));
+}
+.vhd-diff-status { font-size: 10px; color: var(--text-secondary); }
+.vhd-revert-btn {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-warning);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.vhd-revert-btn:hover { background: color-mix(in srgb, var(--accent-warning) 14%, transparent); }
+.vhd-revert-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* The CodeMirror diff editor host. */
+.diffcell-cm { max-height: 420px; overflow: auto; }
+.diffcell-cm .cm-editor { background: transparent; }
+
+/* @codemirror/merge chunk colors, retinted to our success/danger tokens so the
+   diff matches the rest of the app (default merge greens/reds are too saturated).
+   Deleted = the version's lines that are gone now; inserted = current-only lines. */
+.diffcell-cm .cm-deletedChunk {
+  background: color-mix(in srgb, var(--accent-danger) 12%, transparent);
+}
+.diffcell-cm .cm-changedLine,
+.diffcell-cm .cm-insertedLine {
+  background: color-mix(in srgb, var(--accent-success, #3fb950) 14%, transparent);
+}
+.diffcell-cm .cm-changedText {
+  background: color-mix(in srgb, var(--accent-success, #3fb950) 26%, transparent);
+}
+.diffcell-cm .cm-deletedChunk .cm-changedText,
+.diffcell-cm del.cm-deletedText {
+  background: color-mix(in srgb, var(--accent-danger) 26%, transparent);
+  text-decoration: none;
+}
+
+.vhd-diff-legend { display: flex; gap: 14px; padding: 2px 4px; font-size: 10px; color: var(--text-muted); }
+.vhd-diff-legend .vhd-diff-line-del { color: var(--accent-danger); }
+.vhd-diff-legend .vhd-diff-line-add { color: var(--accent-success, #3fb950); }

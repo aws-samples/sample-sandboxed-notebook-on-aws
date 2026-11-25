@@ -1,0 +1,18 @@
+{
+  "name": "RAG: retrieve + cited answer",
+  "desc": "Ground an LLM answer in a Bedrock Knowledge Base, with sources",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 📚 RAG: retrieve + cited answer\n\nAsk a question and get an answer **grounded in your own documents** — a Bedrock Knowledge Base — instead of the model's training memory. This is retrieval-augmented generation: first *retrieve* the passages most relevant to the question, then have the LLM *answer using only those passages*, with citations back to the source.\n\n**Why two steps?** `read_bedrock_kb` shows you the raw retrieved chunks with similarity **scores and source URIs** — so you can see exactly what an answer is (or isn't) grounded in, and catch a KB that's missing the relevant content. `ask_bedrock_kb` then returns the synthesized, source-cited answer for the same question. Inspect step 1 before you trust step 2.\n\nBoth calls use the VM's execution role against the configured Knowledge Base — no keys, nothing to install."
+    },
+    {
+      "type": "code",
+      "code": "# 1) RETRIEVE the most relevant chunks for the question. Each row carries the passage\n#    text, a similarity score, and the source document URI — inspect this to see what\n#    the answer will be grounded in (and whether the KB actually has the content).\nchunks = read_bedrock_kb(\"<your question>\", top_k=5)\nchunks[[\"score\", \"text\", \"source_uri\"]]"
+    },
+    {
+      "type": "code",
+      "code": "# 2) ANSWER, grounded in those chunks. ask_bedrock_kb retrieves + synthesizes in one\n#    call (RetrieveAndGenerate) and returns {answer, citations} for the SAME question.\nresult = ask_bedrock_kb(\"<your question>\")\nprint(result[\"answer\"])\nprint(\"\\nCited sources:\")\nfor c in result.get(\"citations\", []):\n    print(\" -\", c.get(\"source_uri\"))"
+    }
+  ]
+}

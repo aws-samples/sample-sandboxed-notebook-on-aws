@@ -1,0 +1,212 @@
+{
+ "_generated_by": "tests/fixtures/gen_dag_fixtures.py (proxy/notebook/dag.py builder output)",
+ "scenarios": {
+  "ran": {
+   "cells": [
+    {
+     "id": "r",
+     "type": "code",
+     "code": "y = x"
+    },
+    {
+     "id": "w",
+     "type": "code",
+     "code": "x = 1"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 1,
+    "built_at": "2026-05-01T10:00:01.000Z",
+    "run_seq": 2,
+    "nodes": [
+     {
+      "cell_id": "r",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "187356d8a0989bdae70f6b2022029f14afb4d50b03b78db4bb80ebded17cc558",
+      "run_hash": "187356d8a0989bdae70f6b2022029f14afb4d50b03b78db4bb80ebded17cc558",
+      "run_output_variable": null,
+      "facts_hash": "187356d8a0989bdae70f6b2022029f14afb4d50b03b78db4bb80ebded17cc558",
+      "facts_origin": "runtime",
+      "reads": [
+       "x"
+      ],
+      "writes": [
+       "y"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "stale",
+      "stale_reason": {
+       "kind": "upstream_changed",
+       "vars": [
+        "x"
+       ],
+       "via": [
+        "w"
+       ]
+      },
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     },
+     {
+      "cell_id": "w",
+      "position": 1,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "run_output_variable": null,
+      "facts_hash": "89811aa68d45fc05f0d1baae88e248d37bb45b6d5a332db6b67775d6b1bf9007",
+      "facts_origin": "runtime",
+      "reads": [],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 2,
+      "last_ok_seq": 2,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [
+     {
+      "from": "w",
+      "to": "r",
+      "var": "x",
+      "kind": "defines",
+      "use": "read",
+      "origin": "runtime",
+      "backward": true
+     }
+    ],
+    "issues": [
+     {
+      "cell_id": "r",
+      "code": "out_of_order",
+      "severity": "amber",
+      "var": "x",
+      "related": [
+       "w"
+      ],
+      "source": null,
+      "detail": "reads x from cell w, which comes after it in the notebook"
+     }
+    ],
+    "runtime": {
+     "clock": 2,
+     "vars": {
+      "x": {
+       "defined_by": "w",
+       "defined_at": 2,
+       "modified_by": [],
+       "last_cell": "w",
+       "last_exec": 2
+      },
+      "y": {
+       "defined_by": "r",
+       "defined_at": 1,
+       "modified_by": [],
+       "last_cell": "r",
+       "last_exec": 1
+      }
+     },
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "c24551411c386b39ec3a9f3f9f9dae312f028fd25dce37ae9cbf6e6ca8264cc0",
+    "runtime_hash": "68c8ef7c7db87cb51a3729284a0559a0740e4fc064ef68827b3fad1271b45ca8",
+    "runtime_version": 1
+   }
+  },
+  "self_read": {
+   "cells": [
+    {
+     "id": "a",
+     "type": "code",
+     "code": "x = x"
+    }
+   ],
+   "doc": {
+    "schema": 1,
+    "version": 2,
+    "built_at": "2026-05-01T10:00:02.000Z",
+    "run_seq": 1,
+    "nodes": [
+     {
+      "cell_id": "a",
+      "position": 0,
+      "cell_type": "code",
+      "output_variable": null,
+      "output_variable_explicit": false,
+      "code_hash": "35c158d24d3bf8c9e73135fc8ff14bf9eef6277a756af3467b51db7c07c90b8a",
+      "run_hash": "35c158d24d3bf8c9e73135fc8ff14bf9eef6277a756af3467b51db7c07c90b8a",
+      "run_output_variable": null,
+      "facts_hash": "35c158d24d3bf8c9e73135fc8ff14bf9eef6277a756af3467b51db7c07c90b8a",
+      "facts_origin": "runtime",
+      "reads": [
+       "x"
+      ],
+      "writes": [
+       "x"
+      ],
+      "mutates": [],
+      "sources": [],
+      "dynamic": [],
+      "level": 0,
+      "status": "current",
+      "stale_reason": null,
+      "executed_at": "2026-05-01T10:00:00.000Z",
+      "last_run_seq": 1,
+      "last_ok_seq": 1,
+      "last_run_ok": true,
+      "not_in_checkpoint": false
+     }
+    ],
+    "edges": [],
+    "issues": [
+     {
+      "cell_id": "a",
+      "code": "missing_producer",
+      "severity": "amber",
+      "var": "x",
+      "related": [],
+      "source": null,
+      "detail": "reads x, which no cell in this notebook defines"
+     }
+    ],
+    "runtime": {
+     "clock": 1,
+     "vars": {},
+     "runs": {},
+     "vm_id": "vm-fixture-1"
+    },
+    "pending": {},
+    "trigger": "execute",
+    "notebook_id": 1,
+    "graph_hash": "8ad9ef4e9d18511e4ac4be94a3d1c827e7ebf06e69182d287283cf20af10cd3e",
+    "runtime_hash": "5dcc8c05536cb3d1851339ee8b4207d72e8df4db5798a9fbd163c15dc22d78c6",
+    "runtime_version": 2
+   }
+  }
+ }
+}

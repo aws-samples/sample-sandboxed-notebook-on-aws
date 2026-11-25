@@ -1,0 +1,3234 @@
+/* ============================================================
+   Cell Component — Polished styling with theme variables
+   ============================================================ */
+
+.cell {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+  /* Clearance when scrolled to (Outline jump, or the "value set in PY-N" jump from
+     the Variables section). scrollIntoView({block:'start'}) honors this, so the cell
+     head lands just BELOW the sticky notebook toolbar instead of tucking under it. */
+  scroll-margin-top: 56px;
+  border: 1px solid var(--cell-border);
+  border-left: 3px solid rgba(79, 139, 255, 0.6);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), transform 0.15s ease;
+  background: var(--cell-bg);
+  min-width: 0;
+}
+
+.cell:hover {
+  border-color: var(--border-default);
+  border-left: 4px solid rgba(79, 139, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.cell-sql:hover {
+  border-left: 4px solid rgba(224, 108, 29, 0.5);
+}
+
+.cell-markdown:hover {
+  border-left: 4px solid color-mix(in srgb, var(--lang-markdown) 50%, transparent);
+}
+
+.cell-active {
+  /* Active-cell accent = the cell's LANGUAGE identity color, so the highlight
+     matches the type badge in every theme. This base rule governs CODE cells
+     (blue); .cell-sql.cell-active and .cell-markdown.cell-active override it with
+     their own lang colors below. Constant across themes (uses --lang-python). */
+  border-color: color-mix(in srgb, var(--lang-python) 35%, transparent);
+  border-left: 4px solid var(--lang-python) !important;
+  box-shadow: 0 0 0 1px var(--lang-python-subtle), 0 2px 8px var(--lang-python-subtle);
+  background: color-mix(in srgb, var(--cell-bg) 97%, var(--lang-python) 3%);
+}
+
+.cell-active .cell-gutter {
+  background: var(--lang-python-subtle);
+}
+
+.cell-active .cell-number {
+  color: var(--lang-python);
+  background: color-mix(in srgb, var(--lang-python) 16%, transparent);
+}
+
+.cell:focus-within:not(.cell-active) {
+  border-color: var(--border-strong);
+}
+
+.cell-active:focus-within {
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.cell-running {
+  border-color: var(--accent-warning);
+  border-left-color: var(--accent-warning);
+  box-shadow: 0 0 0 2px var(--accent-warning-subtle);
+}
+
+.cell-success {
+  /* Success indicated subtly — no border override (left border = cell type color) */
+}
+
+.cell-success.cell-active {
+  border-left: 4px solid var(--lang-python) !important;
+}
+
+.cell-error {
+  border-left: 4px solid var(--accent-danger) !important;
+}
+
+.cell-error.cell-active {
+  border-left: 4px solid var(--lang-python) !important;
+}
+
+/* User-stopped cell — distinct from a code error (muted/warning tone). */
+.cell-interrupted {
+  border-left: 4px solid var(--accent-warning) !important;
+}
+
+.cell-interrupted.cell-active {
+  border-left: 4px solid var(--lang-python) !important;
+}
+
+/* ---- Gutter ---- */
+.cell-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-3) var(--space-2);
+  background: var(--cell-gutter-bg);
+  min-width: 48px;
+  gap: 6px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.cell-number {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+  opacity: 1;
+}
+
+.cell-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent-warning);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.cell-timer {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--accent-warning);
+  font-weight: 600;
+  animation: pulse-subtle 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Content ---- */
+.cell-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* ---- Mode toggle bar ---- */
+.cell-mode-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--cell-gutter-bg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cell-mode-toggle {
+  display: flex;
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+/* ---- Cell input area ---- */
+.cell-input {
+  display: flex;
+  align-items: flex-start;
+  /* The code editor is the RAISED, active working surface — sits on --cell-bg
+     (surface-2) which is now visibly brighter than the recessed output zones
+     below (surface-0). This is half of the input↔output contrast; the output
+     zones supply the other half by dropping back. */
+  background: var(--cell-bg);
+}
+
+.cell-editor-wrapper {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.cell-editor-highlight,
+.cell-editor-textarea {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  padding: var(--space-3);
+  padding-bottom: var(--space-4);
+  margin: 0;
+  border: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.cell-editor-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  color: var(--text-primary);
+  min-height: 40px;
+}
+
+.cell-editor-textarea {
+  position: relative;
+  width: 100%;
+  min-height: 40px;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text-primary);
+  resize: none;
+  outline: none;
+  overflow: hidden;
+  height: auto;
+}
+
+.cell-editor-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* ---- Cell actions ---- */
+.cell-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.cell:hover .cell-actions,
+.cell:focus-within .cell-actions {
+  opacity: 1;
+}
+
+.cell-run-btn {
+  background: none;
+  color: var(--accent-success);
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.cell-run-btn:hover:not(:disabled) {
+  background: var(--accent-success-subtle);
+  color: var(--accent-success);
+}
+
+.cell-run-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.cell-run-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.cell-stop-btn {
+  color: var(--accent-danger);
+  background: none;
+}
+
+.cell-stop-btn:hover {
+  background: var(--accent-danger-subtle);
+  color: var(--accent-danger);
+}
+
+.cell-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.cell-action-btn:hover {
+  background: var(--surface-4);
+  color: var(--text-primary);
+}
+
+.cell-delete-btn:hover {
+  color: var(--accent-danger);
+  background: var(--accent-danger-subtle);
+}
+
+.cell-clear-btn:hover {
+  color: var(--accent-warning);
+  background: rgba(249, 226, 175, 0.1);
+}
+
+/* ---- Cell output ---- */
+/* OUTPUT / VARIABLES zones — deliberately RECESSED vs the raised code editor.
+   The editor sits on --cell-bg (surface-2, the brightest working surface); these
+   result zones drop to --cell-output-bg (surface-0, the deepest) so "what the
+   machine returned" reads as a distinct, settled region — not just a bordered
+   continuation of the code. An inset top shadow reinforces the "sunken below the
+   code" feel. */
+.cell-output {
+  border-top: 1px solid var(--border-default);
+  padding: var(--space-3);
+  padding-bottom: var(--space-4, 16px);
+  background: var(--cell-output-bg, var(--surface-0));
+  box-shadow: inset 0 6px 8px -8px rgba(0, 0, 0, 0.55);
+  animation: slideDown 0.2s ease;
+  margin-top: 1px;
+  border-radius: 0 0 var(--radius-lg) 0;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 2000px; }
+}
+
+.cell-output-error {
+  background: var(--accent-danger-subtle);
+}
+
+.output-text {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 8px 0 0 0;
+}
+
+/* Wrapper around a text/markdown output block: positioning context for the hover
+   toolbar and the collapse toggle. */
+.output-text-wrap {
+  position: relative;
+  margin-top: 8px;
+}
+.output-text-wrap > .output-text {
+  margin-top: 0;  /* the wrapper owns the top gap now */
+}
+
+/* Plain (non-markdown) text output reads as a "console well" — a subtly inset,
+   bordered panel on a slightly darker surface — so stdout/repr output looks like
+   a terminal result distinct from the code above and from rendered prose. Markdown
+   output stays chrome-free (it's a rendered document, not console text). */
+pre.output-text {
+  /* Recessed console surface. Theme-aware: dark/ember use a deep near-black mix
+     (--console-bg), light uses a soft light-gray surface instead — the old
+     `color-mix(--surface-0, #000 30%)` darkened uniformly and turned the light
+     theme's output band into a heavy mid-gray. */
+  background: var(--console-bg, color-mix(in srgb, var(--surface-0) 70%, #000 30%));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  padding: 10px 12px;
+}
+
+/* CAPPED long output: bound the height and scroll within, so a big print()/dict
+   dump can't grow the whole notebook. "Show all" removes the cap (renders full
+   height). A fade at the bottom hints there's more below the fold. */
+.output-text-capped > .output-text {
+  max-height: 22em;
+  overflow: auto;
+}
+.output-text-capped::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 26px;                 /* sit just above the toggle button */
+  height: 28px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--cell-output-fade, rgba(0,0,0,0.18)));
+  border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
+}
+
+/* "Show all / Collapse" toggle under a capped block. */
+.output-text-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.output-text-toggle:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+/* Markdown-rendered text output (e.g. print()-ed LLM answers like ask_bedrock_kb).
+   Overrides the <pre>-like defaults for prose: proportional font, real headings,
+   lists, tables, and code spans. Kept compact to sit naturally in a cell. */
+.output-markdown {
+  font-family: var(--font-sans, inherit);
+  white-space: normal;
+  color: var(--text-primary);
+}
+.output-markdown > :first-child { margin-top: 0; }
+.output-markdown > :last-child { margin-bottom: 0; }
+.output-markdown h1, .output-markdown h2, .output-markdown h3,
+.output-markdown h4, .output-markdown h5, .output-markdown h6 {
+  margin: 12px 0 6px; line-height: 1.25; font-weight: 650; color: var(--text-primary);
+}
+.output-markdown h1 { font-size: 1.3em; }
+.output-markdown h2 { font-size: 1.18em; }
+.output-markdown h3 { font-size: 1.08em; }
+.output-markdown p { margin: 6px 0; }
+.output-markdown ul, .output-markdown ol { margin: 6px 0; padding-left: 22px; }
+.output-markdown li { margin: 2px 0; }
+.output-markdown code {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--surface-2); padding: 1px 4px; border-radius: 4px;
+}
+.output-markdown pre {
+  background: var(--surface-2); padding: 10px 12px; border-radius: 8px;
+  overflow: auto; margin: 8px 0;
+}
+.output-markdown pre code { background: none; padding: 0; }
+.output-markdown blockquote {
+  margin: 6px 0; padding: 2px 12px; border-left: 3px solid var(--border-default, var(--border-subtle));
+  color: var(--text-secondary);
+}
+.output-markdown table { border-collapse: collapse; margin: 8px 0; }
+.output-markdown th, .output-markdown td {
+  border: 1px solid var(--border-subtle); padding: 5px 10px; text-align: left;
+}
+.output-markdown a { color: var(--accent-primary, #2563eb); }
+
+.output-error {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  color: var(--accent-danger);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  /* Long tracebacks stay contained in a scrollable box instead of growing the whole
+     cell and forcing the user to scroll the notebook. ~16 lines then scroll-within. */
+  max-height: 16em;
+  overflow-y: auto;
+}
+
+.output-error-wrap {
+  position: relative;
+}
+
+/* Run footer of an ERROR output: run stats left, Copy / Fix right-aligned on the same
+   line. flex-wrap moves the actions onto their own line under the stats when the row
+   is too narrow, so they never overlap or squeeze the stats (or the error text, which
+   no longer has anything drawn over it). */
+.output-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 12px;
+  row-gap: 4px;
+  margin-top: 6px;
+}
+.output-footer > .output-meta {
+  margin-top: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.output-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;   /* right-aligned on the stats line, and when wrapped alone */
+}
+
+.output-error-fix-btn {
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--accent-primary-muted);
+  background: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-weight: 500;
+}
+.output-error-fix-btn:hover:not(:disabled) { background: var(--accent-primary-muted); color: var(--text-primary); }
+.output-error-fix-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Secondary error actions (Copy, Explain) — quieter than the primary Fix button:
+   neutral surface, muted text, subtle border. Same size so the cluster aligns. */
+.output-error-btn {
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.output-error-btn:hover:not(:disabled) { background: var(--surface-3); color: var(--text-primary); }
+.output-error-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Collapsible full traceback under the one-line error. Muted so it doesn't compete
+   with the red headline; expands to a scrollable monospace block. */
+.output-traceback {
+  margin-top: 6px;
+}
+.output-traceback-summary {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  user-select: none;
+  list-style: revert;      /* keep the native disclosure triangle */
+  padding: 2px 0;
+}
+.output-traceback-summary:hover { color: var(--text-secondary); }
+.output-traceback-body {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle, var(--border-default));
+  border-radius: var(--radius-sm, 4px);
+  white-space: pre;
+  /* Cap height + scroll within (both axes) so a very long/wide traceback stays
+     contained instead of stretching the whole cell/notebook. */
+  overflow: auto;
+  max-height: 16em;
+}
+
+.output-meta {
+  margin-top: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+/* AI Explain/Fix button and results */
+.cell-ai-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.cell-ai-action-btn {
+  font-size: 12px;
+}
+
+.cell-ai-action-btn:disabled {
+  opacity: 0.3;
+}
+
+.cell-ai-fix-btn {
+  color: var(--accent-danger) !important;
+}
+
+.cell-generate-btn {
+  color: var(--accent-purple) !important;
+}
+
+.cell-generate-btn:disabled {
+  color: var(--text-muted) !important;
+}
+
+.cell-generating {
+  opacity: 0.7 !important;
+}
+
+.cell-gen-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent-purple);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.cell-ai-btn {
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cell-ai-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-subtle);
+}
+
+.cell-ai-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cell-ai-fix {
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+.cell-ai-fix:hover:not(:disabled) {
+  background: var(--accent-danger-subtle);
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+.cell-ai-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.cell-ai-dismiss:hover {
+  color: var(--text-primary);
+}
+
+.cell-ai-result {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  animation: fadeIn 0.2s ease;
+  position: relative;
+}
+
+.cell-ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+}
+
+.cell-ai-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cell-ai-loading-text {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.cell-ai-cancel-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cell-ai-cancel-btn:hover {
+  color: var(--accent-danger);
+  border-color: var(--accent-danger);
+}
+
+.cell-ai-result-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.cell-ai-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-purple);
+  background: var(--accent-purple-subtle);
+  padding: 2px 8px;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
+}
+
+/* "Manually edited" badge — shown alongside the ✨ AI badge once the user edits the note */
+.cell-ai-badge-edited {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent-warning);
+  background: var(--accent-warning-subtle);
+}
+
+/* Fix verification badges — shown next to the ✨ AI badge on a fix result
+   (FixVerification.jsx). "✓ Verified" (green) = the agent's LAST test run succeeded
+   on the exact returned code; "⚠ Not verified" (amber) = no run, the last run
+   failed, or the tested code differs. Text + icon carry the meaning, not colour. */
+.cell-ai-badge-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent-success);
+  background: var(--accent-success-subtle);
+}
+
+.cell-ai-badge-unverified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent-warning);
+  background: var(--accent-warning-subtle);
+}
+
+/* Not-verified warning above the fix diff. The last run's error is shown in FULL
+   (scrolls when long; focusable so keyboard users can scroll it). */
+.cell-ai-fix-verify-warning {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-warning);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: var(--accent-warning-subtle);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.cell-ai-fix-verify-message {
+  font-weight: 600;
+}
+.cell-ai-fix-verify-error {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border-radius: 4px;
+}
+.cell-ai-fix-verify-error:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 1px;
+}
+
+.cell-ai-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cell-ai-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.cell-ai-edit:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.cell-ai-explain-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cell-ai-explain-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  background: var(--surface-2, rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(203, 166, 247, 0.35);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.cell-ai-explain-textarea:focus {
+  border-color: rgba(203, 166, 247, 0.7);
+}
+
+.cell-ai-explain-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cell-ai-result .cell-ai-dismiss {
+  position: static;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cell-ai-result-explain {
+  background: rgba(203, 166, 247, 0.08);
+  border: 1px solid rgba(203, 166, 247, 0.2);
+}
+
+.cell-ai-explain-text {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.cell-ai-explain-text p { margin: 4px 0; }
+.cell-ai-explain-text code {
+  background: var(--surface-4);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+.cell-ai-explain-text strong { color: var(--text-primary); }
+
+.cell-ai-result-fix {
+  background: var(--surface-1);
+  border: 1px solid var(--accent-primary);
+}
+
+/* "Why it failed" — collapsible explanation above the fix diff. Muted so the diff
+   stays the focus; the disclosure triangle invites expansion. Body scrolls if long. */
+.cell-ai-fix-why {
+  margin: 0 0 8px;
+}
+.cell-ai-fix-why-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--accent-danger, #f87171);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: 2px 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Hide the native disclosure triangle so our arrow icon is the only affordance. */
+.cell-ai-fix-why-summary::-webkit-details-marker { display: none; }
+/* Arrow icon that points right when collapsed, rotates down when open. */
+.cell-ai-fix-why-summary::before {
+  content: "▸";
+  font-size: 0.85em;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.cell-ai-fix-why[open] > .cell-ai-fix-why-summary::before { transform: rotate(90deg); }
+.cell-ai-fix-why-summary:hover { color: var(--accent-danger-hover, #fca5a5); filter: brightness(1.15); }
+.cell-ai-fix-why-body {
+  margin-top: 4px;
+  padding: 8px 10px;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle, var(--border-default));
+  border-radius: var(--radius-sm, 4px);
+  max-height: 14em;
+  overflow-y: auto;
+}
+.cell-ai-fix-why-body p { margin: 4px 0; }
+.cell-ai-fix-why-body code {
+  background: var(--surface-4);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+}
+.cell-ai-fix-why-body strong { color: var(--text-primary); }
+
+/* Inline diff of the AI fix vs the code that errored (DiffCell — same read-only
+   unified-diff CodeMirror view as version history). Sized to fit inline under the
+   cell rather than the drawer's taller max-height; scrolls internally for a long
+   fix instead of growing the page. Rounded + bordered so it reads as a contained
+   card matching the surrounding .cell-ai-result-fix panel. */
+.cell-ai-fix-diff {
+  margin: 0 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 4px);
+  overflow: hidden;
+}
+.cell-ai-fix-diff .diffcell-cm {
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+}
+
+.cell-ai-fix-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.cell-ai-apply-btn {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.cell-ai-apply-btn:hover { opacity: 0.85; }
+
+.cell-ai-dismiss-btn {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.cell-ai-dismiss-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Rich output: images */
+.output-image {
+  margin-bottom: var(--space-2);
+}
+
+.output-image img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Persisted chart (loaded from S3 after reload): placeholder + fallback states */
+.output-image-loading {
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-1, rgba(127, 127, 127, 0.08));
+}
+
+.output-image-unavailable {
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3, 12px);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Plotly interactive charts (rendered in sandboxed iframe) */
+.output-plotly {
+  margin-top: 8px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-0);
+}
+
+.output-plotly iframe {
+  display: block;
+}
+/* The srcDoc declares no color-scheme (= light). When the embedding element's scheme
+   differs (dark sets `color-scheme: dark` on <html>), Chrome paints the iframe canvas
+   OPAQUE WHITE: a white plot behind the transparent dark-retheme paper. Matching the
+   inner document keeps the canvas transparent so the .output-plotly surface shows
+   through. Applies to every DARK-scheme theme (dark AND ember): ember also declares
+   `color-scheme: dark`, so without this its charts got the same white canvas (a
+   regression from adding color-scheme; before that, ember charts were transparent). */
+:root:is([data-theme="dark"], [data-theme="ember"]) .output-plotly iframe {
+  color-scheme: light;
+}
+
+/* Rich output: HTML tables (DataFrames) */
+.output-html {
+  overflow-x: auto;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.output-html table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  width: auto;
+}
+
+/* Bound the table to ~15 rows then scroll within (sticky header stays put).
+   Short tables stay their natural height since this is a max, not a fixed height. */
+.df-table-scroll {
+  max-height: 400px;
+  overflow: auto;
+}
+
+/* Polished data table (scoped to the paginated DataGrid so other .output-html
+   tables are unaffected): a contained, rounded card with horizontal-only row
+   separators (no heavy cell grid), roomier rows, right-aligned numeric columns
+   with tabular figures, and a light sticky header. */
+.df-grid .df-table-scroll {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-1);
+}
+.df-grid table {
+  border-collapse: separate;   /* separate so border-radius clips cleanly */
+  border-spacing: 0;
+  width: 100%;
+}
+.df-grid th {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
+  padding: 8px 12px;
+  border: none;                 /* drop the full cell grid */
+  border-bottom: 1px solid var(--border-default, var(--border-subtle));
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-right: 22px;
+  overflow: hidden;             /* contain the badge+label so a narrow header can't
+                                   spill into the neighboring header */
+  transition: background 0.15s, color 0.15s;
+}
+.df-grid th:hover:not(:first-child) {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+/* Drag-to-resize grip on each column's right edge. Sits inside the sticky <th>
+   (which is a positioning context), spans the header height, and shows a
+   col-resize cursor. Invisible until the header is hovered, then a faint rule. */
+.df-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;                    /* above the header content so the drag always hits */
+  touch-action: none;           /* let pointermove drive the resize on touch */
+}
+.df-col-resizer::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.df-grid th:hover .df-col-resizer::after,
+.df-col-resizer:hover::after {
+  background: var(--border-default, var(--border-subtle));
+}
+.df-col-resizer:hover::after { background: var(--accent-primary, #2563eb); }
+/* NB: the DataGrid's scroll box carries BOTH `output-html` and `df-table-scroll`
+   classes, so the generic `.output-html td` rule (padding:4px 10px; border:1px on
+   all sides; white-space:nowrap) ALSO targets these cells at equal specificity and,
+   being later in the file, was WINNING — its 4px padding stacked on top of the
+   inner div's 7px padding (the inflated row height) and its full border drew the
+   vertical grid lines. We scope the grid rules under `.df-table-scroll` so they
+   are MORE specific and reliably win. */
+.df-grid .df-table-scroll td {
+  padding: 0;                   /* padding lives on .df-cell-inner now */
+  border: none;                 /* horizontal-only separators below */
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: top;
+  white-space: normal;          /* beat .output-html td { white-space: nowrap } */
+}
+
+/* The wrapping/width authority is this inner block, NOT the <td> or table-layout.
+   DataGrid sets its width inline to the column's effective pixel width. Because it
+   is a real block box with an explicit width (not a table cell whose width the
+   browser may recompute from content), white-space:normal here ACTUALLY wraps the
+   text to that width — this is the fix for "Wrap does nothing". */
+.df-grid .df-cell-inner {
+  box-sizing: border-box;
+  padding: 7px 12px;
+  /* Match the compact single-line height the plain <td> had: an explicit tight
+     line-height so the block box height = one text line + padding, not a taller
+     default line box. */
+  line-height: var(--line-height-normal, 1.4);
+  white-space: normal;          /* WRAP mode (default): flow to multiple lines */
+  overflow-wrap: anywhere;      /* break long unbroken tokens (URLs/JSON) */
+  word-break: break-word;
+  /* max-width belt-and-suspenders: even if an inline width weren't applied, never
+     let a cell exceed its column and force horizontal overflow. */
+  max-width: 100%;
+}
+/* The inner div's own children (links/spans from CellContent) must be allowed to
+   wrap too — a nested inline-block or nowrap span would defeat the wrap. Kept
+   inline so they don't add their own block line-box (which inflated row height). */
+.df-grid .df-cell-inner > * {
+  white-space: inherit;
+  overflow-wrap: inherit;
+  word-break: inherit;
+}
+
+/* The table is ALWAYS fixed-layout with explicit per-column widths (set inline in
+   DataGrid: user drag width, else a content-estimated default clamped to
+   [80, 340]px), so header and body columns line up and drag-resize is unambiguous.
+   Actual text wrapping is handled by .df-cell-inner above, not by the table. */
+.df-grid table.df-table-fixed {
+  table-layout: fixed;
+  /* width is set inline to the sum of column widths; allow narrower than container. */
+  min-width: 0;
+}
+
+/* Wrap-text OFF (toolbar toggle): each cell on a single line, clipped with an
+   ellipsis. Overrides the wrapping default on the inner block so rows stay one
+   line each for a compact scan; the full value remains accessible by turning wrap
+   back on, widening the column, or the hover title. */
+.df-grid table.df-nowrap .df-cell-inner {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.df-grid table.df-nowrap .df-cell-inner > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.df-grid table.df-nowrap th .df-th-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Last row: no trailing separator (the container border closes it off). */
+.df-grid tbody tr:last-child td { border-bottom: none; }
+/* Zebra + hover: subtle, not a hard grid. */
+.df-grid tbody tr:nth-child(even) td { background: var(--surface-0); }
+.df-grid tbody tr:hover td { background: var(--accent-primary-subtle); }
+
+/* Numeric columns: right-align + tabular figures so decimals line up and the
+   eye can scan magnitudes. Header caret stays on the right regardless. */
+.df-grid td[data-numeric],
+.df-grid th[data-numeric] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+/* A right-aligned numeric header needs the sort caret on the LEFT of the label
+   so it doesn't collide with the right-flushed text. */
+.df-grid th[data-numeric] { padding-right: 12px; padding-left: 22px; }
+.df-grid th[data-numeric]::after { right: auto; left: 6px; }
+
+/* ── Paginated DataGrid (JSON-backed) ─────────────────────────────────────── */
+.df-grid {
+  margin-bottom: var(--space-2);
+  max-width: 100%;
+  overflow: hidden;
+}
+.df-grid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px 8px;
+}
+.df-grid-search {
+  flex: 1;
+  max-width: 260px;
+  padding: 5px 10px;
+  font-size: var(--font-size-sm);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  outline: none;
+}
+.df-grid-search:focus { border-color: var(--accent-primary); }
+.df-grid-toolbar-right { display: flex; align-items: center; gap: 10px; }
+.df-grid-pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.df-grid-pagesize select {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 3px 6px;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+/* Copy CSV reuses the output toolbar's icon-button look (cell-output-action-btn):
+   borderless, muted, icon + label, accent on hover. Only alignment/spacing tweaks
+   remain here so it sits neatly in the grid toolbar. */
+.df-grid-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* Wrap-text toggle: same icon-button look as Copy CSV; tinted when active (ON). */
+.df-grid-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.df-grid-wrap.active {
+  color: var(--accent-primary, #2563eb);
+  background: var(--accent-primary-subtle, color-mix(in srgb, var(--accent-primary, #2563eb) 12%, transparent));
+}
+
+.df-grid-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 2px 2px;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+.df-grid-range { flex: 1; font-size: var(--font-size-xs); white-space: nowrap; }
+.df-grid-pager { display: inline-flex; align-items: center; gap: 4px; }
+.df-grid-pager button {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.df-grid-pager button:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+.df-grid-pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+.df-grid-pageinfo { padding: 0 6px; white-space: nowrap; }
+.df-grid-noresults { text-align: center; color: var(--text-muted); padding: 16px; font-style: italic; }
+.df-grid-empty { padding: 12px; color: var(--text-muted); font-size: var(--font-size-sm); }
+
+.output-html th {
+  background: var(--surface-3);
+  color: var(--accent-primary);
+  font-weight: 600;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  /* Sticky so the header stays visible while scrolling the bounded table body.
+     sticky still establishes a containing block for the ⇅ ::after indicator.
+     border-collapse drops the header's bottom border while stuck, so we redraw
+     it with an inset box-shadow. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: inset 0 -1px 0 var(--border-subtle);
+  padding-right: 22px;
+  transition: background 0.15s;
+}
+
+.output-html th:first-child {
+  cursor: default;
+  padding-right: 10px;
+}
+
+.output-html th:first-child::after {
+  content: none;
+}
+
+.output-html th:hover:not(:first-child) {
+  background: var(--surface-4, var(--surface-3));
+  color: var(--text-primary);
+}
+
+.output-html th::after {
+  content: '⇅';
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  opacity: 0.5;
+  color: var(--text-secondary);
+}
+
+.output-html th[data-sort="asc"]::after {
+  content: '▲';
+  opacity: 1;
+  color: var(--accent-success, #00c9a7);
+  font-size: 10px;
+}
+
+.output-html th[data-sort="desc"]::after {
+  content: '▼';
+  opacity: 1;
+  color: var(--accent-success, #00c9a7);
+  font-size: 10px;
+}
+
+.output-html td {
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.output-html tr:nth-child(even) td {
+  background: var(--surface-0);
+}
+
+.output-html tr:hover td {
+  background: var(--accent-primary-subtle);
+}
+
+.output-html .df-truncation-note,
+.df-grid .df-truncation-note {
+  padding: 8px 12px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  background: var(--surface-1);
+  border-top: 1px solid var(--border-subtle);
+  font-style: italic;
+}
+
+/* DataFrame cell enhancements */
+.output-html .df-cell-null {
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.output-html .df-cell-negative {
+  color: var(--accent-danger);
+}
+
+.output-html .df-cell-bool {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.output-html .df-bool-true {
+  background: rgba(166, 227, 161, 0.15);
+  color: var(--accent-success);
+}
+
+.output-html .df-bool-false {
+  background: rgba(243, 139, 168, 0.15);
+  color: var(--accent-danger);
+}
+
+.output-html .df-cell-img {
+  max-height: 40px;
+  max-width: 80px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.output-html a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.output-html a:hover {
+  text-decoration: underline;
+}
+
+.output-html td[title] {
+  cursor: help;
+}
+
+/* ============================================================
+   AI MODE STYLES
+   ============================================================ */
+
+.cell-ai-mode {
+  border-color: var(--accent-purple-muted);
+}
+
+.cell-ai-mode:focus-within {
+  border-color: var(--accent-purple);
+  box-shadow: var(--shadow-glow-purple);
+}
+
+/* AI prompt area */
+.cell-ai {
+  position: relative;
+}
+
+/* Cell actions positioning in AI mode */
+.cell-actions-ai {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  flex-direction: row;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.cell-ai:hover .cell-actions-ai {
+  opacity: 1;
+}
+
+/* ============================================================
+   MARKDOWN CELL STYLES
+   ============================================================ */
+
+.cell-markdown {
+  border-color: var(--border-subtle);
+  border-left: 3px solid rgba(130, 130, 130, 0.3);
+  background: var(--surface-0);
+}
+
+.cell-markdown.cell-active {
+  border-left: 4px solid var(--lang-markdown) !important;
+  border-color: color-mix(in srgb, var(--lang-markdown) 40%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--lang-markdown) 15%, transparent), 0 2px 8px color-mix(in srgb, var(--lang-markdown) 8%, transparent);
+  background: color-mix(in srgb, var(--surface-0) 97%, var(--lang-markdown) 3%);
+}
+
+.cell-markdown.cell-active .cell-gutter {
+  background: color-mix(in srgb, var(--lang-markdown) 8%, transparent);
+}
+
+/* Same stack as code/SQL cells: top-aligned column (drag handle, chevron, badge) with
+   the base .cell-gutter padding, so a tall Markdown cell keeps its gutter at the top. */
+.cell-markdown .cell-gutter {
+  background: var(--surface-1);
+}
+/* The gutter column is centred and as wide as its widest item (the type badge). The
+   MD badge has no icon, so give the expanded MD gutter the width of a PY-n gutter:
+   handle and chevron then sit at the same x as in the code cells around it. */
+.cell-markdown:not(.cell-collapsed) > .cell-gutter { min-width: 68px; }
+
+.cell-type-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-3);
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.5px;
+}
+
+.cell-markdown .cell-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.cell-markdown .md-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+.cell-markdown:hover .md-actions {
+  opacity: 1;
+}
+
+/* Markdown edit mode */
+.md-edit-area {
+  padding: var(--space-2);
+}
+
+.md-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  outline: none;
+  line-height: 1.6;
+  field-sizing: content;
+}
+
+.md-textarea:focus {
+  border-color: var(--accent-primary-muted);
+  box-shadow: 0 0 0 2px var(--accent-primary-subtle);
+}
+
+.md-textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.md-edit-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  padding: 4px 14px 6px;
+  font-style: italic;
+}
+
+/* Markdown rendered view */
+.md-rendered {
+  padding: 10px 14px;
+  cursor: text;
+  min-height: 28px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+}
+
+.md-rendered:hover {
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+}
+
+.md-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Markdown typography */
+.md-rendered h1 {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 4px;
+}
+
+.md-rendered h2 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text-primary);
+}
+
+.md-rendered h3 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text-primary);
+}
+
+.md-rendered p {
+  margin: 0 0 6px;
+}
+
+.md-rendered p:last-child {
+  margin-bottom: 0;
+}
+
+.md-rendered ul, .md-rendered ol {
+  margin: 0 0 6px;
+  padding-left: 20px;
+}
+
+.md-rendered li {
+  margin-bottom: 1px;
+}
+
+.md-rendered code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--surface-3);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent-primary);
+}
+
+.md-rendered pre {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.md-rendered pre code {
+  background: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Syntax-highlight token colors for code fences rendered by the SHARED markdown
+   renderer (services/markdown.js emits <code class="hljs-basic"> with tok-* spans
+   from basicHighlight). Keyed on .hljs-basic — NOT a surface class — so EVERY
+   <Markdown> surface gets colored Python/SQL (the entity-profile modal's "How to
+   Query", AI explanations, the intel report, markdown cells, text output). The AI
+   chat panel keeps its own .ai-code-pre .tok-* rules; these don't touch those. */
+.hljs-basic .tok-keyword { color: var(--accent-purple); font-weight: 600; }
+.hljs-basic .tok-string  { color: var(--accent-success); }
+.hljs-basic .tok-number  { color: var(--accent-warning); }
+.hljs-basic .tok-comment { color: var(--text-muted); font-style: italic; }
+.hljs-basic .tok-function { color: var(--accent-primary); }
+
+.md-rendered blockquote {
+  border-left: 3px solid var(--accent-primary-muted);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--text-secondary);
+}
+
+.md-rendered strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.md-rendered a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.md-rendered a:hover {
+  text-decoration: underline;
+}
+
+.md-rendered table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: var(--font-size-sm);
+}
+
+.md-rendered th, .md-rendered td {
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+}
+
+.md-rendered th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+.md-rendered hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 12px 0;
+}
+
+/* ============================================================
+   MERMAID DIAGRAMS + KATEX MATH (shared <Markdown> output)
+   ============================================================ */
+
+/* A rendered mermaid diagram: centered, on a subtle surface so the dark-theme SVG
+   reads cleanly in any markdown surface. The .mermaid-src <pre> is the pre-render
+   fallback (shown until the SVG swaps in) and the syntax-error fallback. */
+.mermaid-diagram {
+  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+  padding: 12px;
+  overflow: auto;
+}
+/* Keep diagrams compact: cap the rendered height so tall flowcharts don't dominate
+   the cell, and never upscale past the SVG's intrinsic width. width:auto + the
+   max-height let it shrink proportionally; horizontal overflow scrolls if needed. */
+.mermaid-diagram svg {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 480px;
+}
+/* Source fallback (before render / on error): monospace, dim, left-aligned. */
+.mermaid-diagram .mermaid-src {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mermaid-diagram.mermaid-error {
+  flex-direction: column;
+  align-items: stretch;
+  border-color: color-mix(in srgb, var(--accent-danger, #f85149) 40%, transparent);
+}
+.mermaid-error-note {
+  font-size: var(--font-size-xs);
+  color: var(--accent-danger, #f85149);
+  margin-bottom: 6px;
+}
+
+/* KaTeX: keep block math ($$…$$) from overflowing narrow panels — let it scroll. */
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+
+/* ============================================================
+   CELL COLLAPSE/EXPAND
+   ============================================================ */
+
+.cell-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.cell-collapse-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.cell-collapsed-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--transition-fast);
+}
+
+.cell-collapsed-summary:hover {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+
+.cell-collapsed-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-collapsed-lines {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--surface-3);
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex: none;
+  white-space: nowrap;
+}
+/* Whole-cell collapse: the cell is ONE compact row (gutter laid out horizontally +
+   the strip), with a dashed border and a faint wash in the cell-type colour
+   (Python blue / SQL orange / Markdown purple) so collapsed cells stand out while
+   scrolling. Status (running / error / interrupted / selected) keeps its own
+   border and rail rules; only the idle border is restyled. light/dark: theme-light.css. */
+.cell { --cell-collapse-color: var(--lang-python); }
+.cell-sql { --cell-collapse-color: var(--lang-sql); }
+.cell-markdown { --cell-collapse-color: var(--lang-markdown); }
+.cell.cell-collapsed { border-style: dashed; }
+.cell-collapsed > .cell-gutter {
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 8px;
+}
+.cell-collapsed:not(.cell-active) > .cell-gutter,
+.cell-collapsed > .cell-content {
+  background: color-mix(in srgb, var(--cell-collapse-color) 7%, var(--cell-bg));
+}
+.cell-collapsed > .cell-content { display: flex; align-items: stretch; }
+.cell-collapsed .cell-collapsed-summary {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 0;
+  padding: 6px 12px;
+  background: transparent;
+}
+.cell-collapsed .cell-collapse-btn { color: var(--cell-collapse-color); }
+.cell-collapsed-text-empty { font-style: italic; }
+.cell-collapsed-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 45%;
+  font-family: var(--font-sans, inherit);
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.cell-collapsed-hint > svg { flex: none; }
+.cell-collapsed-hint-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cell-collapsed-hint[data-tone="error"] {
+  color: var(--accent-danger);
+  background: var(--accent-danger-subtle);
+  padding: 1px 8px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+.cell-collapsed-hint[data-tone="warning"] { color: var(--accent-warning); }
+.cell-collapsed-hint[data-tone="running"] { color: var(--text-primary); font-weight: 500; }
+.cell-collapsed-spinner {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.cell-output-collapse-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  /* Raised stacking context so the Export dropdown (an absolutely-positioned
+     descendant that drops DOWN into the output body) paints ABOVE the following
+     output-content sibling instead of being clipped behind it. */
+  position: relative;
+  z-index: 3;
+  border-bottom: 1px solid var(--accent-primary-muted);
+  border-left: 3px solid var(--accent-primary);
+  background: var(--surface-1);
+  transition: all var(--transition-fast);
+}
+
+.cell-sql .cell-output-collapse-bar {
+  color: var(--lang-sql);
+  border-left-color: rgba(224, 108, 29, 0.5);
+  border-bottom-color: rgba(224, 108, 29, 0.3);
+}
+
+/* Result-zone headers use NEUTRAL, desaturated accents (--zone-*) — deliberately
+   NOT the saturated language hues (blue Python / orange SQL / purple Markdown) or
+   the data-type entity colors, so nothing collides. The code editor keeps its
+   language hue; these zones read as quiet, distinct chrome differentiated by
+   elevation + a muted rail. OUTPUT = cool slate; VARIABLES = warm neutral gray —
+   different enough to tell apart, quiet enough to never compete. */
+.cell-output--result > .cell-output-collapse-bar {
+  color: var(--zone-output);
+  border-left-color: var(--zone-output);
+  border-bottom-color: var(--zone-output-line);
+  background: var(--zone-output-tint);
+}
+.cell-output--result {
+  border-left: 3px solid var(--zone-output-line);
+}
+.cell-output--vars > .cell-output-collapse-bar {
+  color: var(--zone-vars);
+  border-left-color: var(--zone-vars);
+  border-bottom-color: var(--zone-vars-line);
+  background: var(--zone-vars-tint);
+}
+.cell-output--vars {
+  border-left: 3px solid var(--zone-vars-line);
+}
+/* An ERROR output is the ONE case that keeps a saturated identity — danger red —
+   because a failure genuinely warrants attention (and red isn't a language hue). */
+.cell-output--result.cell-output-error > .cell-output-collapse-bar {
+  color: var(--accent-danger);
+  border-left-color: var(--accent-danger);
+  border-bottom-color: var(--accent-danger-muted);
+  background: var(--accent-danger-subtle);
+}
+.cell-output--result.cell-output-error {
+  border-left-color: var(--accent-danger-muted);
+}
+
+.cell-output-collapse-bar:hover {
+  filter: brightness(1.12);
+}
+
+.cell-output-clear-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.cell-output-collapse-bar:hover .cell-output-clear-btn {
+  opacity: 1;
+}
+
+.cell-output-clear-btn:hover {
+  color: var(--accent-warning);
+  background: rgba(249, 226, 175, 0.1);
+}
+
+.cell-output-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cell-output-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  transition: all var(--transition-fast);
+}
+
+.cell-output-action-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-4);
+}
+
+/* Copy confirmation: swap the "Copy" label to "Copied" and tint the button
+   success-green for ~1.5s (class toggled in Cell.jsx after a successful copy).
+   The label text is zeroed and "Copied" injected via ::after so no JS state or
+   re-render is needed. */
+.cell-output-action-btn.is-copied {
+  color: var(--accent-success);
+}
+.cell-output-action-btn.is-copied .cell-output-copy-label {
+  font-size: 0;
+}
+.cell-output-action-btn.is-copied .cell-output-copy-label::after {
+  content: "Copied";
+  font-size: 10px;
+}
+
+.cell-output-export-wrap {
+  position: relative;
+}
+
+.cell-output-export-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  overflow: hidden;
+  min-width: 100px;
+}
+
+.cell-output-export-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.cell-output-export-menu button:hover {
+  background: var(--accent-primary-subtle);
+  color: var(--text-primary);
+}
+
+.cell-output-collapsed {
+  padding: 0;
+  padding-bottom: 6px;
+}
+
+.cell-add-md-btn {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ============================================================
+   DRAG TO REORDER
+   ============================================================ */
+
+.cell-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.cell:hover .cell-drag-handle,
+.cell-active .cell-drag-handle {
+  opacity: 1;
+}
+
+.cell-drag-handle:hover {
+  color: var(--text-secondary);
+  background: var(--surface-3);
+}
+
+.cell-drag-handle:active {
+  cursor: grabbing;
+}
+
+.cell-drag-over {
+  border-top: 2px solid var(--accent-primary);
+  margin-top: -1px;
+}
+
+/* Search highlight (markdown cells) — match the CodeMirror highlight contrast. */
+.search-highlight {
+  background: rgba(255, 213, 79, 0.5);
+  color: #1a1a1a;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.search-highlight-active {
+  background: #ffb300;
+  color: #1a1a1a;
+  outline: 2px solid #ffd54f;
+  box-shadow: 0 0 0 2px rgba(255, 179, 0, 0.35);
+  border-radius: 2px;
+}
+
+/* Execution staleness indicator (code edited since last run) */
+.cell-stale-badge {
+  color: var(--accent-warning);
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Dataflow-staleness indicator (an upstream variable this cell reads changed
+   since it last ran). Intentionally IDENTICAL to .cell-stale-badge — same amber
+   dot — so users see one consistent "stale, re-run me" cue; the tooltip carries
+   the reason (code edit vs upstream data change). */
+.cell-dataflow-stale-badge {
+  color: var(--accent-warning);
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+}
+
+/* Lint indicator on the cell header (next to the PY-n / SQL-n badge). Amber
+   warning triangle + issue count, matching the inline squiggle color. Shown only
+   when the last lint pass flagged this cell; clears on a clean re-lint or edit. */
+.cell-lint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent-warning, #e2a03f);
+  cursor: help;
+  line-height: 1;
+}
+.cell-lint-badge-count {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Cell with active search match */
+.cell-search-match {
+  border-left: 3px solid var(--accent-warning);
+}
+
+/* SQL cell type */
+.cell-sql {
+  border-left: 3px solid rgba(224, 108, 29, 0.4);
+}
+
+.cell-sql.cell-active {
+  border-left: 4px solid var(--lang-sql) !important;
+  box-shadow: 0 0 0 1px var(--lang-sql-subtle), 0 2px 8px var(--lang-sql-subtle);
+  background: color-mix(in srgb, var(--cell-bg) 97%, var(--lang-sql) 3%);
+}
+
+.cell-sql.cell-success.cell-active,
+.cell-sql.cell-error.cell-active,
+.cell-sql.cell-interrupted.cell-active {
+  /* Keep SQL cells on the SQL identity color in every active+state combo, so the
+     generic .cell-*.cell-active rules (which use --lang-python) don't leak blue
+     onto a SQL cell that errored/was interrupted while selected. */
+  border-left: 4px solid var(--lang-sql) !important;
+}
+
+.cell-sql .cell-gutter {
+  /* No extra border — left border of the cell is sufficient */
+}
+
+.cell-sql.cell-active .cell-gutter {
+  background: rgba(224, 108, 29, 0.08);
+}
+
+.cell-type-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.cell-type-sql {
+  background: var(--lang-sql-subtle);
+  color: var(--lang-sql);
+}
+
+.cell-type-code {
+  background: var(--lang-python-subtle);
+  color: var(--lang-python);
+}
+
+.cell-type-md {
+  background: var(--lang-markdown-subtle);
+  color: var(--lang-markdown);
+}
+
+.cell-type-label {
+  font-size: 8px;
+  letter-spacing: 0.3px;
+}
+
+.cell-type-text {
+  /* Purple, matching the outline panel's markdown (M-N) badge. */
+  background: var(--lang-markdown-subtle);
+  color: var(--lang-markdown);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* SQL output variable field */
+.sql-output-var {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(224, 108, 29, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+
+.sql-output-var-label {
+  color: var(--entity-sql);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.sql-output-var-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--entity-sql);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 5px;
+  flex: 1;
+  min-width: 0;
+  max-width: 420px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.sql-output-var-input:hover {
+  border-color: rgba(224, 108, 29, 0.3);
+}
+
+.sql-output-var-input:focus {
+  border-color: var(--entity-sql);
+  background: var(--entity-sql-subtle);
+}
+
+/* @param Widget Bar */
+.param-widgets-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 8px 12px;
+  padding-right: 140px;  /* leave room for cell action buttons */
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  align-items: center;
+  width: 100%;
+}
+
+.param-widget {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.param-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  min-width: fit-content;
+  cursor: text;
+}
+
+.param-label-input {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  background: var(--bg-primary, #111);
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  padding: 1px 5px;
+  width: 130px;
+  outline: none;
+}
+
+.param-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.param-slider {
+  width: 100px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+}
+
+.param-value {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  min-width: 30px;
+  text-align: right;
+}
+
+.param-select,
+.param-text,
+.param-number,
+.param-date {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px 6px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+.param-select { min-width: 80px; }
+.param-text { width: 120px; }
+.param-number { width: 70px; }
+.param-date { width: 130px; }
+
+/* Make the native date picker calendar icon visible in dark mode */
+.param-date::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.param-date::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.param-checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.param-select:focus,
+.param-text:focus,
+.param-number:focus,
+.param-date:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+/* --- Per-cell "variables defined here" chips (Option A) --- */
+/* The Variables section reuses the OUTPUT header CSS (.cell-output +
+   .cell-output-collapse-bar) for an identical, collapsible band. The chips sit
+   inside that padded band, so they only need a little top gap under the header. */
+.cell-vars-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 8px;
+}
+.cell-var-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs, 11px);
+  line-height: 1.5;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
+}
+/* Leading dot signals defined (green) vs modified (amber). */
+.cell-var-chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cell-var-defined::before { background: var(--accent-success, #a6e3a1); }
+.cell-var-modified::before { background: var(--accent-warning); }
+button.cell-var-chip:hover {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+button.cell-var-chip:active { transform: translateY(0.5px); }
+button.cell-var-chip:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+/* Type icon as a small colored badge — mirrors the Variables side panel's
+   .var-type-icon so the two surfaces read identically. The var-type-* color
+   classes (defined globally in Sidebar.css) supply the background + text color. */
+.cell-var-chip-icon {
+  font-size: 10px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.cell-var-chip-name { font-weight: 600; }
+/* Right-side meta: scalar value or data/collection shape — quiet, like the panel. */
+.cell-var-chip-meta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Scalar VALUE — the primary content of a scalar chip. Accent-colored so it's
+   unmistakably the VALUE and never confused with the (bold white) variable name. */
+.cell-var-chip-value {
+  color: var(--accent-primary);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Kind groups (Data / Collections / Scalars / Other) — a quiet label above each
+   group's chip row, matching the side panel's grouped sections. */
+.cell-vars-group + .cell-vars-group { margin-top: 8px; }
+.cell-vars-group-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.cell-vars-group .cell-vars-chips { margin-top: 4px; }
+
+/* Static: owned but non-tabular (scalar/collection) — shows its value inline and
+   is NOT clickable (nothing to open in the data grid). */
+.cell-var-static {
+  cursor: default;
+}
+
+/* Replaced: value was set here but later overwritten elsewhere — greyed, not openable. */
+.cell-var-replaced {
+  cursor: default;
+  background: transparent;
+  border-style: dashed;
+}
+/* Grey only the (replaced) icon + name, so the jump-link pill stays fully
+   actionable at full opacity — matching the Variables panel treatment. */
+.cell-var-replaced .cell-var-chip-icon { opacity: 0.5; }
+.cell-var-replaced .cell-var-chip-name {
+  color: var(--text-muted, #888);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.cell-var-replaced-arrow {
+  color: var(--text-muted, #888);
+  opacity: 0.7;
+  font-size: 11px;
+}
+/* Jump-link styled identically to the Variables panel's .var-prov-link pill. */
+.cell-var-replaced-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs, 11px);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 38%, transparent);
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
+}
+.cell-var-replaced-link::after {
+  content: '↗';
+  font-size: 0.95em;
+  opacity: 0.65;
+}
+.cell-var-replaced-link:hover {
+  background: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+.cell-var-replaced-link:hover::after { opacity: 1; }
+.cell-var-replaced-link:active { transform: translateY(0.5px); }
+.cell-var-replaced-link:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+
+/* Brief accent pulse to draw the eye to a just-inserted cell (e.g. from the AI
+   assistant's "Insert N Cells"). Animates box-shadow only so it never fights the
+   cell's own background. */
+/* Flash a just-inserted cell — deliberately subtle (matches the Outline panel's
+   flash): a leading accent bar that fades, plus a faint decaying tint. No loud
+   full-cell outline/ring. Both ride on ::after so they paint ON TOP of the cell's
+   opaque children (a plain background/outline on .cell gets hidden behind the
+   gutter/editor/output). */
+.cell.cell-flash {
+  position: relative;
+  animation: cellFlashTint 3s ease-out forwards;
+}
+@keyframes cellFlashTint {
+  0%   { background: color-mix(in srgb, var(--accent-primary) 8%, transparent); }
+  100% { background: transparent; }
+}
+/* Leading accent bar at the cell's left edge. */
+.cell.cell-flash::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 6;
+  background: var(--accent-primary);
+  animation: cellFlashBar 3s ease-out forwards;
+}
+@keyframes cellFlashBar {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell.cell-flash,
+  .cell.cell-flash::after { animation: none; }
+}
+
+/* ── DataGrid Tier 1/2: type badges, column-summary popover, view toggle, chart ── */
+
+/* Table/Chart view toggle in the grid toolbar (segmented control). */
+.df-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+}
+.df-view-btn {
+  border: none;
+  background: var(--input-bg);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.df-view-btn:not(:last-child) { border-right: 1px solid var(--input-border); }
+.df-view-btn:hover { color: var(--text-primary); background: var(--surface-2); }
+.df-view-btn.active { background: var(--accent-primary); color: #fff; }
+.df-view-btn:active { transform: scale(0.97); }
+
+/* Column type badge inside each header. */
+.df-th-inner {
+  display: flex;             /* flex (not inline-flex) so it fills the th and can shrink */
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;              /* allow the label to shrink below its content width */
+}
+/* Truncate the header label so a narrowly-dragged column doesn't have its header
+   text floor the column width (the full name stays available via the cell title). */
+.df-th-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* Right-aligned numeric headers: keep badge + label ordering readable. */
+.df-grid th[data-numeric] .df-th-inner { flex-direction: row-reverse; }
+
+.df-col-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.df-col-badge:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+.df-col-badge:active { transform: scale(0.94); }
+.df-col-badge-number { color: var(--accent-primary); }
+.df-col-badge-date { color: var(--text-secondary); }
+
+/* Column-summary popover, anchored under the header cell.
+   NOTE: do NOT set `position: relative` on the header here — that would override
+   the `position: sticky` on `.output-html th` (same specificity, later rule wins)
+   and the header would scroll away with the body. A sticky element ALSO
+   establishes a containing block for absolutely-positioned descendants, so the
+   popover still anchors to the `th` correctly without needing `relative`. */
+.df-col-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong, var(--border-subtle));
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  text-align: left;
+  font-weight: 400;
+  cursor: default;
+}
+.df-grid th[data-numeric] .df-col-popover { left: auto; right: 0; }
+/* Portaled to <body>: fixed to the viewport (JS supplies top/left from the
+   badge rect) so the table's overflow:auto can't clip it. Higher z-index than
+   the in-flow variant since it now stacks above sibling panels/output. */
+.df-col-popover-portal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: auto;
+  z-index: 1000;
+}
+.df-col-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.df-col-popover-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.df-col-popover-type {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+.df-col-popover-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+.df-col-popover-stats > div { display: flex; justify-content: space-between; gap: 8px; }
+.df-col-popover-stats dt { color: var(--text-muted); font-size: var(--font-size-xs); }
+.df-col-popover-stats dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+.df-col-popover-top { margin-top: 8px; border-top: 1px solid var(--border-subtle); padding-top: 8px; }
+.df-col-popover-top-title { color: var(--text-muted); font-size: var(--font-size-xs); margin-bottom: 4px; }
+.df-col-popover-top ul { list-style: none; margin: 0; padding: 0; }
+.df-col-popover-top li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  padding: 2px 0;
+}
+.df-col-top-val {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.df-col-top-count { color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.df-col-popover-note { margin-top: 8px; color: var(--text-muted); font-size: 10px; font-style: italic; }
+
+/* ── Chart view ─────────────────────────────────────────────────────────── */
+.df-chart {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-1);
+  padding: 10px 12px;
+  margin-bottom: var(--space-2);
+}
+.df-chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.df-chart-types { display: inline-flex; border: 1px solid var(--input-border); border-radius: var(--radius-md, 6px); overflow: hidden; }
+.df-chart-type {
+  border: none;
+  background: var(--input-bg);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.df-chart-type:not(:last-child) { border-right: 1px solid var(--input-border); }
+.df-chart-type:hover { color: var(--text-primary); background: var(--surface-2); }
+.df-chart-type.active { background: var(--accent-primary); color: #fff; }
+.df-chart-type:active { transform: scale(0.97); }
+.df-chart-selects { display: inline-flex; align-items: center; gap: 12px; }
+.df-chart-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+.df-chart-select select {
+  padding: 3px 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+}
+.df-chart-svg-wrap { width: 100%; overflow-x: auto; }
+.df-chart-svg { width: 100%; height: auto; display: block; }
+.df-chart-empty {
+  padding: 32px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+.df-chart-note { margin-top: 6px; color: var(--text-muted); font-size: 10px; font-style: italic; }
+
+/* SVG chart primitives (themed via CSS vars). */
+.df-chart-grid { stroke: var(--border-subtle); stroke-width: 1; opacity: 0.5; }
+.df-chart-axis { stroke: var(--text-muted); stroke-width: 1; }
+/* SVG text is scaled by the chart's viewBox→render ratio, so these px values
+   render larger than the same number in HTML. Kept small so tick labels + axis
+   titles read at roughly the table's --font-size-xs, not oversized. */
+.df-chart-axis-label { fill: var(--text-muted); font-size: 8px; }
+.df-chart-axis-title { fill: var(--text-secondary); font-size: 8px; font-weight: 500; }
+.df-chart-bar { fill: var(--accent-primary); opacity: 0.85; }
+.df-chart-bar:hover { opacity: 1; }
+.df-chart-line { stroke: var(--accent-primary); stroke-width: 2; }
+.df-chart-dot { fill: var(--accent-primary); }
+
+/* ── Cell focus / "expand" mode (CellFocusOverlay) ──────────────────────────
+   A single code/SQL cell blown up into a large blurred full-screen overlay so a
+   wide DataFrame or big chart is easy to read. Portaled to <body>; sits at modal
+   depth (matches the app's 9998–10000 modal band). The backdrop blurs + dims the
+   notebook behind; the panel holds the same editor + output stacked. */
+.cell-focus-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3vh 3vw;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: cellFocusFadeIn 0.14s ease;
+}
+@keyframes cellFocusFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.cell-focus-panel {
+  display: flex;
+  flex-direction: column;
+  width: 92vw;
+  max-width: 1500px;
+  height: 90vh;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg, 10px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  animation: cellFocusScaleIn 0.16s ease;
+}
+@keyframes cellFocusScaleIn {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.cell-focus-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
+}
+.cell-focus-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-primary);
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 4px);
+  padding: 2px 7px;
+}
+.cell-focus-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+/* Kernel execution count pill on the focus title bar — matches the inline
+   .cell-number chip. Pulled tight to the title (overrides the head's 10px gap). */
+.cell-focus-exec-num {
+  margin-left: -4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  border: 1px solid var(--border-subtle);
+}
+/* Mirrored status indicators (lint / stale dots) sit just after the title; the
+   head's 10px gap is a touch wide for them, so nudge them into a tighter cluster
+   without affecting the run/format/close action group on the right. */
+.cell-focus-head > .cell-lint-badge,
+.cell-focus-head > .cell-stale-badge,
+.cell-focus-head > .cell-dataflow-stale-badge {
+  margin-left: -4px;
+}
+.cell-focus-head-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cell-focus-run,
+.cell-focus-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.cell-focus-run { color: var(--accent-primary); border-color: var(--accent-primary-muted); }
+.cell-focus-run:hover:not(:disabled) { background: var(--accent-primary-subtle); }
+.cell-focus-run:disabled { opacity: 0.5; cursor: not-allowed; }
+.cell-focus-stop { color: var(--accent-danger, #e5534b); }
+.cell-focus-close:hover { background: var(--surface-4); color: var(--text-primary); }
+
+/* Secondary header actions (Clear output, Add note) — mirror the cell toolbar. */
+.cell-focus-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm, 4px);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.cell-focus-icon-btn:hover { background: var(--surface-4); color: var(--text-primary); }
+
+/* Body: editor on top, output below, split by a draggable handle. Each pane
+   scrolls independently so a tall table or a long code block never pushes the
+   other off-screen. Heights are driven by inline flex-basis (see editorPct). */
+.cell-focus-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow: hidden;
+}
+.cell-focus-editor {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;               /* the editor pane itself doesn't scroll... */
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+}
+/* Frozen header inside the editor pane: param sliders / SQL var bar stay pinned
+   at the top while the code scrolls beneath. The inner .param-widgets-bar /
+   .sql-output-var already carry their own background + bottom border, so this
+   wrapper just controls sizing. Capped so a tall wrapped slider set scrolls
+   inside the header rather than swallowing the code region. */
+.cell-focus-editor-sticky {
+  flex: 0 0 auto;
+  max-height: 45%;
+  overflow: auto;
+}
+/* Inside the frozen header the params bar shouldn't round its top corners or
+   keep the editor-context right padding for action buttons (none here). */
+.cell-focus-editor-sticky .param-widgets-bar {
+  border-radius: 0;
+  padding-right: 12px;
+}
+
+/* Collapsible "Inputs" header for the frozen param strip — mirrors App mode's
+   Inputs panel toggle. Clickable title with a chevron; shows a count pill when
+   collapsed so the user knows what's hidden. */
+.cell-focus-inputs-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  text-align: left;
+}
+.cell-focus-inputs-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent-primary);
+  opacity: 0.8;
+}
+.cell-focus-inputs-title:hover .cell-focus-inputs-chevron { opacity: 1; }
+/* Count pill (collapsed only), pushed to the right. */
+.cell-focus-inputs-count {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
+  border-radius: var(--radius-full, 999px);
+  padding: 1px 8px;
+}
+/* When collapsed the strip is just the header — drop the params bar's own top
+   border so there's no double divider, and let the header border stand alone. */
+.cell-focus-inputs-collapsed .cell-focus-inputs-title { border-bottom: none; }
+/* With the header present, the params bar's own top border is redundant. */
+.cell-focus-editor-sticky .cell-focus-inputs-title + .param-widgets-bar {
+  border-top: none;
+}
+/* ...only the code region scrolls. */
+.cell-focus-editor-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.cell-focus-output {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+}
+/* Collapsed: shrink to just the "Output hidden" bar, don't grow. */
+.cell-focus-output.cell-output-collapsed {
+  flex: 0 0 auto;
+}
+/* The Output header bar stays pinned; only this inner region scrolls. */
+.cell-focus-output-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Note (read-only mirror) pinned below output; caps its own height and scrolls
+   if long so it never crowds out the editor/output panes. */
+.cell-focus-note {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  max-height: 30%;
+  overflow: auto;
+}
+/* A FIX preview is the actionable panel — it deserves real estate, not a 30%
+   cap. Let it grow to fit its content (the diff already scrolls internally at
+   220px) and only start scrolling the whole card past ~55% of the body. Paired
+   with the output cap below so a one-line error can't hog the pane above it. */
+.cell-focus-note.cell-ai-result-fix {
+  flex: 1 1 auto;
+  max-height: 55%;
+}
+/* When a fix preview is showing, the output above is just the error that
+   prompted it — keep it compact (size toward its content, cap the growth) so
+   the fix panel gets the space. The output scroll region still scrolls if the
+   error/traceback is long. Scoped to a body that contains a fix so normal
+   output (tables, plots) is unaffected. */
+.cell-focus-body:has(.cell-ai-result-fix) .cell-focus-output {
+  flex: 0 1 auto;
+  max-height: 45%;
+}
+
+/* Focus mode: ONE section-title look for Inputs, Output, Variables and the
+   Explanation panel (small caps, letter-spaced, accent), and a header bar that
+   stands out from the panel body: raised surface, a stronger rule, and a 3px edge
+   in the cell-type colour (Python blue / SQL orange). */
+.cell-focus-panel .cell-focus-section-title,
+.cell-focus-panel .cell-explain-title {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+}
+/* Header: neutral raised bar + a stronger hairline (no coloured edge; only the PY/SQL
+   badge carries the cell-type colour, as in the notebook). */
+.cell-focus-panel > .cell-focus-head {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-default);
+  box-shadow: none;
+}
+.cell-focus-panel > .cell-focus-head .cell-focus-title {
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+/* The section header BARS pop through a NEUTRAL raised fill (the grouped surface the left
+   panels use), not a blue tint; the title text stays accent. An errored Output keeps its
+   danger colours (that is status). */
+.cell-focus-panel .cell-focus-inputs-title,
+.cell-focus-panel .cell-output-collapse-bar,
+.cell-focus-panel .cell-explain-head {
+  background: var(--surface-3);
+  box-shadow: none;
+}
+.cell-focus-panel .cell-output-collapse-bar {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm, 4px);
+}
+.cell-focus-panel .cell-output-collapse-bar > svg { color: var(--accent-primary); }
+.cell-focus-panel .cell-output-error > .cell-output-collapse-bar {
+  background: transparent;
+  box-shadow: inset 3px 0 0 0 var(--accent-danger);
+}
+.cell-focus-panel .cell-output-error .cell-focus-section-title,
+.cell-focus-panel .cell-output-error > .cell-output-collapse-bar > svg { color: var(--accent-danger); }
+
+/* Draggable divider between the editor and output panes. */
+.cell-focus-splitter {
+  flex: 0 0 auto;
+  height: 10px;
+  margin: 2px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+}
+.cell-focus-splitter-grip {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-default);
+  transition: background 0.15s;
+}
+.cell-focus-splitter:hover .cell-focus-splitter-grip { background: var(--accent-primary); }
+/* Same hover feedback as the notebook's other dividers (the sidebar and the bottom
+   Logs/Terminal panel handles): the WHOLE divider line turns accent on hover and
+   while dragging, not just the small grip. */
+.cell-focus-splitter { position: relative; }
+.cell-focus-splitter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.15s;
+  pointer-events: none;
+}
+.cell-focus-splitter:hover::before,
+.cell-focus-splitter:active::before,
+.cell-focus-splitter:focus-visible::before { background: var(--accent-primary); }
+.cell-focus-splitter:active .cell-focus-splitter-grip { background: var(--accent-primary); }
+.cell-focus-splitter-grip { position: relative; z-index: 1; }
+
+/* Variables section inside focus mode — pinned below the note, capped + scrollable. */
+.cell-focus-vars {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  max-height: 28%;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 6px);
+}
+/* Collapsed: shrink to just the "Variables hidden" bar. */
+.cell-focus-vars.cell-output-collapsed { max-height: none; }
+
+/* The variable viewer is portaled to <body> at the modal band (z-index 200), which
+   sits BELOW the focus overlay (9998). When it's opened FROM focus mode, raise its
+   overlay above the focus panel so it isn't hidden behind the blurred backdrop. */
+.modal-overlay:has(.var-viewer-in-focus) {
+  z-index: 10001;
+}
+
+/* Multi-output cell: each table / chart / image behind a one-line disclosure header
+   (a real <button aria-expanded>; the body is mounted only while open). Colours are
+   theme tokens only: caption --text-secondary (hover --text-primary) on --surface-1,
+   chevron + focus ring --accent-primary. The caption wraps (never truncated) so it
+   fits a 240 px column. Same disclosure look as the sidebar group headers. */
+.output-item { margin-top: 8px; }
+.output-item-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px 10px;
+  text-align: left;
+  font-family: var(--font-sans, inherit);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: var(--line-height-normal);
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast, 0.15s), background var(--transition-fast, 0.15s), border-color var(--transition-fast, 0.15s);
+}
+.output-item-toggle:hover {
+  color: var(--text-primary);
+  background: var(--fill-hover, var(--surface-2));
+  border-color: var(--accent-primary);
+}
+.output-item-toggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+/* Make the header read as a clickable control: a 3px accent edge (the same card
+   edge the app uses elsewhere), an accent-tinted fill and accent caption while
+   COLLAPSED, and a right-aligned "Show" / "Hide" label. Open outputs keep the
+   quieter secondary caption so the table below stays the focus. */
+/* Apple style: a NEUTRAL raised fill (no blue panel fill, no coloured edge); the caption,
+   chevron and "Show" label carry the accent while collapsed, so it still reads as a
+   control. Hover strengthens the neutral fill and shows an accent hairline border. */
+.output-item:not(.output-item-open) .output-item-toggle {
+  color: var(--accent-primary);
+  background: var(--surface-3);
+  border-color: var(--border-default);
+}
+.output-item:not(.output-item-open) .output-item-toggle:hover {
+  background: color-mix(in srgb, var(--text-primary) 6%, var(--surface-3));
+  border-color: var(--accent-primary);
+}
+.output-item-action {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 8px;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+.output-item-chevron {
+  flex: 0 0 auto;
+  width: 1em;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--accent-primary);
+}
+.output-item-caption {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.output-item-body { min-width: 0; }
+.output-item-body > .output-plotly,
+.output-item-body > .output-image { margin-top: 4px; }

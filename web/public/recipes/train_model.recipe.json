@@ -1,0 +1,42 @@
+{
+  "name": "Train a model from a DataFrame",
+  "desc": "Fit → inspect → score → evaluate → save an ML model in the VM, end-to-end with train_model",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 🎯 Train a model from a DataFrame\n\nThe everyday supervised-ML loop — **without the boilerplate**. Point `train_model` at a DataFrame and a target column and it handles what normally takes 30+ lines by hand: it infers the task (classification vs regression), one-hot encodes categoricals, imputes missing values, splits train/test, fits the model, and prints the metrics. What you get back is a scikit-learn **Pipeline that takes RAW rows** — so you never have to reproduce the encoding at predict time.\n\n| Stage | Helper | What it does |\n|---|---|---|\n| Load | `read_athena` / `read_s3_csv` / `read_dynamodb` | pull a labelled table into a DataFrame |\n| Train | `train_model(df, target=...)` | encode + split + fit + score, one call |\n| Inspect | `model_info(model)` | features it expects, classes, hyperparameters |\n| Score | `predict_batch(model, df)` | predictions (or probabilities) as a new column |\n| Evaluate | `evaluate_model` / `plot_confusion_matrix` | metrics on a holdout + a confusion-matrix heatmap |\n| Ship | `save_model` / `load_model` | persist to S3 as `.joblib`, reload anywhere |\n\n```mermaid\ngraph LR\n  D[\"Labelled DataFrame\"] --> T[\"train_model\"]\n  T --> M[\"fitted Pipeline\"]\n  M --> I[\"model_info\"]\n  M --> P[\"predict_batch → scored rows\"]\n  M --> E[\"evaluate_model + plot_confusion_matrix\"]\n  M --> S[\"save_model → S3 (.joblib)\"]\n  S -. later .-> L[\"load_model ← S3\"]\n```\n\nReplace the `<...>` placeholders with your table, target column, and bucket. `scikit-learn` is pre-installed — nothing to `pip install`."
+    },
+    {
+      "type": "code",
+      "code": "# 1) Load your labelled data. Swap read_athena for read_s3_csv / read_dynamodb /\n#    read_local depending on where it lives — they all return a DataFrame.\ndf = read_athena(\"SELECT * FROM <your_table> LIMIT 5000\")\nprint(df.shape, \"rows × cols\")\ndf.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 2) Train in ONE call. train_model infers the task from the target, one-hot encodes\n#    categoricals, imputes, splits, fits, and prints held-out metrics.\n#    Override anything you like:\n#      task=\"classification\"|\"regression\"   (auto-detected by default)\n#      features=[...]                        (subset of columns; default = all but target)\n#      estimator=<any sklearn estimator>     (default = a solid RandomForest/GBM)\n#      n_estimators=, max_depth=, cv=, scale=\nmodel = train_model(df, target=\"<target_column>\")"
+    },
+    {
+      "type": "code",
+      "code": "# 3) Inspect the fitted model — the exact feature columns it expects (so you feed\n#    the right RAW rows), the classes it predicts, and the chosen hyperparameters.\nmodel_info(model)"
+    },
+    {
+      "type": "code",
+      "code": "# 4) Score the whole frame. predict_batch appends a column of predictions; the\n#    Pipeline one-hots internally, so pass RAW rows (no manual get_dummies).\nscored = predict_batch(model, df, output_col=\"prediction\")\nscored.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 4b) For a CLASSIFIER, rank by likelihood instead of a hard 0/1 label — usually\n#     what you actually want for a prioritized action list. proba=True appends the\n#     class probability; sort to put the highest-risk rows on top.\nranked = predict_batch(model, df, output_col=\"score\", proba=True)\nranked.sort_values(\"score\", ascending=False).head(10)"
+    },
+    {
+      "type": "code",
+      "code": "# 4c) Evaluate on a held-out test set — evaluate_model returns the metrics dict\n#     (accuracy/F1/AUC for classification, R²/MAE for regression; task auto-inferred).\n#     Works on THIS model or any you load_model(...) later — not just a fresh train.\n#     Split a quick holdout to score honestly (or pass your own X_test / y_test):\nfrom sklearn.model_selection import train_test_split\ntrain_df, test_df = train_test_split(df, test_size=0.2, random_state=42)\nmetrics = evaluate_model(model, test_df, test_df[\"<target_column>\"])\nmetrics"
+    },
+    {
+      "type": "code",
+      "code": "# 4d) For a CLASSIFIER, see WHERE the errors land — plot_confusion_matrix renders a\n#     labeled heatmap (rows = actual, cols = predicted). normalize=True shows the\n#     per-true-class share, which reads better on imbalanced classes. (Skip for\n#     regression.)\nplot_confusion_matrix(model, test_df, test_df[\"<target_column>\"], normalize=True)"
+    },
+    {
+      "type": "code",
+      "code": "# 5) Persist the trained model to S3 as a portable .joblib artifact, then reload it\n#    (in this or any other notebook) with load_model — the shipped-model round trip.\nuri = save_model(model, \"<your-bucket>\", \"models/<name>.joblib\")\nprint(\"saved:\", uri)\n\n# later / elsewhere:\n# clf = load_model(\"<your-bucket>\", \"models/<name>.joblib\")\n# predict(clf, new_rows)"
+    }
+  ]
+}

@@ -1,0 +1,216 @@
+[
+  {
+    "id": "aws_data_sources",
+    "name": "AWS Data Sources",
+    "icon": "☁️",
+    "file": "aws_data_sources.notebook.json",
+    "description": "Query Athena, S3 Tables (Iceberg), DynamoDB, S3, and a Bedrock Knowledge Base from the sandbox",
+    "showcasedFeatures": [
+      "Amazon Athena",
+      "Amazon S3 Tables",
+      "Amazon DynamoDB",
+      "Amazon S3",
+      "Amazon Bedrock Knowledge Bases",
+      "SQL cells",
+      "Cross-source SQL"
+    ]
+  },
+  {
+    "id": "voice_of_customer",
+    "name": "Voice of the Customer (LLM)",
+    "icon": "🗣️",
+    "file": "voice_of_customer.notebook.json",
+    "description": "Mine raw reviews with Bedrock LLMs — sentiment, issue themes, extraction, semantic search — then join to Athena revenue for a product action plan",
+    "showcasedFeatures": [
+      "Amazon Bedrock",
+      "Semantic search",
+      "Amazon DynamoDB",
+      "Amazon Athena",
+      "SQL cells"
+    ]
+  },
+  {
+    "id": "ml_inference",
+    "name": "ML: Return-Risk Scorekeeper",
+    "icon": "🎯",
+    "file": "ml_inference.notebook.json",
+    "description": "Train a scikit-learn model on Athena features labelled by the Iceberg order lifecycle — by hand and as a one-line train_model call — ship it to S3 with save_model/load_model, score the catalog into a product action list, then optionally export to ONNX and deploy to real-time endpoints in BOTH hosting flavors (serverless + instance) with stop/start",
+    "showcasedFeatures": [
+      "In-VM ML training",
+      "Amazon Athena",
+      "Amazon S3 Tables",
+      "Amazon S3",
+      "ONNX export",
+      "Amazon SageMaker AI",
+      "Model endpoints"
+    ]
+  },
+  {
+    "id": "sagemaker_training",
+    "name": "SageMaker: Train at Scale",
+    "icon": "🛰️",
+    "file": "sagemaker_training.notebook.json",
+    "description": "Train a return-risk model on SageMaker-managed compute with the sm_* helpers — build features from Athena + Iceberg, submit a non-blocking sm_train job, poll it, sm_load_model → predict and predict_batch the catalog, then optionally sm_deploy_serverless it as a serverless real-time endpoint (sm_predict / sm_delete_endpoint)",
+    "showcasedFeatures": [
+      "Amazon SageMaker AI",
+      "Amazon Athena",
+      "Amazon S3 Tables",
+      "Model endpoints"
+    ]
+  },
+  {
+    "id": "sagemaker_bigdata",
+    "name": "Big Data ML: Train from S3, Serve Two Ways",
+    "icon": "📦",
+    "file": "sagemaker_bigdata.notebook.json",
+    "description": "Train on data too big for the VM: UNLOAD a joined Athena+Iceberg feature table to S3 (shown both as the unload_athena_to_s3 helper and a native SQL UNLOAD cell — rows never enter the sandbox), sm_train straight from the S3 pointer across xgboost + lightgbm, build a nightly hold list with predict_batch, then deploy the champion TWO ways — serverless for the batch job, instance for a real-time checkout widget",
+    "showcasedFeatures": [
+      "Amazon SageMaker AI",
+      "Amazon Athena",
+      "Amazon S3 Tables",
+      "Amazon S3",
+      "SQL cells",
+      "Model endpoints"
+    ]
+  },
+  {
+    "id": "cloudwatch_logs",
+    "name": "CloudWatch Logs Analysis",
+    "icon": "🔎",
+    "file": "cloudwatch_logs.notebook.json",
+    "description": "Analyze this notebook's own CloudWatch logs with no setup — tail/grep/Insights/plain-English (read_logs, grep_logs, tail_logs, ask_logs), chart log levels and an error trend, then go fleet-wide across every MicroVM log group",
+    "showcasedFeatures": [
+      "Amazon CloudWatch Logs",
+      "Amazon Bedrock",
+      "Interactive charts"
+    ]
+  },
+  {
+    "id": "sales_analysis",
+    "name": "Sales Data Analysis",
+    "icon": "📊",
+    "file": "sales_analysis.notebook.json",
+    "description": "Query real orders from Athena with SQL, then chart top products and revenue trends with Plotly",
+    "showcasedFeatures": [
+      "Amazon Athena",
+      "SQL cells",
+      "Interactive charts"
+    ]
+  },
+  {
+    "id": "time_series",
+    "name": "Time Series Forecasting",
+    "icon": "📈",
+    "file": "time_series.notebook.json",
+    "description": "Turn real S3 clickstream into a daily series, analyze weekday/seasonal patterns, and forecast with confidence intervals",
+    "showcasedFeatures": [
+      "Amazon S3",
+      "SQL cells",
+      "Interactive charts"
+    ]
+  },
+  {
+    "id": "burst_demo",
+    "name": "Memory & CPU Burst Demo",
+    "icon": "⚡",
+    "file": "burst_demo.notebook.json",
+    "description": "Watch the MicroVM scale memory and CPU under heavy load",
+    "showcasedFeatures": [
+      "Memory & CPU burst",
+      "Interactive parameters",
+      "Cost tracking"
+    ]
+  },
+  {
+    "id": "reactive_dependencies",
+    "name": "Reactive Dependencies",
+    "icon": "🔗",
+    "file": "reactive_dependencies.notebook.json",
+    "description": "Reactive auto-run across dependent SQL and Python cells",
+    "showcasedFeatures": [
+      "Reactive execution",
+      "Interactive parameters",
+      "SQL cells",
+      "Cross-source SQL",
+      "Amazon Athena",
+      "Amazon S3 Tables",
+      "Amazon DynamoDB"
+    ]
+  },
+  {
+    "id": "interactive_params",
+    "name": "Interactive Parameters",
+    "icon": "🎛️",
+    "file": "interactive_params.notebook.json",
+    "description": "Parameterize notebooks with interactive widgets, including dropdowns driven dynamically by a variable",
+    "showcasedFeatures": [
+      "Interactive parameters"
+    ]
+  },
+  {
+    "id": "data_cleaning",
+    "name": "Data Cleaning & Transform",
+    "icon": "🧹",
+    "file": "data_cleaning.notebook.json",
+    "description": "Reconcile real customers and orders into a tidy table — parse dates, handle join nulls, derive tiers, validate with SQL",
+    "showcasedFeatures": [
+      "Amazon Athena",
+      "SQL cells"
+    ]
+  },
+  {
+    "id": "statistical_analysis",
+    "name": "Statistical Analysis",
+    "icon": "🔬",
+    "file": "statistical_analysis.notebook.json",
+    "description": "Test a real hypothesis (verified vs unverified reviews, or Premium vs Standard customers) with a t-test, effect size, and CIs",
+    "showcasedFeatures": [
+      "Amazon Athena",
+      "Amazon DynamoDB",
+      "Interactive parameters"
+    ]
+  },
+  {
+    "id": "public_apis",
+    "name": "Public API Data Analysis",
+    "icon": "🌐",
+    "file": "public_apis.notebook.json",
+    "description": "A market-expansion brief from free no-auth APIs: market size (World Bank), operating conditions (Open-Meteo), treasury exposure (CoinGecko)",
+    "showcasedFeatures": [
+      "Public APIs",
+      "Interactive parameters"
+    ]
+  },
+  {
+    "id": "helper_functions",
+    "name": "Helper Functions Demo",
+    "icon": "🧰",
+    "file": "helper_functions.notebook.json",
+    "description": "Tour every pre-loaded helper: discover them with helpers(), load from S3/DynamoDB/Athena/Aurora/URLs, query a Bedrock Knowledge Base, run LLMs, train a model in one line with train_model, profile, visualize, export, and price your session",
+    "showcasedFeatures": [
+      "Helper library",
+      "Amazon S3",
+      "Amazon DynamoDB",
+      "Amazon Athena",
+      "Amazon Aurora PostgreSQL",
+      "Amazon Bedrock Knowledge Bases",
+      "Amazon Bedrock",
+      "In-VM ML training",
+      "Cost tracking"
+    ]
+  },
+  {
+    "id": "notebook_analytics",
+    "name": "Notebook Analytics & Cost",
+    "icon": "💰",
+    "file": "notebook_analytics.notebook.json",
+    "description": "See your open notebooks' runs and cost, then pick one to deep-dive its versions, runs, execution times, CPU, memory, and cost (needs --AuroraSetup)",
+    "showcasedFeatures": [
+      "Amazon Aurora PostgreSQL",
+      "Run history",
+      "Cost tracking",
+      "Interactive parameters"
+    ],
+    "requiresAurora": true
+  }
+]

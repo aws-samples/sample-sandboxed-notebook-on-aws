@@ -1,0 +1,1084 @@
+.connection-panel {
+  /* Viewport-level overlay so it sits on top of ALL panels — including the
+     bottom panel (Logs/Intel/Terminal) and the AI chat — not just the notebook
+     area. (Was position:absolute, which trapped it inside the notebook region.)
+     z-index stays below the true modals (Intel/confirm at 9999–10000). */
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  z-index: 500;
+  /* The safe margin around the card; the card itself never exceeds the window
+     (max-height below), only its middle body scrolls. */
+  padding: 12px;
+  animation: fadeIn 0.15s ease;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The dialog: a flex column of a fixed header, a scrolling body, the pinned
+   warning / error strip and a fixed footer. */
+.connection-card {
+  /* Grows with the window: up to 820 px, never narrower than the window allows
+     (24 px margin each side), so long ids and the spec grid get room. */
+  width: min(820px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  box-shadow: var(--shadow-lg);
+}
+.connection-card:focus { outline: none; }
+
+.cp-head {
+  flex: none;
+  padding: 20px 22px 16px;
+}
+.cp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cp-pinzone {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-subtle);
+}
+.cp-pinzone .connection-error,
+.cp-pinzone .connection-launching { margin-top: 0; padding: 8px 12px; line-height: 1.45; }
+.cp-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-default);
+}
+.cp-foot-hint {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.cp-foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+/* Every action button of the dialog (primary and secondary, footer and the
+   Connected card): ONE size in every theme, whatever its border (the height is
+   border-box, so the 2 px secondary border adds nothing). The icon sits left of
+   the label with an 8 px gap; theme-light.css sets only colours. */
+.connection-card :is(.connect-btn, .dismiss-btn) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+  border-radius: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.connection-card .dismiss-btn:not(.dismiss-btn-primary) { border-width: 2px; }
+/* The 16 px action icon; the busy ring below takes the same slot. */
+.cp-btn-icon { flex: none; width: 16px; height: 16px; }
+.connection-info-top .dismiss-btn { margin-left: 0; }
+/* The arch icon in a filled button takes the button's text colour (the arch
+   tints are made for neutral surfaces). */
+.connect-btn .arch-badge svg { color: currentColor; }
+/* Busy state: a small ring before "Restoring..." / "Launching...". */
+.cp-spinner {
+  flex: none;
+  box-sizing: border-box;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 1px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cp-spin 0.8s linear infinite;
+}
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+
+.connection-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+
+.connection-desc {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+  line-height: 1.55;
+}
+
+.connection-detecting {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  padding: var(--space-2) 0;
+}
+
+.connection-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.connection-error {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--accent-danger-subtle);
+  border: 1px solid var(--accent-danger-muted);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--accent-danger);
+}
+
+.connection-launching {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--accent-primary);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  align-items: center;
+}
+
+/* ── Two collapsible sections (accordion: one open at a time) ────────────
+   Base rules serve ember (and light / dark through the tokens); theme-light.css
+   adds the light / dark fills. Blue (the theme accent) only on the open
+   section's thin border, its chevron and the focus ring. */
+.cp-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cp-sec {
+  border: 2px solid var(--border-default);
+  border-radius: 11px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+/* The open section: the accent as a 2 px outline only (no fill). */
+.cp-sec-open {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-default));
+}
+.cp-sec-h {
+  margin: 0;
+  font: inherit;
+}
+.cp-sec-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--surface-3);
+  border: 0;
+  border-radius: 0;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cp-sec-head[aria-disabled="true"] { cursor: default; }
+.cp-sec-open .cp-sec-head { border-bottom: 1px solid var(--border-default); }
+.cp-sec-head:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+.cp-sec-chev {
+  flex: none;
+  color: var(--text-tertiary);
+  transition: transform 150ms ease;
+}
+.cp-sec-open .cp-sec-chev {
+  color: var(--accent-primary);
+  transform: rotate(90deg);
+}
+.cp-sec-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cp-sec-sum {
+  margin-left: auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+/* Closed panel: 0 rows high, transparent and inert; opening animates the row
+   height and the opacity over 150 ms. */
+.cp-sec-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition: grid-template-rows 150ms ease, opacity 150ms ease, visibility 0s linear 150ms;
+}
+.cp-sec-open .cp-sec-panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition: grid-template-rows 150ms ease, opacity 150ms ease, visibility 0s;
+}
+.cp-sec-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.cp-sec-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+/* Small caps label ("SAVED INSTANCE", "CPU ARCHITECTURE"). */
+.cp-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.cp-card {
+  background: var(--surface-3);
+  border: 2px solid var(--border-default);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+.cp-saved-spec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.cp-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 0 8px;
+}
+.cp-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.cp-meta code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* "Restore on a different instance type": a disclosure row; expanded, the two
+   selects sit side by side (stacked on a narrow window). */
+.restore-alt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.restore-alt-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  width: 100%;
+  padding: 3px 2px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--accent-primary);
+  cursor: pointer;
+}
+.restore-alt-toggle:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.restore-alt-chev { flex: none; transition: transform 150ms ease; }
+.restore-alt-toggle[aria-expanded="true"] .restore-alt-chev { transform: rotate(90deg); }
+.restore-alt-text { font-weight: 500; }
+.restore-alt-state {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.restore-alt-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+.restore-alt-body[hidden] { display: none; }
+.restore-alt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* The choice notes: a faint status tint, the status colour on the 3 px left
+   edge and the title only. */
+.restore-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.restore-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  padding: 10px 12px 10px 14px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  box-shadow: inset 3px 0 0 var(--border-strong);
+  overflow-wrap: anywhere;
+}
+.restore-note-title { display: block; font-weight: 600; margin-bottom: 3px; }
+.restore-note-warn {
+  background: var(--accent-warning-subtle);
+  border-color: color-mix(in srgb, var(--accent-warning) 40%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent-warning);
+}
+.restore-note-warn .restore-note-title { color: var(--accent-warning); }
+.restore-note-strong {
+  /* 6 % of the danger colour (the -subtle token's 10 % left ember's red title
+     at 4.4:1; this keeps it above 4.5:1). */
+  background: color-mix(in srgb, var(--accent-danger) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent-danger) 40%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent-danger);
+}
+.restore-note-strong .restore-note-title { color: var(--accent-danger); }
+/* The pinned strip: the strongest note's short text on one line (ellipsis on a
+   narrow window); the full note stays in the body. */
+.cp-pin {
+  padding: 7px 12px 7px 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-pin .restore-note-title { display: inline; margin: 0; }
+/* Arch badge in a small-caps label ("MEMORY TIER · x86_64"): the arch name's own case. */
+.cp-label .arch-badge {
+  margin-left: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Narrow window: one column everywhere. */
+@media (max-width: 520px) {
+  .connection-panel { padding: 8px; }
+  .connection-card { max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); }
+  .cp-head, .cp-foot, .cp-pinzone { padding-left: 14px; padding-right: 14px; }
+  .cp-body { padding-left: 14px; padding-right: 14px; }
+  .cp-sec-head { padding-left: 12px; padding-right: 12px; }
+  .cp-sec-content { padding: 14px 12px; }
+  .connection-card :is(.connect-btn, .dismiss-btn) { padding: 0 16px; }
+  /* .connection-card raises the specificity above the base two-column rules
+     defined later in this file. */
+  .connection-card .restore-alt-body,
+  .connection-card .launch-config-specs { grid-template-columns: 1fr; }
+  .cp-sec-sum { margin-left: 20px; text-align: left; flex-basis: 100%; }
+}
+/* Short window: the description gives its lines to the body. */
+/* Short window: the description gives its lines to the body, and the fixed
+   header / footer give back some of their padding (the buttons keep 40 px). */
+@media (max-height: 480px) {
+  .cp-head { padding-top: 12px; padding-bottom: 8px; }
+  .cp-head .connection-title { margin-bottom: 0; }
+  .cp-head .connection-desc { display: none; }
+  .cp-foot { padding-top: 10px; padding-bottom: 10px; }
+  .cp-pinzone { padding-top: 8px; padding-bottom: 8px; }
+  .cp-body { gap: 12px; }
+  .cp-sections { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .connection-panel { animation: none; }
+  .cp-sec-panel,
+  .cp-sec-open .cp-sec-panel,
+  .cp-sec-chev,
+  .restore-alt-chev { transition: none; }
+  .cp-spinner { animation: none; }
+}
+
+/* Launch section: the config sits flat inside the section (no extra box). */
+.cp-sec .launch-config {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cp-sec .launch-config-tabs {
+  margin-bottom: 0;
+}
+.cp-sec .launch-config-specs { gap: 14px 16px; }
+.cp-sec .launch-spec-item {
+  background: var(--surface-3);
+  border: 2px solid var(--border-default);
+  border-radius: 10px;
+  padding: 12px 14px;
+  gap: 7px;
+}
+.cp-sec .launch-config-note {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-tertiary);
+}
+.cp-sec .connection-subhint { margin: 0; }
+/* Sub-tabs "Instance spec" | "Secrets & env vars" as small pills (ember; light
+   and dark use their segmented control from theme-light.css). */
+.cp-sec .launch-config-tabs {
+  align-self: flex-start;
+  border-bottom: 0;
+  gap: 6px;
+}
+.cp-sec .launch-tab {
+  flex: none;
+  padding: 4px 10px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-default);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-secondary);
+}
+.cp-sec .launch-tab-active {
+  background: var(--surface-1);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.cp-sec .launch-tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+/* Labels on the raised cards: secondary text keeps AA on ember's raised fill. */
+.cp-label,
+.cp-sec .launch-spec-label {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+.cp-sec .launch-spec-peak { font-size: 12px; line-height: 1.45; margin-top: 0; color: var(--text-secondary); }
+/* "Fixed by warm pool": the warning text colour (the select beside it is
+   disabled), so a locked setting reads at a glance. */
+.cp-sec .launch-spec-peak.launch-spec-lock {
+  color: var(--accent-warning);
+  font-weight: 500;
+}
+.launch-spec-lock-icon {
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+/* A locked (disabled) select looks disabled: dimmed, no hover accent. */
+.launch-spec-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.launch-spec-select:disabled:hover { border-color: var(--input-border); }
+
+.connect-btn {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border: none;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.connect-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.connect-btn:active {
+  transform: translateY(0);
+}
+
+.connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dismiss-btn {
+  background: var(--surface-4);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dismiss-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.connection-info {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--accent-success-subtle);
+  border: 1px solid var(--accent-success-muted);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--accent-success);
+}
+
+.connection-info-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 0;
+  padding: var(--space-4);
+  gap: var(--space-4);
+}
+
+.connection-info-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* "Connected" and its Dismiss share the card's first row, so the id rows below
+   get the card's full width (one line from 700 px). */
+.connection-info-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.connection-info-status {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--accent-success);
+}
+
+.connection-info-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.connection-info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.connection-info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 56px;
+}
+
+.connection-info-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  /* One line while there is room (the dialog is wider now); on a narrow window it
+     wraps at any character instead of overflowing. */
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .connection-info-id { white-space: normal; word-break: break-all; }
+}
+
+.connection-info-spec {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.connection-info-note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.connection-divider {
+  height: 1px;
+  background: var(--border-default);
+  margin: var(--space-4) 0;
+}
+
+.dismiss-btn-primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-inverse);
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: var(--space-3);
+}
+
+.dismiss-btn-primary:hover {
+  filter: brightness(1.1);
+  color: var(--text-inverse);
+}
+/* On the Connected card, Dismiss means 'stay on this VM': the success tone, to
+   match the green 'Connected' status next to it. */
+.connection-info-top .dismiss-btn-primary {
+  background: var(--accent-success);
+  border-color: var(--accent-success);
+  color: var(--text-on-status, #04140a);
+}
+.connection-info-top .dismiss-btn-primary:hover {
+  filter: brightness(1.08);
+  color: var(--text-on-status, #04140a);
+}
+
+.connection-hint {
+  padding: var(--space-3);
+  background: var(--accent-primary-subtle);
+  border: 1px solid var(--accent-primary-muted);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--accent-primary);
+  line-height: var(--line-height-normal);
+}
+
+/* Demoted variant — quiet helper text (no heavy blue box) for low-signal state
+   like "launch or attach". Keeps the strong banner treatment for real callouts. */
+.connection-subhint {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  line-height: var(--line-height-normal);
+}
+.connection-subhint code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Launch Configuration */
+.launch-config {
+  margin: var(--space-3) 0;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.launch-config-specs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3) var(--space-4);
+  align-items: start;
+}
+
+/* Spec items are flat — the ONLY boxed thing is the <select> control, so users
+   can tell at a glance which fields are editable vs read-only. */
+.launch-spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+  min-width: 0;
+}
+/* (no distinct box for editable — the select carries the affordance) */
+.launch-spec-editable { background: none; border: none; }
+
+.launch-spec-select {
+  width: 100%;
+  background: var(--input-bg);
+  border: 2px solid var(--input-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  padding: 8px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.launch-spec-select:hover {
+  border-color: var(--accent-primary);
+}
+
+.launch-spec-select:focus {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.launch-spec-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--accent-primary);
+}
+/* Arch badge in a label ("Baseline Image Size · x86_64"): keep the arch name's
+   own case ("x86_64", not "X86_64"). */
+.launch-spec-label .arch-badge {
+  margin-left: 6px;
+  text-transform: none;
+}
+/* Arch select + its icon on one row; the select keeps the remaining width. */
+.launch-spec-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.launch-spec-select-row .launch-spec-select { flex: 1; min-width: 0; }
+
+.launch-spec-value {
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  font-weight: 500;
+  padding: 7px 0;   /* align the read-only value row with the select's text baseline */
+}
+
+/* Peak burst — a quiet helper line under the Baseline select (not a control).
+   The dynamic sizing (GB/vCPU) is bolded + accent so the user sees it update. */
+.launch-spec-peak {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.launch-spec-peak strong {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.launch-config-note {
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-normal);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.launch-config-note strong {
+  color: var(--accent-primary);
+}
+
+/* Secrets & Env Vars Section */
+.launch-config-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 12px;
+}
+.launch-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.launch-tab:hover {
+  color: var(--text-secondary);
+}
+.launch-tab-active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+.launch-secret-path {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: block;
+  margin-left: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
+.launch-secret-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.launch-secret-header:hover .launch-secret-name {
+  color: var(--accent-primary);
+}
+
+.launch-secret-chevron {
+  font-size: 12px;
+  color: var(--text-muted);
+  width: 12px;
+}
+
+.launch-secret-badge {
+  font-size: 12px;
+  background: var(--accent-primary);
+  color: white;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: auto;
+}
+
+.launch-secret-keys-panel {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.launch-secret-keys-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.launch-secret-keys-title code {
+  color: var(--accent-primary);
+}
+
+.launch-secret-selected-summary {
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent-primary-muted, rgba(91,159,255,0.2));
+}
+.launch-secret-selected-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+.launch-secret-selected-row code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.launch-secret-envvar-display {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.launch-secret-keys {
+  margin-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 0;
+}
+
+.launch-secret-key-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.launch-secret-key-name {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.launch-secrets-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.launch-secrets-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.launch-secrets-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.launch-secret-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--surface-1);
+}
+.launch-secret-selected {
+  background: var(--accent-primary-subtle, rgba(91,159,255,0.08));
+  border: 1px solid var(--accent-primary-muted, rgba(91,159,255,0.3));
+}
+.launch-secret-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.launch-secret-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.launch-secret-envvar {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 2px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  margin-left: 20px;
+  width: calc(100% - 20px);
+}
+
+.launch-secret-envvar-inline {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 2px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--surface-0);
+  color: var(--accent-primary);
+  width: 140px;
+  font-weight: 600;
+}
+
+.launch-secret-arrow {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.launch-envvar-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.launch-envvar-key {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 2px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+.launch-envvar-value {
+  flex: 2;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 2px solid var(--border-default);
+  border-radius: 3px;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+.launch-envvar-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.launch-envvar-remove:hover {
+  color: var(--accent-danger);
+}
+.launch-envvar-add {
+  background: none;
+  border: 1px dashed var(--border-default);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.launch-envvar-add:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}

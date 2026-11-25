@@ -1,0 +1,4 @@
+ERROR: Ignored the following yanked versions: 0.20.0, 1.0.0
+ERROR: Ignored the following versions that require a different python version: 1.6.0 Requires-Python >=3.12
+ERROR: Could not find a version that satisfies the requirement sqlalchemy-utils[babel]~=9.0; python_version >= "3.8" (from versions: 0.36.8, 0.37.0, 0.41.1, 0.41.2)
+ERROR: No matching distribution found for sqlalchemy-utils[babel]~=9.0; python_version >= "3.8"

@@ -1,0 +1,2 @@
+Collecting opencv-python==4.5.1.48
+  Downloading opencv-python-4.5.1.48.tar.gz (88.3 MB)

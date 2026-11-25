@@ -1,0 +1,73 @@
+# MicroVM sandbox dependencies (baked into the Lambda MicroVM image)
+# IMPORTANT: Use exact pins for reproducible, fast builds.
+# These versions have prebuilt wheels for Linux/AL2023 (aarch64/x86_64).
+
+# Sandbox server
+fastapi==0.115.12
+uvicorn==0.34.2
+httpx==0.28.1
+
+# Pre-baked data science packages (available immediately on launch)
+pandas==2.2.3
+numpy==2.2.6
+polars==1.30.0
+matplotlib==3.10.3
+# Pillow is a transitive dep of matplotlib; pin a floor to pull in a version that
+# fixes CVE-2023-50447 (arbitrary code execution) and ~17 other image-parsing CVEs
+# present in the previously-resolved 9.5.0. Floor (not ==) so it stays within
+# matplotlib's supported range while guaranteeing the security fixes.
+pillow>=11.0.0
+requests==2.32.3
+psutil==7.0.0
+
+# File format support
+openpyxl==3.1.5
+xlrd==2.0.2
+pyarrow==19.0.1
+
+# Statistical analysis
+scipy==1.15.3
+
+# Classic ML: train/load a model and run inference (powers the ML helpers —
+# load_model / predict / model_info). scikit-learn ships prebuilt aarch64 + x86_64 wheels
+# and reuses the numpy+scipy already pinned above, so the marginal image cost is
+# small (~9MB download). joblib is sklearn's own persistence format (and a dep),
+# pinned explicitly since the load_model/save_model helpers use it directly.
+# ONNX inference (onnxruntime) is intentionally NOT baked in — it's a large native
+# runtime (~21MB) only needed to RUN a graph, installed on demand by the load_onnx
+# helper. (The lightweight `onnx` schema reader used by the proxy's Data Catalog lives
+# in proxy/requirements.txt, not here — the VM never reads .onnx graphs at rest.)
+# Pinned to 1.9.x (was 1.6.1) to MATCH the SageMaker SKLearn serving container,
+# whose only available tags are 1.2-1 and 1.9-0 (no 1.6.x). This train/serve
+# version parity is required for Phase 2 real-time endpoints: a ColumnTransformer
+# pickled on 1.6.1 fails to UNPICKLE on 1.9 (removed internal _RemainderColsList),
+# so a locally-trained model could not be served on the 1.9-0 container without
+# this alignment. Verified our train_model/predict/predict_proba code paths run
+# clean on 1.9 (scripts/test_sklearn_19_compat.sh).
+scikit-learn==1.9.1
+joblib==1.4.2
+
+# AWS SDK (for DynamoDB, S3 access from within the MicroVM)
+boto3==1.43.51
+
+# Session checkpoint/restore (namespace serialization)
+dill==0.4.0
+
+# SQL engine (query DataFrames, CSV/Parquet files, and S3 directly with SQL)
+duckdb==1.2.2
+
+# Interactive charting (renders as HTML with zoom, pan, hover)
+plotly==6.9.0
+
+# Inline lint + format (powers the notebook's /lint and /format endpoints).
+# ruff ships prebuilt wheels for Linux AL2023 (aarch64/x86_64) and is a single
+# self-contained binary, so it adds negligible cold-start/image weight. Pinned
+# exact for reproducible builds. ruff handles PYTHON cells.
+ruff==0.16.0
+
+# SQL cell format + basic (syntax) lint for the same /lint and /format endpoints.
+# sqlglot is a pure-Python SQL parser/transpiler (~8MB, zero dependencies), so it
+# adds negligible image weight and needs no native wheels. We use it to pretty-print
+# SQL cells (duckdb dialect, matching the notebook's SQL engine) and to surface parse
+# errors as a single lint diagnostic. It is NOT a rule-based linter (no style rules).
+sqlglot==30.19.0

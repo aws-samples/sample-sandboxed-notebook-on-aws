@@ -1,0 +1,38 @@
+{
+  "name": "Train on SageMaker from S3 (data never enters the VM)",
+  "desc": "UNLOAD a huge Athena result to S3, train sm_train straight off the S3 pointer, then load + score — for data too big to pull into the sandbox",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "## 📦 Train on SageMaker from S3 — the VM never touches the data\n\nThe *managed training* recipe still pulls your rows into a DataFrame first (`read_athena(...) → sm_train(df, ...)`), so it's bounded by the sandbox's memory. When the **training set itself is too big to live in the VM**, flip the data flow around:\n\n1. **`unload_athena_to_s3(sql)`** — Athena runs the query on its OWN fleet and writes the result straight to S3. No rows come back to the VM; you get a lightweight **pointer** (an `UnloadResult`: `.s3_uri`, `.file_count`, `.total_bytes`).\n2. **`sm_train(pointer, target, task=...)`** — the SageMaker instance reads the training set **directly from S3**. The VM only samples ONE file to infer the feature split; the full dataset never materializes in the sandbox.\n\n```mermaid\ngraph LR\n  Q[\"Athena SELECT / JOIN\"] -->|unload_athena_to_s3| S3[\"Parquet in S3 (VM-free)\"]\n  S3 -->|pointer| T[\"sm_train(pointer, task=…)\"]\n  T -. managed compute reads S3 directly .-> J[\"SageMaker Training Job\"]\n  J -->|sm_load_model| M[\"model in VM\"]\n  M -->|predict_batch| P[\"scored rows\"]\n```\n\n**When to reach for this:** `read_athena(...)` into a DataFrame would blow the VM's memory, or you're prepping millions of rows / a big JOIN. For data that comfortably fits the VM, the plain *managed training* recipe (DataFrame → `sm_train`) is simpler.\n\n**Two things to remember for the pointer path:**\n- It **requires `task=`** (`\"classification\"` or `\"regression\"`) — the VM can't infer it without reading the data.\n- It's **scikit-learn only** today (every estimator — random_forest/xgboost/lightgbm/… — works, same script-mode path). `data_format=` is auto-detected (UNLOAD writes Parquet by default).\n\n**Cost & timing:** the UNLOAD is an Athena query (scanned-bytes billing, seconds–minutes); the training job takes minutes (instance spin-up ~3–4 min) and bills only while it runs. Nothing stands after it finishes — see the *Deploy a real-time endpoint* recipe to host the model."
+    },
+    {
+      "type": "code",
+      "code": "# 1) UNLOAD a (potentially huge) Athena result straight to S3 — Athena transforms\n#    and writes server-side, so NOT A SINGLE ROW enters the VM. Cross-database /\n#    cross-catalog JOINs work exactly like read_athena (qualify as db.table).\n#    Returns a POINTER (UnloadResult), not a DataFrame.\nprep = unload_athena_to_s3('''\n    SELECT o.order_id, o.total, o.quantity, o.shipping_country, o.payment_method,\n           p.category, p.brand, p.price,\n           CASE WHEN e.status = 'returned' THEN 1 ELSE 0 END AS returned\n    FROM microvm_demo_db.orders o\n    JOIN microvm_demo_db.products p   ON o.product_id = p.product_id\n    JOIN microvm_demo_iceberg.order_events e ON o.order_id = e.order_id\n''')\nprint(prep.s3_uri)\nprint(f\"{prep.file_count} file(s), {prep.total_bytes/1e6:.1f} MB written by Athena\")"
+    },
+    {
+      "type": "markdown",
+      "code": "### Alternative: UNLOAD from a SQL cell\n\nThe step above uses the Python helper because it hands back a `prep` pointer the next cell needs. You can also run an UNLOAD **directly in a SQL cell** — same engine, result is the file list:\n\n```sql\nUNLOAD (\n  WITH labelled AS (\n    SELECT o.order_id, o.total, o.quantity, o.shipping_country, o.payment_method,\n           p.category, p.brand, p.price,\n           CASE WHEN e.status = 'returned' THEN 1 ELSE 0 END AS returned\n    FROM microvm_demo_db.orders o\n    JOIN microvm_demo_db.products p ON o.product_id = p.product_id\n    JOIN microvm_demo_iceberg.order_events e ON o.order_id = e.order_id\n  )\n  SELECT * FROM labelled\n) TO 's3://<your-artifact-bucket>/unload/returnrisk/' WITH (format='PARQUET')\n```\n\nOmit the `TO '...'` and a fresh unique prefix is chosen for you. To then train from it, pass the S3 prefix string to `sm_train` (`sm_train('s3://.../unload/returnrisk/', target='returned', task='classification')`)."
+    },
+    {
+      "type": "code",
+      "code": "# 1b) (optional) PEEK at what landed — read just the part files back WITHOUT loading\n#     the whole set. Athena UNLOAD writes EXTENSIONLESS parquet, so pass\n#     format='parquet' (auto-detect skips files with no extension). Keep this to a\n#     small sample; the point of the pointer path is to NOT pull the full data in.\n# sample = read_s3_prefix(prep.s3_uri, format='parquet')\n# print(sample.shape); sample.head()"
+    },
+    {
+      "type": "code",
+      "code": "# 2) SUBMIT training straight from the S3 pointer — NON-BLOCKING, returns a handle in\n#    ~seconds. The SageMaker instance reads the data from S3; the VM only samples ONE\n#    file to infer the feature split. The pointer path REQUIRES task=.\n#    Optional: estimator= (random_forest default · gradient_boosting · xgboost ·\n#    lightgbm · logistic · linear · ridge), instance= (e.g. 'ml.m5.2xlarge'),\n#    features=/categorical=/numeric=, data_format= ('csv'|'parquet', auto by default).\njob = sm_train(prep, target=\"returned\", task=\"classification\", estimator=\"xgboost\")\nprint(\"submitted:\", job)"
+    },
+    {
+      "type": "code",
+      "code": "# 3) POLL until it finishes — RE-RUN this cell every ~30s. Status walks\n#    'InProgress (Nm elapsed)' → 'Completed (Nm)' (or 'Failed: <reason>').\n#    Only move on once it reads Completed.\nprint(sm_training_job_status(job))"
+    },
+    {
+      "type": "code",
+      "code": "# 4) Load the finished model into the VM. sm_load_model WAITS for the job, then\n#    returns a complete scikit-learn Pipeline that takes RAW rows (plain joblib.load —\n#    no rewrap). xgboost/lightgbm libs are auto-installed in the VM on load.\nmodel = sm_load_model(job)\nmodel_info(model)"
+    },
+    {
+      "type": "code",
+      "code": "# 5) Score. predict / predict_batch accept EITHER the loaded model OR the job handle\n#    (auto-resolved via sm_load_model) — same surface for local and SageMaker models.\n#    Score a bounded hold set you CAN fit in the VM (don't pull the full S3 set back):\nhold = read_athena(\"SELECT * FROM microvm_demo_db.orders LIMIT 5000\")\nscored = predict_batch(job, hold, output_col=\"prediction\")\nscored.head()\n\n# Rank by probability for an action list (classification):\n# ranked = predict_batch(job, hold, output_col=\"return_prob\", proba=True)\n# ranked.sort_values(\"return_prob\", ascending=False).head(10)"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# Build context = this directory (agent/ai_assistant/, the runtime codeLocation).
+# Keep the image clean + reproducible: the Dockerfile does `COPY . /app/ai_assistant/`,
+# so exclude everything that must NOT land in the image.
+
+# Python bytecode / caches (regenerated in-image)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# A local uv/venv must never shadow the image's uv-synced /app/ai_assistant/.venv
+.venv/
+venv/
+
+# The Dockerfile itself and container metadata don't belong inside the image
+Dockerfile
+.dockerignore
+
+# OS / editor cruft
+.DS_Store
+*.egg-info/
+.pytest_cache/
+.ruff_cache/

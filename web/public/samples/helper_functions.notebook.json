@@ -1,0 +1,559 @@
+{
+  "name": "Helper Functions Demo",
+  "description": "Tour the pre-loaded helper library: discover everything with helpers(), load from S3/DynamoDB/Athena/Aurora/URLs, semantic search a Bedrock Knowledge Base, run LLMs, train a classic model in one line with train_model, profile and visualize, export, and price your own session — every helper is available in every cell, no imports.",
+  "savedAt": "2026-08-08T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🧰 Helper Functions Demo\n\nEvery notebook cell here comes with a **pre-loaded helper library** — no `import` needed. The helpers wrap the fiddly parts (AWS auth, pagination, dtype coercion, chart boilerplate) into one-liners so you can stay on the analysis.\n\n**What you'll tour**\n- **Discover** the whole library from a cell with `helpers()` (the in-notebook catalog)\n- **Load** from local files, S3 (auto-detect + typed readers, whole prefixes, downloads), DynamoDB (with plain-dict filters), **Athena / S3 Tables**, **Aurora**, and public URLs\n- **Discover** what you can query — `athena_tables` / `athena_schema`, `aurora_tables` / `aurora_schema`, `dynamodb_tables` / `dynamodb_schema`\n- **Ask questions** of a **Bedrock Knowledge Base** (semantic search + a cited answer)\n- **Run LLMs** with `invoke_llm` and the `llm_*` helpers (classify, extract, sentiment, summarize, map), plus `embed_texts` + `semantic_search`\n- **Train a classic model** in one line with `train_model`, then `model_info` / `predict_batch` / `save_model`\n- **Explore** with `profile`, `compare_df`, `list_s3`, `head_s3`, `@timer`\n- **Read env vars & secrets** — discover with `list_env` / `list_secret`, read with `get_env` / `get_secret` (smart typing, values stay hidden)\n- **Visualize** with one-line interactive Plotly charts\n- **Export** back to S3 (CSV / Parquet / JSON / Excel) / local\n- **Introspect** your own session and **estimate its cost**\n\nEvery reader shows up in the **Snippets** panel too. Run the cells top to bottom.\n\n```mermaid\ngraph LR\n  H[\"helpers(): discover the whole library\"] -.-> LOAD\n  SRC[\"Sources: local, S3, DynamoDB, Athena, Aurora, URLs, Bedrock KB\"] --> LOAD[\"read_* helpers → DataFrame\"]\n  LOAD --> EXP[\"Explore: profile, compare_df, list_s3, head_s3\"]\n  LOAD --> ML[\"LLMs: invoke_llm, llm_*, embed_texts, semantic_search\"]\n  LOAD --> TM[\"Classic ML: train_model → model_info / predict_batch / save_model\"]\n  LOAD --> VIZ[\"Visualize: one-line Plotly\"]\n  LOAD --> OUT[\"Export: to_s3_* / to_local\"]\n  EXP --> SESS[\"Introspect session + estimate cost\"]\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🪪 Who am I?\n\n`whoami()` reports the account, region, execution role, and artifacts bucket the VM is running as. We stash the result in `info` — later cells reuse `info['bucket']`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Show current AWS identity and environment\ninfo = whoami()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🧭 What's available? — `helpers()`\n\nBefore touring them one by one: **`helpers()`** is the in-notebook catalog of everything injected into your namespace — the same set the **Snippets** panel and autocomplete use, so it never drifts. Three ways to call it:\n\n- **`helpers()`** — the whole catalog as a table (category · name · signature · summary).\n- **`helpers(\"<category or text>\")`** — filter to a category or fuzzy-match a name (e.g. `helpers(\"Machine Learning\")`, `helpers(\"s3\")`).\n- **`helpers(some_function)`** — print one function's full signature + docstring (e.g. `helpers(train_model)`).\n\nIt's the fastest way to answer \"is there a helper for this?\" without leaving the cell.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# The whole catalog, grouped by category — a live table of every pre-loaded helper.\nhelpers()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Filter to one category (case-insensitive, partial match works too)...\ndisplay(helpers(\"Machine Learning\"))\n\n# ...or print ONE function's full signature + docstring — the in-cell reference.\nhelpers(train_model)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 📦 Data Loading\n\nLoad data from local files, S3, DynamoDB, or URLs — all in one line. The S3 readers come in `read_s3_csv` / `read_s3_parquet` / `read_s3_json` flavors; each accepts `(bucket, key)` or a full `s3://…` URI.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# What can I query right now? list_datasources() is the in-cell Data Sources panel:\n# every source this session knows about (local /tmp files, S3, DynamoDB, Athena,\n# Aurora, Bedrock KB) in one DataFrame. Filter by type, e.g. list_datasources('s3').\nlist_datasources()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Load a built-in sample dataset\n# Call with no args to see available datasets\ndf = sample_data('orders')\nprint(f\"Loaded {len(df)} rows\")\ndf.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Read CSV directly from S3 (uses the execution role — no credentials needed)\nbucket = info['bucket']\nclickstream = read_s3_csv(bucket, \"samples/clickstream_events.csv\")\nprint(f\"Loaded {len(clickstream)} rows from S3\")\nclickstream.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# DynamoDB, three ways: scan all, scan with a filter, or query by key.\n# read_dynamodb scans everything into a DataFrame...\nreviews = read_dynamodb(\"ecommerce-reviews\")\nprint(f\"Scan: {len(reviews)} items\")\n\n# ...pass a plain-dict filter to narrow it — operators like gte/lt/between/in,\n# no boto3 Attr import and floats are handled for you (DynamoDB wants Decimal).\ntop_rated = read_dynamodb(\"ecommerce-reviews\", filter={\"rating\": {\"gte\": 4}})\nprint(f\"Filter rating>=4: {len(top_rated)} items\")\n\n# ...read_dynamodb_query fetches ONE partition key (cheap — uses the index, no\n# condition expression to write). It must be the table's PARTITION key, so check\n# the schema first (see the next cell for dynamodb_schema).\nif 'productId' in reviews.columns and len(reviews):\n    pid = reviews['productId'].iloc[0]\n    one_product = read_dynamodb_query(\"ecommerce-reviews\", \"productId\", pid)\n    print(f\"Query productId={pid}: {len(one_product)} reviews\")\n    display(one_product.head())\nelse:\n    display(reviews.head())",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Fetch data from a public URL\niris = read_url(\"https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv\")\nprint(f\"Iris dataset: {iris.shape}\")\niris.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# read_s3 auto-detects the format from the file extension — one reader for\n# .csv / .parquet / .json / .xlsx, so you don't pick the typed variant by hand.\nclickstream2 = read_s3(bucket, \"samples/clickstream_events.csv\")   # same file, auto-detected\n# The typed readers still exist when you want to be explicit:\n#   read_s3_csv / read_s3_json / read_s3_parquet / read_s3_excel\nprint(f\"read_s3 loaded {len(clickstream2)} rows (auto-detected CSV)\")\nclickstream2.head(3)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# read_s3_prefix reads EVERY file under a prefix and concatenates them into ONE\n# DataFrame — the natural way to load a PARTITIONED dataset (many part files in\n# one folder, as Spark/Athena/Glue write them). samples/web_sessions_parquet/ is\n# ~8k web-session events split across 4 Parquet parts.\nsessions = read_s3_prefix(bucket, \"samples/web_sessions_parquet/\")\nprint(f\"read_s3_prefix stitched {len(sessions):,} rows from all parts under \"\n      f\"samples/web_sessions_parquet/\")\n# For an Athena UNLOAD export the parts are EXTENSIONLESS, so there you'd force\n# the type:  read_s3_prefix(bucket, 'unload/<run>/', format='parquet')\nsessions.head(3)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# download_s3 pulls a NON-tabular object to /tmp (the sandbox's writable dir) and\n# returns the local path — use it for a model file, an archive, an image, etc.\n# read_local then reads a file already on the local filesystem (format by extension).\nlocal_path = download_s3(bucket, \"samples/clickstream_events.csv\")\nprint(f\"Downloaded to: {local_path}\")\nlocal_df = read_local(local_path)\nprint(f\"read_local re-read {len(local_df)} rows from {local_path}\")\nlocal_df.head(3)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# query_df — SQL across the DataFrames you've ALREADY loaded, by variable name\n# (DuckDB in-process, no server). Cleaner than chaining pandas merges when you need\n# a JOIN / GROUP BY / window. Here: average review rating per product, joined to\n# the orders we loaded, top sellers first.\nby_product = query_df('''\n    SELECT o.product_id,\n           COUNT(*)                AS orders,\n           ROUND(AVG(r.rating), 2) AS avg_rating\n    FROM df AS o\n    LEFT JOIN reviews AS r ON CAST(o.product_id AS VARCHAR) = CAST(r.productId AS VARCHAR)\n    GROUP BY o.product_id\n    ORDER BY orders DESC\n    LIMIT 10\n''') if 'product_id' in df.columns else query_df(\"SELECT COUNT(*) AS orders FROM df\")\nby_product",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# Discovery before you query: dynamodb_tables lists the tables you can read;\n# dynamodb_schema shows a table's KEY schema (which attribute is the partition\n# key vs sort key) plus sampled attributes — run it BEFORE read_dynamodb_query\n# so you pass the RIGHT key (a non-key attribute raises a clear error).\nprint(\"DynamoDB tables:\")\ndisplay(dynamodb_tables())\nprint(\"\\nSchema of ecommerce-reviews (note the partition_key / sort_key roles):\")\ndisplay(dynamodb_schema(\"ecommerce-reviews\"))",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🗄️ Query engines — Athena & Aurora\n\nFor server-side SQL, skip the boto3 ceremony. `read_athena` runs a query and returns a typed DataFrame (numbers come back as numbers). It works the same for regular Glue tables **and S3 Tables (Apache Iceberg)** — reference the table as `database.table` and the federated catalog is resolved for you.\n\n`read_aurora` does the same for the Aurora PostgreSQL cluster over the RDS Data API. Aurora is **optional** (opt-in at setup), so we guard the call and skip cleanly if it isn't configured.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# read_athena → typed DataFrame. This hits the Glue-backed demo tables.\ntop_products = read_athena(\"\"\"\n    SELECT p.name, p.category,\n           COUNT(o.order_id)          AS orders,\n           SUM(o.total)               AS revenue\n    FROM microvm_demo_db.orders o\n    JOIN microvm_demo_db.products p ON o.product_id = p.product_id\n    GROUP BY p.name, p.category\n    ORDER BY revenue DESC\n    LIMIT 10\n\"\"\")\nprint(f\"Top {len(top_products)} products by revenue (revenue dtype: {top_products['revenue'].dtype})\")\ntop_products",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# read_athena also queries S3 Tables (Iceberg) — same call, just the namespace.\n# The federated catalog is auto-resolved from the 'microvm_demo_iceberg.' prefix.\nlifecycle = read_athena(\"\"\"\n    SELECT status, COUNT(*) AS events\n    FROM microvm_demo_iceberg.order_events\n    GROUP BY status\n    ORDER BY events DESC\n\"\"\")\nprint(\"Order-event lifecycle (from the Iceberg table):\")\nlifecycle",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# read_aurora — guarded, since Aurora is opt-in. If it's configured you'll see a\n# row count; otherwise the helper raises a clear 'not configured' error we catch.\ntry:\n    nb = read_aurora(\"SELECT id, name FROM notebooks ORDER BY id LIMIT 5\")\n    print(f\"Aurora reachable — {len(nb)} notebooks\")\n    display(nb)\nexcept Exception as e:\n    print(f\"Aurora not configured for this workspace — skipping. ({type(e).__name__})\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Discovery: 'what can I query?' — list Athena/Glue tables and inspect a schema\n# before writing SQL. Both return DataFrames.\nprint(\"Athena tables in microvm_demo_db:\")\ndisplay(athena_tables())\nprint(\"\\nColumns of the orders table:\")\ndisplay(athena_schema(\"orders\"))",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# Same discovery for Aurora (guarded — Aurora is opt-in). aurora_tables lists a\n# schema's tables/views; aurora_schema shows a table's columns. Both read the\n# read-only information_schema, so no extra permission is needed.\ntry:\n    display(aurora_tables())            # public schema\n    display(aurora_schema(\"notebooks\"))\nexcept Exception as e:\n    print(f\"Aurora not configured for this workspace — skipping. ({type(e).__name__})\")",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🧠 Bedrock Knowledge Base — ask your documents\n\nA Knowledge Base is a **retrieve-only** vector store over your document chunks. `read_bedrock_kb` runs semantic search and returns one row per matching chunk (with a relevance `score`); `ask_bedrock_kb` goes further and returns a **synthesized, cited answer**. The KB is configured at the platform level — you normally just pass the query. Guarded in case no KB is wired up.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"text\", \"default\": \"Which products are best for sensitive skin?\", \"placeholder\": \"ask the knowledge base...\", \"label\": \"KB query\"}\nkb_query = \"Which products are best for sensitive skin?\"\n\n# Semantic search → top matching chunks with scores.\ntry:\n    chunks = read_bedrock_kb(kb_query)\n    print(f\"Retrieved {len(chunks)} chunks for: {kb_query!r}\")\n    display(chunks[['score', 'source_uri', 'text']].head())\nexcept Exception as e:\n    print(f\"No Knowledge Base available — skipping. ({type(e).__name__})\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# ask_bedrock_kb → a synthesized, cited answer grounded in the retrieved chunks.\ntry:\n    result = ask_bedrock_kb(kb_query)\n    print(\"ANSWER:\\n\" + result['answer'])\n    print(f\"\\nGrounded in {len(result['citations'])} citation(s):\")\n    for c in result['citations'][:3]:\n        print(f\"  • {c.get('source_uri', '(no uri)')}\")\nexcept Exception as e:\n    print(f\"No Knowledge Base available — skipping. ({type(e).__name__})\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🤖 Machine Learning — Bedrock LLMs\n\nFoundation-model inference from a notebook cell — no API keys, the MicroVM's **execution role** authorizes Bedrock. `invoke_llm` is the base call; the `llm_*` helpers run a prompt over a whole DataFrame column (concurrently), and `embed_texts` + `semantic_search` cover vectors. The default model is `BEDROCK_MODEL_ID` (Claude Sonnet); see `list_bedrock_models()` for others.\n\n```mermaid\ngraph LR\n  B[\"invoke_llm (base call)\"] --> M[\"llm_map (per-row engine)\"]\n  M --> C[\"llm_classify\"]\n  M --> E[\"llm_extract\"]\n  M --> S[\"llm_sentiment\"]\n  M --> Z[\"llm_summarize\"]\n  EM[\"embed_texts\"] --> SS[\"semantic_search\"]\n  T[\"count_tokens (size a batch)\"] -.-> M\n  L[\"list_bedrock_models (pick model=)\"] -.-> B\n```",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# invoke_llm — one prompt in, text out. json=True parses a JSON reply to a dict.\nprint(invoke_llm(\"Summarize what a columnar file format is in one sentence.\"))\n\nfacts = invoke_llm(\n    \"Return JSON with keys 'format' and 'good_for' for Apache Parquet.\",\n    system=\"Return only compact JSON.\", json=True,\n)\nprint(facts)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# A small batch of review text to run the per-row helpers over (kept small so the\n# demo is fast + cheap — the llm_* helpers run one Bedrock call per row, concurrently).\nsample_reviews = reviews.head(8).copy() if 'text' in reviews.columns else reviews.head(8).copy()\ntexts = sample_reviews['text'] if 'text' in sample_reviews.columns else sample_reviews.iloc[:, 0].astype(str)\n# count_tokens sizes the text before you spend LLM calls on it.\nprint(f\"~{count_tokens(list(texts))} tokens across {len(texts)} reviews\")\ntexts.head(3).tolist()",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# llm_sentiment — label each text negative / neutral / positive (reads the prose,\n# not the star rating). Returns a DataFrame (text, sentiment).\nllm_sentiment(texts)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# llm_classify — bucket each text into a fixed label set (your taxonomy).\nllm_classify(texts, labels=[\"quality\", \"shipping\", \"value\", \"other\"],\n             instructions=\"Pick the single dominant theme.\")",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# llm_extract — turn prose into columns: one row per input, one column per schema field.\nllm_extract(texts, schema={\n    \"aspect\": \"the product aspect mentioned, or null\",\n    \"positive\": \"true or false — is the overall tone positive\",\n})",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# llm_summarize — one string → a string; a column → a DataFrame of summaries.\nprint(llm_summarize(\" \".join(texts.tolist()), style=\"bullets\", max_words=60))",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# llm_translate — a string → a string; a column → a DataFrame (text, translation).\n# Target language is required; source is auto-detected unless you pin it.\nprint(llm_translate(\"Fast shipping and great quality — very happy!\", to=\"French\"))\nllm_translate(texts.head(3), to=\"Spanish\")",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# llm_map — the generic engine: run ANY prompt template over every row.\n# {column} placeholders are filled per row. (classify/extract/etc. are built on this.)\nmapped = llm_map(sample_reviews.assign(text=texts),\n                 \"Reply with a single emoji capturing the mood of: {text}\",\n                 output_column=\"mood\")\nmapped[[c for c in ['text','mood'] if c in mapped.columns]].head()",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# embed_texts → vectors; semantic_search ranks a corpus against a query by meaning\n# (no keywords). Embed the corpus ONCE and reuse the vectors for fast repeat searches.\ncorpus = texts.tolist()\nvecs = embed_texts(corpus)\nprint(f\"Embedded {vecs.shape[0]} texts into {vecs.shape[1]}-dim vectors\")\nsemantic_search(\"disappointed with the quality\", corpus, corpus_vectors=vecs, top_k=3)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# list_bedrock_models — discover the models available for the model= argument.\nlist_bedrock_models(by_provider=\"anthropic\")",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🎯 Classic ML — train a model with `train_model`\n\nThe LLM helpers above call *foundation models* over an API. `train_model` is the other half: it **fits a classic scikit-learn model** from a DataFrame, in the VM, in ONE call. It replaces the usual boilerplate — split numeric vs categorical columns, `get_dummies`, `train_test_split`, construct the estimator, `fit`, compute metrics — with a single line that infers the task, auto one-hot-encodes the categoricals, does the split, fits, and prints the holdout metrics.\n\nIt returns a scikit-learn **Pipeline** (encoder + model), so it drops straight into the other ML helpers: **`model_info`**, **`predict_batch`**, **`save_model`** / **`load_model`**. Because the encoder is *inside* the Pipeline, you score **raw rows** later — no need to reproduce `get_dummies`.\n\n```mermaid\ngraph LR\n  D[\"DataFrame + target\"] --> TM[\"train_model (auto encode + split + fit + score)\"]\n  TM --> MI[\"model_info\"]\n  TM --> PB[\"predict_batch (raw rows in)\"]\n  TM --> SV[\"save_model → S3\"]\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# A quick target from the orders sample: was this a 'big basket' order? (top-quartile\n# total). Purely to have something to predict — swap in your own label column.\nml_df = df.copy()\nthreshold = ml_df['total'].quantile(0.75)\nml_df['big_basket'] = (ml_df['total'] > threshold).astype(int)\n\n# Pick real, predictive feature columns. The orders sample is: order_id, user_id,\n# product_id, quantity, unit_price, total, order_date, shipping_country,\n# payment_method. We use quantity + unit_price (numeric) and shipping_country +\n# payment_method (categorical → auto one-hot). We deliberately skip the id columns\n# (high-cardinality, not predictive), order_date (a string), and 'total' (the label\n# is derived from it — that would leak the answer).\nFEATURES = ['quantity', 'unit_price', 'shipping_country', 'payment_method']\n\n# ONE call = split cols → get_dummies → train_test_split → fit → metrics. It infers\n# 'classification' from the target, one-hots the categoricals, and prints a report.\nmodel = train_model(ml_df, target='big_basket', features=FEATURES)\ntype(model)   # a scikit-learn Pipeline (preprocessing + estimator)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "### Customizing the call — pass only what you want to change\n\nEvery default is overridable; you supply just the knobs you care about. A few of them (most commented so you can try one at a time — each retrains):",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Reuse the same FEATURES list from the previous cell (quantity, unit_price,\n# shipping_country, payment_method).\n\n# 1) Tune the DEFAULT RandomForest inline via **estimator_kwargs + enlarge the holdout.\nmodel = train_model(ml_df, target='big_basket', features=FEATURES,\n                    n_estimators=200, max_depth=6, test_size=0.25)\n\n# 2) Bring your OWN estimator (any sklearn-style instance); scale=True adds a\n#    StandardScaler to the numeric features (useful for linear / SVM / KNN).\n# from sklearn.linear_model import LogisticRegression\n# model = train_model(ml_df, target='big_basket', features=FEATURES,\n#                     estimator=LogisticRegression(max_iter=1000), scale=True)\n\n# 3) k-fold cross-validation instead of a single split (prints mean ± std).\n# model = train_model(ml_df, target='big_basket', features=FEATURES, cv=5)\n\n# 4) Pin exactly which columns are numeric vs categorical (skip the features= arg\n#    and name each treatment explicitly instead).\n# model = train_model(ml_df, target='big_basket',\n#                     numeric=['quantity', 'unit_price'],\n#                     categorical=['shipping_country', 'payment_method'])\n\n# 5) Force a REGRESSION task on a numeric target, and stay silent (no report).\n# price_model = train_model(ml_df, target='total',\n#                           features=['quantity', 'unit_price', 'shipping_country', 'payment_method'],\n#                           task='regression', return_report=False)\n\nmodel_info(model)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# The returned Pipeline plugs into the same inference + persistence helpers as a\n# loaded model. Score RAW rows (the Pipeline one-hots the categoricals internally,\n# so we feed the ORIGINAL columns — no manual get_dummies) and ship it to S3.\nscored = predict_batch(model, ml_df.head(10), output_col='pred_big_basket')\ndisplay(scored[['quantity', 'unit_price', 'shipping_country', 'payment_method', 'pred_big_basket']].head())\n\nuri = save_model(model, info['bucket'], 'models/big_basket.joblib')\nprint(f\"Saved model → {uri}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🔧 Utilities\n\nProfile, compare, explore — all without boilerplate.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Profile a DataFrame: types, nulls, unique values\nprofile(clickstream)",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# List objects in an S3 bucket\nfiles = list_s3(info['bucket'], \"samples/\")\nfiles",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 1, \"max\": 20, \"step\": 1, \"default\": 5, \"label\": \"Preview rows\"}\npreview_rows = 5\n# Preview first N rows from S3 without downloading the full file\npreview = head_s3(info['bucket'], \"samples/clickstream_events.csv\", n=preview_rows)\npreview",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Compare two DataFrames (useful for before/after cleaning)\n# Create a \"cleaned\" version by filtering out empty product_ids\nimport pandas as pd\nclickstream_clean = clickstream[clickstream['product_id'] != ''].copy()\nclickstream_clean['duration_bucket'] = pd.cut(clickstream_clean['duration_seconds'].astype(int), bins=[0, 30, 60, 120, 300], labels=['<30s', '30-60s', '1-2min', '2-5min'])\n\ncompare_df(clickstream, clickstream_clean, \"original\", \"cleaned\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Time a computation with @timer\n@timer\ndef aggregate_orders():\n    return df.groupby(['shipping_country', 'payment_method']).agg(\n        total_revenue=('total', 'sum'),\n        avg_quantity=('quantity', 'mean'),\n        order_count=('order_id', 'count')\n    ).reset_index()\n\nsummary = aggregate_orders()\nsummary.head()",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🔐 Environment variables & secrets\n\nConfigure values in the **Secrets & Env panel** (plain env vars + Secrets-Manager-backed secrets) and both land in `os.environ` at VM launch. Instead of hand-writing `os.environ[...]` + `json.loads`, use the helpers:\n\n- **`list_env()`** / **`list_secret()`** — discover what's configured. **Keys only — values are never printed** (a `length` column tells you a value is populated without revealing it). The two are a clean split: `list_env()` shows your **direct env vars**, `list_secret()` shows your **secrets** — nothing overlaps. `list_env(all=True)` is the escape hatch that dumps everything, platform/system vars included.\n- **`get_env(name, default=None, as_type=..., required=...)`** — read one, with smart typing. A JSON secret parses to a `dict`/`list` automatically; a plaintext value stays a string (numeric-looking strings are **not** silently coerced — opt in with `as_type=int/float/bool`).\n- **`get_secret(name, ...)`** — the same reader with secret-flavored wording.\n\n> This section is **guarded**: a fresh notebook may have nothing configured yet. To see live values, open the **Secrets & Env panel** and add the seeded demo entries — `DEMO_API_KEY` (plaintext, from `microvm/demo-api-key`) and `DB_CREDS` (JSON, from `microvm/demo-db-credentials`) — then re-run.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Discover what THIS notebook has configured — keys only, values are never shown.\n# 'source' = 'secret' (Secrets-Manager-backed) or 'env' (a direct env var);\n# 'looks_like' = 'json' when the value parses as a JSON object/array; 'length' is\n# a populated-ness check that never reveals the value.\nconfigured = list_env()        # your DIRECT env vars (secrets -> list_secret(); system vars hidden)\nconfigured",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# list_secret() is the secrets-only view — exactly the entries added from the\n# Secrets & Env panel's Secrets Manager picker (no 'all' option: a system env var\n# is never a secret). list_env(all=True) is the other extreme — EVERYTHING,\n# including the platform vars (AWS_*, MICROVM_*, ATHENA_*, PATH, …).\nprint(\"Secrets configured for this notebook:\")\ndisplay(list_secret())\nprint(f\"\\nTotal env vars visible to the VM (incl. system/platform): {len(list_env(all=True))}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Read ONE value by name. get_env/get_secret replace os.environ + json.loads:\n#   • a JSON secret  → parsed to a dict/list automatically\n#   • a plaintext value → stays a string (a numeric-looking string is NOT silently\n#     coerced — opt in with as_type=int/float/bool)\n#   • default= is returned when unset; required=True raises instead.\n# Guarded so the cell is clean whether or not you've added the demo entries yet.\napi_key = get_secret(\"DEMO_API_KEY\")          # plaintext → the string, or None if unset\ndb_creds = get_secret(\"DB_CREDS\")             # JSON secret → a dict, or None if unset\n\nif api_key is None and db_creds is None:\n    print(\"No demo secrets configured yet. Open the Secrets & Env panel and add\")\n    print(\"DEMO_API_KEY (from microvm/demo-api-key) and DB_CREDS (from\")\n    print(\"microvm/demo-db-credentials), then re-run this cell.\")\nelse:\n    if api_key is not None:\n        print(f\"DEMO_API_KEY → {type(api_key).__name__}, {len(api_key)} chars \"\n              f\"(value hidden)\")\n    if isinstance(db_creds, dict):\n        print(f\"DB_CREDS → dict with keys {sorted(db_creds)} (values hidden)\")\n    elif db_creds is not None:\n        print(f\"DB_CREDS → {type(db_creds).__name__} (value hidden)\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Smart typing in action — as_type forces a conversion, with a clear error on a\n# bad value instead of a cryptic traceback. default= supplies a fallback when the\n# var is unset, so these are safe to run even with nothing configured.\nport    = get_env(\"DB_PORT\", 5432, as_type=int)      # int, defaulting to 5432\ndebug   = get_env(\"DEBUG\", False, as_type=bool)      # bool from true/false/1/0/yes/no\nregion  = get_env(\"AWS_REGION\", \"us-west-2\")         # a system var that's always set\nprint(f\"DB_PORT   = {port!r}   ({type(port).__name__})\")\nprint(f\"DEBUG     = {debug!r}   ({type(debug).__name__})\")\nprint(f\"AWS_REGION = {region!r}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 📊 Visualization\n\nOne-liner interactive Plotly charts. All return the figure object for further customization.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 3, \"max\": 15, \"step\": 1, \"default\": 10, \"label\": \"Top N countries\"}\ntop_n_countries = 10\n# Interactive bar chart\ncountry_rev = df.groupby('shipping_country')['total'].sum().reset_index().sort_values('total', ascending=False).head(top_n_countries)\nplot_bar(country_rev, x='shipping_country', y='total', title=f'Top {top_n_countries} Countries by Revenue')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Line chart — daily revenue trend (parse dates, roll up, plot)\nimport pandas as pd\ndaily = df.copy()\ndaily['order_date'] = pd.to_datetime(daily['order_date'], errors='coerce')\ndaily = daily.dropna(subset=['order_date']).groupby('order_date')['total'].sum().reset_index()\nplot_line(daily, x='order_date', y='total', title='Daily Revenue Trend')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Interactive scatter plot with size and color encoding\nplot_scatter(df, x='quantity', y='total', size='unit_price', color='payment_method', title='Quantity vs Total by Payment Method')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"slider\", \"min\": 5, \"max\": 50, \"step\": 5, \"default\": 25, \"label\": \"Histogram bins\"}\nhist_bins = 25\n# Interactive histogram\nplot_histogram(df, 'total', bins=hist_bins, title='Order Total Distribution')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Heatmap from a pivot (country x payment_method → revenue)\nplot_heatmap(df, x='shipping_country', y='payment_method', value='total', title='Revenue: Country × Payment Method')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "### More everyday charts — box, pie, area, correlation\n\nBeyond the five above: **`plot_box`** for a distribution (median / quartiles / outliers), **`plot_pie`** for share-of-total, **`plot_area`** for a filled trend (stacked when you pass `color`), and **`plot_corr`** for a numeric-column correlation heatmap — the one-line EDA companion to `profile()`.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Box plot — order-total distribution per payment method (spot spread + outliers)\nplot_box(df, y='total', x='payment_method', title='Order Total by Payment Method')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Pie — revenue share across the top countries (sum per slice)\nplot_pie(country_rev, names='shipping_country', values='total', title='Revenue Share by Country')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Area — the same daily revenue series as a filled trend\nplot_area(daily, x='order_date', y='total', title='Daily Revenue (area)')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Correlation heatmap — auto-selects the numeric columns (needs \u22652). The EDA\n# companion to profile(): see which numeric fields move together at a glance.\nplot_corr(df, title='Numeric Column Correlations')",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 💾 Data Export\n\nSave results back to S3 or local files. Writers mirror the readers: `to_s3_csv` / `to_s3_parquet` / `to_s3_json` and `to_local` (format auto-detected from the extension).",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Save locally (format from extension) and upload to S3 in two formats\nto_local(summary, '/tmp/order_summary.csv')\nto_local(summary, '/tmp/order_summary.parquet')\nprint(\"Saved locally ✓\")\n\ncsv_uri = to_s3_csv(summary, info['bucket'], \"user-data/order_summary.csv\")\nparquet_uri = to_s3_parquet(summary, info['bucket'], \"user-data/order_summary.parquet\")\nprint(f\"Uploaded CSV     → {csv_uri}\")\nprint(f\"Uploaded Parquet → {parquet_uri}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# The same DataFrame in the other export formats: JSON and Excel to S3.\njson_uri  = to_s3_json(summary, info['bucket'], \"user-data/order_summary.json\")\nexcel_uri = to_s3_excel(summary, info['bucket'], \"user-data/order_summary.xlsx\", sheet=\"Summary\")\nprint(f\"Uploaded JSON  → {json_uri}\")\nprint(f\"Uploaded Excel → {excel_uri}\")",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "code",
+      "code": "# Verify the upload\nfiles = list_s3(info['bucket'], \"user-data/\")\nfiles",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Round-trip: read the files we just exported back with the TYPED S3 readers,\n# proving each format reader works (read_s3 above auto-detects; these are explicit).\nback_parquet = read_s3_parquet(info['bucket'], \"user-data/order_summary.parquet\")\nback_json    = read_s3_json(info['bucket'], \"user-data/order_summary.json\", lines=False)\nback_excel   = read_s3_excel(info['bucket'], \"user-data/order_summary.xlsx\", sheet=\"Summary\")\nprint(f\"read_s3_parquet → {back_parquet.shape} · read_s3_json → {back_json.shape} · read_s3_excel → {back_excel.shape}\")\nback_parquet.head(3)",
+      "output": null,
+      "error": null
+    },
+    {
+      "type": "markdown",
+      "code": "## 🧾 Session & cost\n\nThe notebook can describe **itself**. `this_notebook()` returns the current session's identity (notebook name/id, MicroVM id, persistence mode) and, when Aurora is configured, its measured usage priced by `estimate_session_cost()` — the same three-component model (compute + suspended storage + burst) the platform bills on.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# Describe THIS session. Identity fields always resolve; cost fields fill in when\n# Aurora (the usage store) is configured — otherwise they come back as None.\nme = this_notebook()\nprint(f\"Notebook : {me.get('notebook_name')}  (id {me.get('notebook_id')})\")\nprint(f\"MicroVM  : {me.get('microvm_id')}\")\nprint(f\"Mode     : {me.get('persistence_mode')}\")\nif me.get('total_cost_usd') is not None:\n    print(f\"Cost so far: ${me['total_cost_usd']:.4f}\")\nme",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# The one-liner: session_cost() resolves THIS session and prices it for you —\n# no session id to copy, no SQL to write. Returns the same dict as\n# estimate_session_cost (or {'error': ...} if Aurora isn't configured yet).\ncost = session_cost()\nif 'error' in cost:\n    print(cost['error'])\nelse:\n    print(f\"Session cost so far: ${cost['total_cost_usd']:.4f} \"\n          f\"(running ${cost['running_cost_usd']:.4f} + suspended ${cost['suspended_cost_usd']:.4f})\")\ncost",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "code",
+      "code": "# estimate_session_cost prices raw usage quantities — handy for what-if math.\n# Example: 20 min running + 40 min suspended on a 4 GB arm64 tier, no burst.\nest = estimate_session_cost(running_secs=1200, suspended_secs=2400, memory_mib=4096, architecture='arm64')\nprint(f\"Running   : ${est['running_cost_usd']:.4f}\")\nprint(f\"Suspended : ${est['suspended_cost_usd']:.4f}\")\nprint(f\"Burst     : ${est['burst_cost_usd']:.4f}\")\nprint(f\"TOTAL     : ${est['total_cost_usd']:.4f}\")",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Wrap-up\n\nThat's the helper library end to end: **discover** it with `helpers()`, **load** from any source (files, S3, DynamoDB, Athena/Iceberg, Aurora, URLs), **ask** a Knowledge Base, **run LLMs**, **train a classic model** in one line with `train_model` (then `model_info` / `predict_batch` / `save_model`), **explore** and **visualize** in one-liners, **export** anywhere, and even **price your own session**. Everything you saw is available in every cell with no imports — and mirrored in the **Snippets** panel (including multi-step **Recipes**) for autocomplete.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null
+    }
+  ]
+}

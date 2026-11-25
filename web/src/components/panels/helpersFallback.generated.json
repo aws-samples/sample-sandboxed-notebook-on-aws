@@ -1,0 +1,922 @@
+{
+  "helpers": [
+    {
+      "category": "Data Loading",
+      "code": "# Plain-English question -> an LLM writes + runs the Insights query. CloudWatch\n# is NOT SQL; this is English -> Insights. Omit log_group for this notebook.\ndf = ask_logs('how many ERROR lines per hour in the last 24h', hours=24)\ndf.head()",
+      "desc": "Ask your logs in plain English (LLM writes Insights)",
+      "name": "ask_logs",
+      "returns": "DataFrame",
+      "signature": "ask_logs(question: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, show_query: bool = True, model: str = None, log_stream: str = None) -> DataFrame",
+      "summary": "Ask a question of your logs in **plain English** — an LLM writes the CloudWatch Logs Insights query, then it's run with read_logs and the DataFrame is returned."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# See a table's columns + types before you query it\nathena_schema(\"orders\")\n# accepts \"database.table\" too:\n# athena_schema(\"microvm_demo_iceberg.order_events\")",
+      "desc": "Show columns of an Athena table",
+      "name": "athena_schema",
+      "returns": "DataFrame",
+      "signature": "athena_schema(table: str, database: str = None) -> DataFrame",
+      "summary": "Show the columns of an Athena/Glue table as a DataFrame (columns: column, type, partition)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Discover the tables in an Athena/Glue database\nathena_tables()\n# Another database (e.g. the S3 Tables / Iceberg namespace):\n# athena_tables(\"microvm_demo_iceberg\")",
+      "desc": "List Athena/Glue tables",
+      "name": "athena_tables",
+      "returns": "DataFrame",
+      "signature": "athena_tables(database: str = None) -> DataFrame",
+      "summary": "List the tables in an Athena/Glue database as a DataFrame (columns: database, table, type)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# See an Aurora table's columns before you query it\naurora_schema(\"notebooks\")\n# accepts \"schema.table\" too:\n# aurora_schema(\"analytics.events\")",
+      "desc": "Show columns of an Aurora table",
+      "name": "aurora_schema",
+      "returns": "DataFrame",
+      "signature": "aurora_schema(table: str, schema: str = public, database: str = None) -> DataFrame",
+      "summary": "Show the columns of an Aurora PostgreSQL table/view as a DataFrame (columns: column, type, nullable, default, position)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Discover the tables/views in an Aurora schema\naurora_tables()            # public schema\n# aurora_tables(\"analytics\")",
+      "desc": "List Aurora tables in a schema",
+      "name": "aurora_tables",
+      "returns": "DataFrame",
+      "signature": "aurora_tables(schema: str = public, database: str = None) -> DataFrame",
+      "summary": "List the tables and views in an Aurora PostgreSQL schema as a DataFrame (columns: schema, table, type)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Download a NON-tabular artifact (model file, archive, image) to /tmp\npath = download_s3(\"your-bucket\", \"models/model.joblib\")\nprint(f\"Downloaded to: {path}\")",
+      "desc": "Download any S3 object to /tmp",
+      "name": "download_s3",
+      "returns": "str",
+      "signature": "download_s3(bucket: str, key: str = None, local_path: str = None) -> str",
+      "summary": "Download an S3 object to a local file under /tmp (the sandbox's only writable dir) and return the local path."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Sample a DynamoDB table to see its attributes + key roles (schemaless store).\ndynamodb_schema('ecommerce-reviews')",
+      "desc": "Infer a DynamoDB table's attributes from a sample",
+      "name": "dynamodb_schema",
+      "returns": "DataFrame",
+      "signature": "dynamodb_schema(table_name: str, sample: int = 25) -> DataFrame",
+      "summary": "Show a DynamoDB table's schema as a DataFrame (columns: attribute, type, role) — the discovery helper to run BEFORE read_dynamodb_query so you use the right key."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Discover the DynamoDB tables you can read\ndynamodb_tables()",
+      "desc": "List DynamoDB tables",
+      "name": "dynamodb_tables",
+      "returns": "DataFrame",
+      "signature": "dynamodb_tables() -> DataFrame",
+      "summary": "List the DynamoDB tables visible to this notebook as a DataFrame (one row per table)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Just the matching lines (no aggregation). Omit log_group for this notebook.\nhits = grep_logs('Timeout', hours=6)\nhits.tail(20)",
+      "desc": "Grep raw log lines for a pattern",
+      "name": "grep_logs",
+      "returns": "DataFrame",
+      "signature": "grep_logs(pattern: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, log_stream: str = None) -> DataFrame",
+      "summary": "Grep raw CloudWatch log events for a substring/pattern — the \"just show me the matching lines\" path (no Insights syntax, no aggregation)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Preview first 5 rows of an S3 file without downloading it fully\nhead_s3(\"your-bucket\", \"data/large_file.csv\", n=5)",
+      "desc": "Preview first N rows from an S3 file",
+      "name": "head_s3",
+      "returns": "DataFrame",
+      "signature": "head_s3(bucket: str, key: str = None, n: int = 5) -> DataFrame",
+      "summary": "Preview the first N rows of an S3 file, auto-detecting the format from the file extension (.csv/.tsv, .parquet/.pq, .json/.jsonl/.ndjson, .xlsx/.xls)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# List objects in an S3 bucket\nfiles = list_s3(\"your-bucket\", \"data/\")\nfiles",
+      "desc": "List files in an S3 bucket/prefix",
+      "name": "list_s3",
+      "returns": "DataFrame",
+      "signature": "list_s3(bucket: str, prefix: str = '', max_keys: int = 100) -> DataFrame",
+      "summary": "List objects in an S3 bucket/prefix and return as a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Discover log groups you can read (name, size, retention).\nlog_groups('/aws/lambda-microvms/')   # this platform's VM logs",
+      "desc": "List queryable CloudWatch log groups",
+      "name": "log_groups",
+      "returns": "DataFrame",
+      "signature": "log_groups(prefix: str = None, limit: int = 100) -> DataFrame",
+      "summary": "List the CloudWatch log groups you can query, as a DataFrame (columns: log_group, stored_mb, retention_days, created)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# What read_logs()/ask_logs() default to when you omit log_group.\nnotebook_log_groups()",
+      "desc": "The log group(s) that belong to THIS notebook",
+      "name": "notebook_log_groups",
+      "returns": "list[str]",
+      "signature": "notebook_log_groups() -> list[str]",
+      "summary": "The CloudWatch log group(s) that belong to THIS notebook — every VM the current session has run on (across rotations/recovery swaps), merged."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# JOIN / GROUP BY / window across DataFrames already in your notebook, with\n# DuckDB (in-process). Reference each frame by its variable name as a table.\nout = query_df('''\n    SELECT o.customer_id, SUM(o.total) AS spend\n    FROM orders o JOIN customers c ON o.customer_id = c.id\n    GROUP BY 1 ORDER BY spend DESC\n''')\nout.head()",
+      "desc": "Run DuckDB SQL across your in-memory DataFrames",
+      "name": "query_df",
+      "returns": "DataFrame",
+      "signature": "query_df(sql: str) -> DataFrame",
+      "summary": "Run SQL over the DataFrames already in your notebook with DuckDB (in-process) and return the result as a DataFrame — the clean way to JOIN / GROUP BY / window across frames you've loaded, instead of…"
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Run an Athena SQL query\ndf = read_athena(\"SELECT * FROM <table_name> LIMIT 100\")\ndf.head()",
+      "desc": "Run Athena SQL query",
+      "name": "read_athena",
+      "returns": "DataFrame",
+      "signature": "read_athena(sql: str, database: str = None, catalog: str = None) -> DataFrame",
+      "summary": "Run an Athena SQL query and return results as a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Run a SELECT against Aurora PostgreSQL (read-only, via the Data API)\ndf = read_aurora(\"SELECT * FROM <table_name> LIMIT 100\")\ndf.head()",
+      "desc": "Run a read-only Aurora SQL query",
+      "name": "read_aurora",
+      "returns": "DataFrame",
+      "signature": "read_aurora(sql: str, database: str = None, parameters: list = None) -> DataFrame",
+      "summary": "Run a SQL query against the Aurora PostgreSQL cluster via the RDS Data API and return the results as a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Scan a DynamoDB table into a DataFrame\ndf = read_dynamodb(\"your-table-name\")\n# Optional filter (server-side, but still a FULL scan — cuts transfer, not cost):\n# df = read_dynamodb(\"your-table-name\", filter={\"segment\": \"Premium\"})\nprint(f\"Loaded {len(df)} rows\")\ndf.head()",
+      "desc": "Scan DynamoDB table (optional filter)",
+      "name": "read_dynamodb",
+      "returns": "DataFrame",
+      "signature": "read_dynamodb(table_name: str, limit: int = None, filter: dict = None) -> DataFrame",
+      "summary": "Scan a DynamoDB table and return as a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Query DynamoDB by partition key (pass key NAME and VALUE)\ndf = read_dynamodb_query(\"your-table-name\", \"customer_id\", \"CUST-001\")\n# With a sort key:\n# df = read_dynamodb_query(\"your-table-name\", \"customer_id\", \"CUST-001\", sort_key=\"order_date\", sort_value=\"2024-01-01\")\ndf.head()",
+      "desc": "Query DynamoDB by partition key (equality)",
+      "name": "read_dynamodb_query",
+      "returns": "DataFrame",
+      "signature": "read_dynamodb_query(table_name: str, key, value, sort_key: str = None, sort_value=None) -> DataFrame",
+      "summary": "Query a DynamoDB table by partition key (and optional sort key), equality match."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read a local file into a DataFrame\n# Supports: .csv, .parquet, .json, .xlsx\ndf = read_local('/tmp/your_file.csv')\ndf.head()",
+      "desc": "Read local file (CSV, Parquet, JSON, Excel)",
+      "name": "read_local",
+      "returns": "DataFrame",
+      "signature": "read_local(path: str) -> DataFrame",
+      "summary": "Read a SINGLE local file into a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read EVERY file in a /tmp folder (or glob) and concatenate into ONE DataFrame —\n# the local parallel to read_s3_prefix, for a partitioned export (part-0000.parquet, …).\ndf = read_local_prefix('/tmp/parts/')               # whole folder\n# df = read_local_prefix('/tmp/parts/*.parquet')    # glob\n# df = read_local_prefix('/tmp/parts/', format='parquet')  # extensionless parts\nprint(f\"Loaded {len(df)} rows from all files\")\ndf.head()",
+      "desc": "Read + concat all local files in a folder/glob",
+      "name": "read_local_prefix",
+      "returns": "DataFrame",
+      "signature": "read_local_prefix(path: str, format: str = None, max_files: int = 1000) -> DataFrame",
+      "summary": "Read EVERY local file matching a folder or glob and concatenate them into ONE DataFrame — the local parallel to read_s3_prefix, for a partitioned export written to /tmp (e.g. part-0000.parquet…"
+    },
+    {
+      "category": "Data Loading",
+      "code": "# CloudWatch Logs Insights (a PIPE language, not SQL). Omit log_group to query\n# THIS notebook's own logs; the time range is the hours= arg, never in the query.\ndf = read_logs('''\n    fields @timestamp, @message\n    | filter @message like /ERROR/\n    | stats count() as errors by bin(1h)\n''', hours=24)\ndf.head()",
+      "desc": "Run a CloudWatch Logs Insights query",
+      "name": "read_logs",
+      "returns": "DataFrame",
+      "signature": "read_logs(query: str, log_group=None, hours: float = 1, start=None, end=None, limit: int = 1000, poll_timeout: float = 60.0, log_stream: str = None) -> DataFrame",
+      "summary": "Run a CloudWatch Logs **Insights** query and return the results as a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read a single S3 file — format auto-detected from the extension\n# (.csv / .parquet / .json / .jsonl / .xlsx). One reader, no need to pick.\ndf = read_s3(\"your-bucket\", \"path/to/file.parquet\")\n# or a full URI: df = read_s3(\"s3://your-bucket/path/to/file.csv\")\ndf.head()",
+      "desc": "Read any S3 file (auto-detects format)",
+      "name": "read_s3",
+      "returns": "DataFrame",
+      "signature": "read_s3(bucket: str, key: str = None) -> DataFrame",
+      "summary": "Read a single file from S3 into a DataFrame, auto-detecting the format from the file extension (.csv/.tsv, .parquet, .json/.jsonl, .xlsx/.xls)."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read a CSV file from S3\ndf = read_s3_csv(\"your-bucket\", \"path/to/file.csv\")\ndf.head()",
+      "desc": "Read CSV from S3 bucket",
+      "name": "read_s3_csv",
+      "returns": "DataFrame",
+      "signature": "read_s3_csv(bucket: str, key: str = None, **kwargs) -> DataFrame",
+      "summary": "Read a CSV file from S3 into a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read an Excel workbook from S3 (pick a sheet by name or index)\ndf = read_s3_excel(\"your-bucket\", \"reports/q4.xlsx\", sheet=\"Summary\")\ndf.head()",
+      "desc": "Read Excel (.xlsx) from S3",
+      "name": "read_s3_excel",
+      "returns": "DataFrame",
+      "signature": "read_s3_excel(bucket: str, key: str = None, sheet=0, **kwargs) -> DataFrame",
+      "summary": "Read an Excel file (.xlsx/.xls) from S3 into a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read a JSON Lines file from S3\ndf = read_s3_json(\"your-bucket\", \"path/to/file.jsonl\")\ndf.head()",
+      "desc": "Read JSON/JSONL from S3",
+      "name": "read_s3_json",
+      "returns": "DataFrame",
+      "signature": "read_s3_json(bucket: str, key: str = None, lines: bool = True) -> DataFrame",
+      "summary": "Read a JSON file from S3 into a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read a Parquet file from S3\ndf = read_s3_parquet(\"your-bucket\", \"path/to/file.parquet\")\ndf.head()",
+      "desc": "Read Parquet from S3 bucket",
+      "name": "read_s3_parquet",
+      "returns": "DataFrame",
+      "signature": "read_s3_parquet(bucket: str, key: str = None) -> DataFrame",
+      "summary": "Read a Parquet file from S3 into a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Read EVERY file under a prefix and concatenate into ONE DataFrame —\n# the natural way to load a partitioned export (part-0000.parquet, ...).\ndf = read_s3_prefix(\"your-bucket\", \"exports/orders/\")\nprint(f\"Loaded {len(df)} rows from all files under the prefix\")\ndf.head()",
+      "desc": "Read + concat all files under an S3 prefix",
+      "name": "read_s3_prefix",
+      "returns": "DataFrame",
+      "signature": "read_s3_prefix(bucket: str, prefix: str = None, format: str = None, max_files: int = 1000) -> DataFrame",
+      "summary": "Read EVERY file under an S3 prefix and concatenate them into ONE DataFrame — the natural way to load a partitioned export (e.g. data/part-0000.parquet, part-0001.parquet, …) written by…"
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Fetch CSV data from a public URL\ndf = read_url(\"https://raw.githubusercontent.com/datasets/iris/master/data/iris.csv\")\ndf.head()",
+      "desc": "Fetch data from URL",
+      "name": "read_url",
+      "returns": "DataFrame",
+      "signature": "read_url(url: str, format: str = csv, **kwargs) -> DataFrame",
+      "summary": "Fetch data from a URL and return as a DataFrame."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# The quick 'what just happened?' peek — newest lines first.\ntail_logs(lines=50)\n# One VM only: tail_logs(lines=50, log_stream='microvm-<id>')",
+      "desc": "Newest N log lines (this notebook)",
+      "name": "tail_logs",
+      "returns": "DataFrame",
+      "signature": "tail_logs(log_group=None, lines: int = 50, hours: float = 1, log_stream: str = None) -> DataFrame",
+      "summary": "The most-recent N events from a log group (newest first) — the quick \"what just happened?\" peek, analogous to head_s3 for a file."
+    },
+    {
+      "category": "Data Loading",
+      "code": "# Export a big Athena result straight to S3 as part-files — the rows never\n# load into the VM. Returns a result with the output prefix.\nres = unload_athena_to_s3(\n    'SELECT * FROM microvm_demo_db.orders',\n    format='parquet',\n)\nprint(res.uri)                          # s3://.../unload/<ts>-<id>/\ndf = read_s3_prefix(res.bucket, res.prefix, format='parquet')   # read it back",
+      "desc": "UNLOAD an Athena query to S3 (rows never enter the VM)",
+      "name": "unload_athena_to_s3",
+      "returns": "UnloadResult",
+      "signature": "unload_athena_to_s3(sql: str, dest: str = None, *, format: str = parquet, compression: str = None, partition_by: list = None, overwrite: bool = True) -> app.notebook.helpers.readers.UnloadResult",
+      "summary": "Run an Athena SELECT and have ATHENA write the result straight to S3 — WITHOUT pulling any rows into the VM."
+    },
+    {
+      "category": "Data Export",
+      "code": "# Save DataFrame to a local file (auto-detects format)\nto_local(df, '/tmp/output.csv')\nto_local(df, '/tmp/output.parquet')",
+      "desc": "Save DataFrame to local file",
+      "name": "to_local",
+      "returns": "str",
+      "signature": "to_local(df: DataFrame, path: str, index: bool = False) -> str",
+      "summary": "Save a DataFrame to a local file."
+    },
+    {
+      "category": "Data Export",
+      "code": "# Write a DataFrame as MULTIPLE part-files under a /tmp folder — the write\n# parallel to read_local_prefix (a local partitioned export).\nto_local_prefix(df, '/tmp/orders_parts/', parts=4)   # part-0000.parquet … part-0003.parquet\n# format='csv' or 'json' too. Existing parts are cleared first.\nback = read_local_prefix('/tmp/orders_parts/')        # clean round-trip\nprint(f\"wrote + re-read {len(back)} rows\")",
+      "desc": "Save DataFrame as part-files under a /tmp folder",
+      "name": "to_local_prefix",
+      "returns": "str",
+      "signature": "to_local_prefix(df: DataFrame, path: str, parts: int = 4, format: str = parquet, index: bool = False) -> str",
+      "summary": "Save a DataFrame as MULTIPLE part-files under a /tmp FOLDER — the write parallel to read_local_prefix (and the local mirror of a Spark/Athena partitioned export)."
+    },
+    {
+      "category": "Data Export",
+      "code": "# Upload DataFrame as CSV to S3\nuri = to_s3_csv(df, \"your-bucket\", \"user-data/output.csv\")\nprint(f\"Uploaded to: {uri}\")",
+      "desc": "Upload DataFrame as CSV to S3",
+      "name": "to_s3_csv",
+      "returns": "str",
+      "signature": "to_s3_csv(df: DataFrame, bucket: str, key: str = None, index: bool = False) -> str",
+      "summary": "Upload a DataFrame as CSV to S3."
+    },
+    {
+      "category": "Data Export",
+      "code": "# Upload DataFrame as an Excel workbook to S3\nuri = to_s3_excel(df, \"your-bucket\", \"reports/summary.xlsx\", sheet=\"Summary\")\nprint(f\"Uploaded to: {uri}\")",
+      "desc": "Upload DataFrame as Excel (.xlsx) to S3",
+      "name": "to_s3_excel",
+      "returns": "str",
+      "signature": "to_s3_excel(df: DataFrame, bucket: str, key: str = None, sheet: str = Sheet1, index: bool = False) -> str",
+      "summary": "Upload a DataFrame as an Excel (.xlsx) file to S3."
+    },
+    {
+      "category": "Data Export",
+      "code": "# Upload DataFrame as JSON to S3\nuri = to_s3_json(df, \"your-bucket\", \"user-data/output.json\")\nprint(f\"Uploaded to: {uri}\")",
+      "desc": "Upload DataFrame as JSON to S3",
+      "name": "to_s3_json",
+      "returns": "str",
+      "signature": "to_s3_json(df: DataFrame, bucket: str, key: str = None, orient: str = records) -> str",
+      "summary": "Upload a DataFrame as JSON to S3."
+    },
+    {
+      "category": "Data Export",
+      "code": "# Upload DataFrame as Parquet to S3 (smaller, faster)\nuri = to_s3_parquet(df, \"your-bucket\", \"user-data/output.parquet\")\nprint(f\"Uploaded to: {uri}\")",
+      "desc": "Upload DataFrame as Parquet to S3",
+      "name": "to_s3_parquet",
+      "returns": "str",
+      "signature": "to_s3_parquet(df: DataFrame, bucket: str, key: str = None) -> str",
+      "summary": "Upload a DataFrame as Parquet to S3."
+    },
+    {
+      "category": "Data Export",
+      "code": "# For NON-tabular artifacts (a model file, archive, image). For DataFrames use\n# to_s3_csv/parquet/json instead.\nuri = upload_s3('/tmp/model.joblib', 'your-bucket', 'models/model.joblib')\n# or raw bytes: upload_s3(b'...', 'your-bucket', 'blobs/x.bin')\nprint(uri)",
+      "desc": "Upload bytes or a local file to S3 (non-tabular)",
+      "name": "upload_s3",
+      "returns": "str",
+      "signature": "upload_s3(data, bucket: str, key: str = None) -> str",
+      "summary": "Upload an arbitrary artifact to S3 — a local file OR raw bytes."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Filled line — a trend over time, or a stacked composition with color=.\nplot_area(df, x='date', y='revenue', color='product', title='Revenue over time')",
+      "desc": "Interactive area chart (trend / stacked)",
+      "name": "plot_area",
+      "returns": "",
+      "signature": "plot_area(df: DataFrame, x: str, y: str, color: str = None, title: str = None)",
+      "summary": "Interactive area chart — a filled line, ideal for a trend over time or a stacked composition when `color` splits the series."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Interactive bar chart with Plotly\nplot_bar(df, x='product', y='revenue', color='region', title='Revenue by Product')",
+      "desc": "Interactive bar chart",
+      "name": "plot_bar",
+      "returns": "",
+      "signature": "plot_bar(df: DataFrame, x: str, y: str, color: str = None, title: str = None)",
+      "summary": "Interactive bar chart."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Distribution, median, quartiles, outliers of a numeric column.\nplot_box(df, y='revenue', x='region', title='Revenue by region')",
+      "desc": "Box plot — distribution & outliers",
+      "name": "plot_box",
+      "returns": "",
+      "signature": "plot_box(df: DataFrame, y: str, x: str = None, color: str = None, title: str = None)",
+      "summary": "Interactive box plot — distribution, median, quartiles, and outliers of a numeric column, optionally split into groups by a categorical column."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Evaluate a fitted classifier on a labeled test set.\nplot_confusion_matrix(model, X_test, y_test, normalize=True)",
+      "desc": "Confusion matrix of a fitted classifier",
+      "name": "plot_confusion_matrix",
+      "returns": "",
+      "signature": "plot_confusion_matrix(model, X, y, feature_cols=None, labels=None, normalize: bool = False, title: str = None)",
+      "summary": "Confusion matrix of a fitted CLASSIFIER on a labeled test set, rendered as a labeled heatmap — the visual companion to evaluate_model (accuracy tells you how often you're right; this shows WHICH…"
+    },
+    {
+      "category": "Visualization",
+      "code": "# Correlation matrix across numeric columns (the EDA companion to profile()).\nplot_corr(df)                      # all numeric cols, pearson\n# plot_corr(df, columns=['price','qty','total'], method='spearman')",
+      "desc": "Correlation heatmap of numeric columns",
+      "name": "plot_corr",
+      "returns": "",
+      "signature": "plot_corr(df: DataFrame, columns: list = None, method: str = pearson, title: str = None)",
+      "summary": "Correlation heatmap of the NUMERIC columns — the one-liner EDA companion to profile()."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Heatmap from a pivot table\nplot_heatmap(df, x='month', y='product', value='revenue', title='Sales Heatmap')",
+      "desc": "Pivot heatmap",
+      "name": "plot_heatmap",
+      "returns": "",
+      "signature": "plot_heatmap(df: DataFrame, x: str, y: str, value: str, title: str = None)",
+      "summary": "Pivot and display as heatmap."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Interactive histogram\nplot_histogram(df, 'revenue', bins=20, title='Revenue Distribution')",
+      "desc": "Interactive histogram",
+      "name": "plot_histogram",
+      "returns": "",
+      "signature": "plot_histogram(df: DataFrame, column: str, bins: int = 30, title: str = None)",
+      "summary": "Interactive histogram."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Interactive line chart with Plotly\nplot_line(df, x='date', y='revenue', color='product', title='Revenue Over Time')",
+      "desc": "Interactive line chart",
+      "name": "plot_line",
+      "returns": "",
+      "signature": "plot_line(df: DataFrame, x: str, y: str, color: str = None, title: str = None)",
+      "summary": "Interactive line chart."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Share of a total across categories.\nplot_pie(df, names='category', values='revenue', title='Revenue share')",
+      "desc": "Pie chart — share of a total",
+      "name": "plot_pie",
+      "returns": "",
+      "signature": "plot_pie(df: DataFrame, names: str, values: str, title: str = None)",
+      "summary": "Interactive pie chart — share of a total across categories."
+    },
+    {
+      "category": "Visualization",
+      "code": "# Interactive scatter plot (size + color encoding)\nplot_scatter(df, x='age', y='revenue', size='quantity', color='country')",
+      "desc": "Interactive scatter plot",
+      "name": "plot_scatter",
+      "returns": "",
+      "signature": "plot_scatter(df: DataFrame, x: str, y: str, size: str = None, color: str = None, title: str = None)",
+      "summary": "Interactive scatter plot."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Retrieve + generate in one call: a natural-language answer grounded in the\n# Knowledge Base, with citations.\nresult = ask_bedrock_kb(\"What is the return policy for electronics?\")\nprint(result[\"answer\"])\nfor c in result.get(\"citations\", []):\n    print(\" -\", c.get(\"source_uri\"))",
+      "desc": "Ask a KB for a synthesized, cited answer (RAG)",
+      "name": "ask_bedrock_kb",
+      "returns": "dict",
+      "signature": "ask_bedrock_kb(query: str, kb_id: str = None, filter: dict = None, model_id: str = None) -> dict",
+      "summary": "Ask a Bedrock Knowledge Base a question and get a SYNTHESIZED, cited answer (the RetrieveAndGenerate API): Bedrock retrieves the relevant chunks AND uses a foundation model to compose a…"
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Rough token estimate — size a prompt or a batch before running it\nprint(count_tokens(long_prompt))\nprint(\"total for column:\", count_tokens(df[\"review_text\"].tolist()))",
+      "desc": "Estimate tokens to size a prompt / cost",
+      "name": "count_tokens",
+      "returns": "int",
+      "signature": "count_tokens(text, *, model: str = None) -> int",
+      "summary": "Estimate the token count of a string (or the total for a list of strings)."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Embed a list of texts → (n, dim) numpy array (Titan v2 by default)\nvecs = embed_texts(df[\"description\"].tolist())\nprint(\"shape:\", vecs.shape)",
+      "desc": "Compute embeddings (numpy array)",
+      "name": "embed_texts",
+      "returns": "",
+      "signature": "embed_texts(texts, *, model: str = None, batch_size: int = 96, input_type: str = search_document)",
+      "summary": "Compute embeddings for a list of texts via Bedrock."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Single LLM call via Amazon Bedrock (no API keys — uses the VM's role)\nanswer = invoke_llm(\"Summarize AWS Lambda in one sentence.\")\nprint(answer)\n\n# Structured output: parse the reply as JSON\ndata = invoke_llm(\n    \"Extract the company and amount as JSON from: Acme paid $4,200.\",\n    system=\"Return only compact JSON.\", json=True,\n)\ndata",
+      "desc": "Call a Bedrock LLM with one prompt",
+      "name": "invoke_llm",
+      "returns": "",
+      "signature": "invoke_llm(prompt: str, *, system: str = None, model: str = None, max_tokens: int = 1024, temperature: float = 0.0, json: bool = False)",
+      "summary": "Call a Bedrock LLM with a single prompt and return its reply."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# List models available for the model= arg of invoke_llm / embed_texts\nlist_bedrock_models()\n# Filter by provider:\n# list_bedrock_models(by_provider=\"anthropic\")",
+      "desc": "Discover available Bedrock models",
+      "name": "list_bedrock_models",
+      "returns": "DataFrame",
+      "signature": "list_bedrock_models(*, by_provider: str = None, text_only: bool = True) -> DataFrame",
+      "summary": "List the Bedrock models available in this account/region as a DataFrame (columns: model_id, provider, name, input_modalities, output_modalities, streaming)."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Classify each text into one of the given labels\nresult = llm_classify(\n    df[\"ticket_text\"],\n    labels=[\"billing\", \"technical\", \"account\", \"other\"],\n    instructions=\"treat refund questions as 'billing'\",\n)\nresult.head()",
+      "desc": "Classify text into a fixed set of labels",
+      "name": "llm_classify",
+      "returns": "DataFrame",
+      "signature": "llm_classify(texts, labels, *, system: str = None, instructions: str = None, model: str = None, temperature: float = 0.0, multi_label: bool = False) -> DataFrame",
+      "summary": "Classify each text into one of `labels` using an LLM."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Pull structured fields out of free text — one row per input\nresult = llm_extract(\n    df[\"email_body\"],\n    schema={\n        \"sender_intent\": \"one of: question, complaint, request\",\n        \"product\": \"the product mentioned, or null\",\n        \"urgency\": \"low, medium, or high\",\n    },\n)\nresult.head()",
+      "desc": "Extract structured fields from text",
+      "name": "llm_extract",
+      "returns": "DataFrame",
+      "signature": "llm_extract(texts, schema: dict, *, system: str = None, instructions: str = None, model: str = None, temperature: float = 0.0) -> DataFrame",
+      "summary": "Extract structured fields from each text into a DataFrame — one row per input, one column per field in `schema`."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Apply an LLM to each row. {column} placeholders are filled per row.\n# ⚠️ one Bedrock call PER ROW — filter/sample large frames first.\ndf = llm_map(df, \"Rewrite this review politely:\\n{review_text}\",\n             output_column=\"polite\")\ndf[[\"review_text\", \"polite\"]].head()",
+      "desc": "Run a prompt over every row of a DataFrame",
+      "name": "llm_map",
+      "returns": "DataFrame",
+      "signature": "llm_map(df: DataFrame, prompt_template: str, *, output_column: str = llm_output, system: str = None, model: str = None, max_tokens: int = 512, temperature: float = 0.0, json: bool = False) -> DataFrame",
+      "summary": "Run an LLM prompt over EVERY ROW of a DataFrame — \"apply, but with an LLM\"."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Sentiment as labels (negative / neutral / positive)\nllm_sentiment(df[\"review_text\"]).head()\n\n# ...or as a numeric score from -1.0 to 1.0\n# llm_sentiment(df[\"review_text\"], scale=\"score\").head()",
+      "desc": "Sentiment label or score per text",
+      "name": "llm_sentiment",
+      "returns": "DataFrame",
+      "signature": "llm_sentiment(texts, *, scale: str = label, system: str = None, model: str = None, temperature: float = 0.0) -> DataFrame",
+      "summary": "Sentiment analysis over text."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Summarize one string → returns a string\nprint(llm_summarize(long_text, style=\"bullets\"))\n\n# Summarize a whole column → returns a DataFrame (text, summary)\nsummaries = llm_summarize(df[\"notes\"], style=\"concise\", max_words=30)\nsummaries.head()",
+      "desc": "Summarize a string or a column of text",
+      "name": "llm_summarize",
+      "returns": "",
+      "signature": "llm_summarize(texts, *, style: str = concise, max_words: int = None, system: str = None, model: str = None, temperature: float = 0.0)",
+      "summary": "Summarize text with an LLM."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Translate one string, or a whole column (returns a DataFrame).\nprint(llm_translate('Good morning', to='French'))\n# translated = llm_translate(df['review_text'], to='Spanish')",
+      "desc": "Translate a string or a column of text",
+      "name": "llm_translate",
+      "returns": "",
+      "signature": "llm_translate(texts, to, *, source: str = None, system: str = None, model: str = None, temperature: float = 0.0)",
+      "summary": "Translate text with an LLM."
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Retrieve the most relevant document chunks for a question (semantic search\n# over your KB) — returns a DataFrame of chunks with scores + source URIs.\ndf = read_bedrock_kb(\"Which products are best for cold weather?\", top_k=5)\ndf[[\"score\", \"text\", \"source_uri\"]]",
+      "desc": "Retrieve chunks from a Bedrock Knowledge Base (RAG)",
+      "name": "read_bedrock_kb",
+      "returns": "DataFrame",
+      "signature": "read_bedrock_kb(query: str, kb_id: str = None, top_k: int = 5, filter: dict = None, min_score: float = None) -> DataFrame",
+      "summary": "Semantic search a Bedrock Knowledge Base and return the retrieved chunks as a DataFrame — one row per chunk, with columns: text the chunk's cited text score relevance score (higher = more relevant)…"
+    },
+    {
+      "category": "Generative AI",
+      "code": "# Rank a corpus against a query (cosine similarity)\ncorpus = df[\"description\"].tolist()\nsemantic_search(\"waterproof winter boots\", corpus, top_k=5)\n\n# Efficient reuse: embed the corpus ONCE, then only the query is embedded\n# vecs = embed_texts(corpus)\n# semantic_search(\"waterproof winter boots\", corpus, corpus_vectors=vecs, top_k=5)",
+      "desc": "Rank a corpus by similarity to a query",
+      "name": "semantic_search",
+      "returns": "DataFrame",
+      "signature": "semantic_search(query: str, corpus, *, corpus_vectors=None, top_k: int = 5, model: str = None) -> DataFrame",
+      "summary": "Rank a corpus by semantic similarity to a query and return the top-k matches as a DataFrame (columns: rank, score, text) sorted by score descending."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Compare two DataFrames side-by-side\n# Useful for before/after cleaning checks\ncompare_df(df_raw, df_clean, \"raw\", \"cleaned\")",
+      "desc": "Compare two DataFrames (shape, nulls, columns)",
+      "name": "compare_df",
+      "returns": "DataFrame",
+      "signature": "compare_df(df1: DataFrame, df2: DataFrame, name1: str = df1, name2: str = df2) -> DataFrame",
+      "summary": "Compare two DataFrames and show differences in shape, columns, and values."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Price a session's usage (quantities come from the v_nb_session_cost view)\nq = read_aurora(\"SELECT running_secs, suspended_secs, burst_mb_seconds, \"\n                \"memory_mib, architecture FROM v_nb_session_cost \"\n                \"WHERE session_id = '<session-id>'\")\ncost = estimate_session_cost(**q.iloc[0].to_dict())\nprint(f\"Session cost: ${cost['total_cost_usd']:.4f}\")",
+      "desc": "Price a session from its usage quantities",
+      "name": "estimate_session_cost",
+      "returns": "dict",
+      "signature": "estimate_session_cost(running_secs: float = 0.0, suspended_secs: float = 0.0, burst_mb_seconds: float = 0.0, memory_mib: int = None, architecture: str = None, resume_count: int = 0, suspend_count: int = 0) -> dict",
+      "summary": "Estimate a MicroVM session's cost in USD from its usage QUANTITIES — the exact three-component model the platform bills on: 1."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Secrets & env vars are configured in the Secrets & Env panel and injected\n# into the notebook at launch. Read them with the helpers (no os.environ/json):\n\n# Discover what's available (keys only — values are never shown). The two lists\n# are a clean split: direct env vars vs Secrets-Manager secrets.\nlist_env()        # your direct env vars\n# list_secret()   # just the Secrets-Manager-backed ones\n\n# Read a value by name. A JSON secret comes back as a dict; a plain value as a\n# string (no JSONDecodeError on plaintext).\napi_key = get_secret('MY_SECRET_NAME')\nprint('MY_SECRET_NAME →', '✓ loaded' if api_key is not None else '✗ not set')\n\n# Typed config via as_type (int/float/bool/dict/list); default + required too:\n# port  = get_env('DB_PORT', 5432, as_type=int)\n# creds = get_secret('DB_CREDS')          # dict if JSON\n# token = get_env('API_TOKEN', required=True)",
+      "desc": "Read an injected secret or env var",
+      "name": "get_env",
+      "returns": "",
+      "signature": "get_env(name, default=UNSET, *, as_type=None, required=False)",
+      "summary": "Read an environment variable (or a Secrets-Manager secret) by name, with smart typing — the one-liner that replaces hand-written os.environ + json.loads."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Read a Secrets-Manager secret by its env-var name. JSON comes back as a dict,\n# plaintext as the string (no json.loads, no JSONDecodeError).\ncreds = get_secret('DB_CREDS')          # {'username': ..., 'password': ...}\nkey = get_secret('DEMO_API_KEY')        # 'sk-...'",
+      "desc": "Read a secret (JSON -> dict, else string)",
+      "name": "get_secret",
+      "returns": "",
+      "signature": "get_secret(name, default=UNSET, *, as_type=None, required=False)",
+      "summary": "Read a secret by its target env var name — an alias of get_env (secrets and env vars both resolve from os.environ at VM launch; identical behavior)."
+    },
+    {
+      "category": "Utilities",
+      "code": "# The in-notebook helper reference (same catalog as the Snippets panel).\nhelpers()                     # every helper, grouped\n# helpers('Machine Learning') # one category\n# helpers(train_model)        # full signature + docstring for one",
+      "desc": "Browse the pre-loaded helper functions",
+      "name": "helpers",
+      "returns": "",
+      "signature": "helpers(query=None)",
+      "summary": "Browse the pre-loaded helper functions from inside a cell — the in-notebook reference for everything that's injected into your namespace (read_*, plot_*, invoke_llm, train_model, …)."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Install a package not baked into the image (persists across VM restore).\ninstall_package('yfinance')",
+      "desc": "Install a Python package into the sandbox",
+      "name": "install_package",
+      "returns": "dict",
+      "signature": "install_package(package: str) -> dict",
+      "summary": "Install a Python package into this sandbox — the same action as the Packages side-panel, so the package is pip-installed AND recorded so it SURVIVES a VM suspend/restore (a plain `pip install` in a…"
+    },
+    {
+      "category": "Utilities",
+      "code": "# The in-cell Data Sources panel as a DataFrame — see what's queryable.\nlist_datasources()\n# list_datasources('athena')   # filter by type",
+      "desc": "List data sources available this session",
+      "name": "list_datasources",
+      "returns": "DataFrame",
+      "signature": "list_datasources(source_type: str = None) -> DataFrame",
+      "summary": "List the data sources available to THIS notebook as a DataFrame — the in-cell equivalent of the Data Sources side panel (\"what can I query right now?\")."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Your DIRECT env vars (KEYS ONLY — values never shown). Secrets are NOT here —\n# use list_secret() for those; the two are a clean, non-overlapping split.\nlist_env()            # your direct env vars\n# list_env(all=True)  # the full dump: system/platform vars + secrets too",
+      "desc": "List your direct env vars (keys only)",
+      "name": "list_env",
+      "returns": "",
+      "signature": "list_env(all: bool = False)",
+      "summary": "List the DIRECT environment variables this notebook configured, as a DataFrame — the discovery companion to get_env."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Just the Secrets-Manager-backed secrets (keys only).\nlist_secret()",
+      "desc": "List Secrets-Manager secrets (keys only)",
+      "name": "list_secret",
+      "returns": "",
+      "signature": "list_secret()",
+      "summary": "List the Secrets-Manager-backed secrets this notebook configured, as a DataFrame — the mirror of list_env()."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Profile a DataFrame: types, nulls, unique counts\nprofile(df)",
+      "desc": "Quick data profiling (types, nulls, stats)",
+      "name": "profile",
+      "returns": "DataFrame",
+      "signature": "profile(df: DataFrame) -> DataFrame",
+      "summary": "Quick data profiling: types, nulls, unique values, and basic stats."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Load a built-in sample dataset\n# Call without args to list available datasets\ndf = sample_data()  # lists available\ndf = sample_data('dataset_name')\ndf.head()",
+      "desc": "Load built-in sample dataset",
+      "name": "sample_data",
+      "returns": "DataFrame",
+      "signature": "sample_data(name: str = None) -> DataFrame",
+      "summary": "Load a built-in sample dataset from S3."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Zero-arg: price the current session's usage. Needs --AuroraSetup.\nc = session_cost()\nprint(c['total_cost_usd'])",
+      "desc": "Cost of THIS notebook's session so far (USD)",
+      "name": "session_cost",
+      "returns": "dict",
+      "signature": "session_cost() -> dict",
+      "summary": "Cost of THIS notebook's session so far, in USD — the zero-argument one-liner."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Identity + usage + cost of the current notebook session\ninfo = this_notebook()",
+      "desc": "Describe this session (identity, usage, cost)",
+      "name": "this_notebook",
+      "returns": "dict",
+      "signature": "this_notebook(session_id: str = None) -> dict",
+      "summary": "Describe a notebook session: its notebook name + id, MicroVM id, persistence mode, and (when Aurora is configured) the session's usage and a cost estimate."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Time a function's execution\n@timer\ndef my_computation():\n    return sum(range(10**7))\n\nresult = my_computation()",
+      "desc": "Decorator to measure function execution time",
+      "name": "timer",
+      "returns": "",
+      "signature": "timer(func)",
+      "summary": "Decorator that prints execution time of a function."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Remove a previously-installed package.\nuninstall_package('yfinance')",
+      "desc": "Uninstall a Python package from the sandbox",
+      "name": "uninstall_package",
+      "returns": "dict",
+      "signature": "uninstall_package(package: str) -> dict",
+      "summary": "Uninstall a Python package from this sandbox — the same action as the Packages side-panel's remove."
+    },
+    {
+      "category": "Utilities",
+      "code": "# Show current AWS identity and environment\ninfo = whoami()",
+      "desc": "Show current AWS account, region, role, bucket",
+      "name": "whoami",
+      "returns": "dict",
+      "signature": "whoami() -> dict",
+      "summary": "Show current AWS identity: account, region, role, and artifacts bucket."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Metrics on held-out data — accuracy/F1 (classification) or R2/MAE (regression).\nmetrics = evaluate_model(model, X_test, y_test)\nmetrics",
+      "desc": "Score a fitted model on a labeled test set",
+      "name": "evaluate_model",
+      "returns": "dict",
+      "signature": "evaluate_model(model, X, y, feature_cols=None, task: str = None) -> dict",
+      "summary": "Score a FITTED model on a labeled test set and return the metrics as a dict — the standalone version of the holdout report train_model prints, so you can evaluate a model you LOADED (load_model /…"
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Reload a model saved with save_model (or any .joblib / .pkl in S3).\nmodel = load_model(\"<your-bucket>\", \"models/<name>.joblib\")",
+      "desc": "Load a trained model back from S3",
+      "name": "load_model",
+      "returns": "",
+      "signature": "load_model(bucket: str, key: str = None)",
+      "summary": "Load a trained model from S3 into a live object you can call .predict() on."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Reload a model saved with save_model_local.\nmodel = load_model_local('/tmp/model.joblib')",
+      "desc": "Load a model back from /tmp",
+      "name": "load_model_local",
+      "returns": "",
+      "signature": "load_model_local(path: str)",
+      "summary": "Load a trained model from a local /tmp file (e.g. one you downloaded earlier with download_s3, or trained in a previous cell and saved with save_model_local)."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Load an ONNX graph (framework-free inference) saved to S3.\nsess = load_onnx('your-bucket', 'models/model.onnx')\n# preds = onnx_predict(sess, new_rows)",
+      "desc": "Load an ONNX model from S3 for inference",
+      "name": "load_onnx",
+      "returns": "",
+      "signature": "load_onnx(bucket: str, key: str = None)",
+      "summary": "Load an ONNX model into an inference session — run classic-model inference WITHOUT the original training framework installed."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# What does this model expect and predict? Works for a train_model Pipeline, an\n# ONNX session, OR a SageMaker endpoint handle/name.\nmodel_info(model)",
+      "desc": "Inspect a model: features, classes, task",
+      "name": "model_info",
+      "returns": "dict",
+      "signature": "model_info(model) -> dict",
+      "summary": "Inspect any model — a scikit-learn estimator/Pipeline, an ONNX InferenceSession (from load_onnx), or a deployed SageMaker endpoint (handle or 'microvm-ep-*' name) — printing a \"what do I feed this?\"…"
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Run inference through an ONNX session on raw rows.\npreds = onnx_predict(sess, new_rows)\npreds[:5]",
+      "desc": "Predict with a loaded ONNX session",
+      "name": "onnx_predict",
+      "returns": "",
+      "signature": "onnx_predict(session, data, feature_cols=None, input_name: str = None)",
+      "summary": "Run inference with an ONNX session (from load_onnx) and return the model's first output as a numpy array (or a Series aligned to a DataFrame's index)."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Predict on RAW rows (the Pipeline one-hots internally). Also accepts a SageMaker\n# job handle or an endpoint — same call surface for local and remote models.\npreds = predict(model, new_rows)\n# proba = predict_proba(model, new_rows)   # class probabilities",
+      "desc": "Predict on raw rows with a loaded model",
+      "name": "predict",
+      "returns": "",
+      "signature": "predict(model, data, feature_cols=None)",
+      "summary": "Run a model (or a SageMakerJob) .predict() on your data and return the predictions."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Score a frame and append predictions as a new column.\nscored = predict_batch(model, df, output_col=\"prediction\")\n# Rank by likelihood (classification):\n# ranked = predict_batch(model, df, output_col=\"score\", proba=True).sort_values(\"score\", ascending=False)",
+      "desc": "Score a whole DataFrame, append a column",
+      "name": "predict_batch",
+      "returns": "DataFrame",
+      "signature": "predict_batch(model, df: DataFrame, feature_cols=None, output_col: str = prediction, proba: bool = False) -> DataFrame",
+      "summary": "Score a whole DataFrame with a model (or a SageMakerJob) and return a COPY of df with the predictions appended as a new column — the natural way in a notebook."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Per-class probabilities (classification). Takes RAW rows (the Pipeline encodes).\nproba = predict_proba(model, new_rows)\nproba[:5]",
+      "desc": "Class probabilities from a classifier",
+      "name": "predict_proba",
+      "returns": "",
+      "signature": "predict_proba(model, data, feature_cols=None)",
+      "summary": "Class probabilities from a classifier (a model or a SageMakerJob), as a DataFrame with one column per class (labeled with the model's classes_ when available) and aligned to the input index."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Persist to S3 as a portable .joblib artifact; reload later with load_model.\nuri = save_model(model, \"<your-bucket>\", \"models/<name>.joblib\")\nprint(\"saved:\", uri)",
+      "desc": "Persist a trained model to S3 (.joblib)",
+      "name": "save_model",
+      "returns": "str",
+      "signature": "save_model(model, bucket: str, key: str = None) -> str",
+      "summary": "Serialize a trained model and upload it to S3 (the inverse of load_model)."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Persist a model to the local sandbox (not S3). Reload with load_model_local.\npath = save_model_local(model, '/tmp/model.joblib')\nprint(path)",
+      "desc": "Save a trained model to /tmp (.joblib)",
+      "name": "save_model_local",
+      "returns": "str",
+      "signature": "save_model_local(model, path: str) -> str",
+      "summary": "Serialize a trained model to a local /tmp file."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# Convert a fitted scikit-learn model to ONNX for framework-free inference.\nonx = to_onnx(model, df.head(1))        # installs skl2onnx on first use\n# save_model(onx, \"<bucket>\", \"models/<name>.onnx\")   # .onnx key stores the graph",
+      "desc": "Export a sklearn model to ONNX (framework-free)",
+      "name": "to_onnx",
+      "returns": "",
+      "signature": "to_onnx(model, sample, target_opset: int = None)",
+      "summary": "Convert a fitted scikit-learn model to an ONNX graph — the framework-free export format."
+    },
+    {
+      "category": "Machine Learning / Local",
+      "code": "# One-call training: infers the task, one-hot encodes, splits, fits, prints metrics.\n# Returns a scikit-learn Pipeline that takes RAW rows (no manual encoding).\nmodel = train_model(df, target=\"returned\")\n# Override anything: task=, features=, estimator=<sklearn est>, n_estimators=, cv=, scale=",
+      "desc": "Fit a model from a DataFrame in one call",
+      "name": "train_model",
+      "returns": "",
+      "signature": "train_model(df: pd.DataFrame, target: str, *, features=None, task: str = None, estimator=None, categorical=None, numeric=None, test_size: float = 0.2, stratify: bool = True, scale: bool = False, cv: int = None, random_state: int = 42, return_report: bool = True, **estimator_kwargs)",
+      "summary": "Fit a scikit-learn model from a DataFrame in ONE call — the end-to-end version of the usual get_dummies → train_test_split → fit → score boilerplate."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Permanent teardown — removes the endpoint, its config, and the model.\nprint(sm_delete_endpoint(ep))",
+      "desc": "Delete an endpoint (full teardown)",
+      "name": "sm_delete_endpoint",
+      "returns": "str",
+      "signature": "sm_delete_endpoint(endpoint) -> str",
+      "summary": "Delete a deployed endpoint AND its config + model (full teardown, so nothing keeps standing)."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Dedicated, always-warm (no cold start; GPU types available). ⚠️ BILLS CONTINUOUSLY\n# while running — stop it when idle (sm_stop_endpoint) and delete when done.\nep = sm_deploy_instance(model, instance_type=\"ml.m5.large\")",
+      "desc": "Deploy an always-warm instance endpoint",
+      "name": "sm_deploy_instance",
+      "returns": "SageMakerEndpoint",
+      "signature": "sm_deploy_instance(model, *, name: str = None, instance_type: str = ml.m5.large, instance_count: int = 1, tags: dict = None, wait: bool = True, timeout_s: int = 1200) -> SageMakerEndpoint",
+      "summary": "Deploy a trained model as an INSTANCE-BACKED (dedicated) SageMaker endpoint — always-warm compute with no cold start, callable from ANY notebook by name."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Standing endpoint that scales to zero — $0 while idle, pay per request. The DEFAULT.\n# wait=False returns a handle immediately; poll sm_endpoint_status until InService.\nep = sm_deploy_serverless(model, name=\"return-risk\", wait=False)\nprint(ep.name, \"·\", ep.status())",
+      "desc": "Deploy a serverless real-time endpoint ($0 idle)",
+      "name": "sm_deploy_serverless",
+      "returns": "SageMakerEndpoint",
+      "signature": "sm_deploy_serverless(model, *, name: str = None, memory_mb: int = 2048, max_concurrency: int = 5, provisioned_concurrency: int = None, tags: dict = None, wait: bool = True, timeout_s: int = 1200) -> SageMakerEndpoint",
+      "summary": "Deploy a trained model as a SERVERLESS SageMaker endpoint — a standing HTTPS model callable from ANY notebook by name, that costs $0 while idle (scales to zero) and needs no start/stop."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Poll a deployed endpoint — 'Creating' -> 'InService' / 'Failed'.\nprint(sm_endpoint_status(ep))",
+      "desc": "Current status of a SageMaker endpoint",
+      "name": "sm_endpoint_status",
+      "returns": "str",
+      "signature": "sm_endpoint_status(endpoint) -> str",
+      "summary": "One-line status of an endpoint: 'InService' / 'Creating' / 'Failed: <reason>' / 'OutOfService' / 'Stopped' / 'Deleted'."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# The microvm-ep-* endpoints currently standing (name, status, mode).\nsm_endpoints()",
+      "desc": "List this project's SageMaker endpoints",
+      "name": "sm_endpoints",
+      "returns": "DataFrame",
+      "signature": "sm_endpoints(max_results: int = 25) -> pd.DataFrame",
+      "summary": "List this account's SageMaker endpoints (filtered to this project's microvm-ep-*) as a DataFrame: endpoint, type, status, region, created."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Recent sm_train jobs and their status.\nsm_jobs()",
+      "desc": "List recent SageMaker training jobs",
+      "name": "sm_jobs",
+      "returns": "DataFrame",
+      "signature": "sm_jobs(max_results: int = 10, *, since=None) -> pd.DataFrame",
+      "summary": "List this account's recent SageMaker training jobs (name, status, created) as a DataFrame — a quick way to see what you've submitted and whether it's done."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Waits for the job, downloads the model, rewraps it with its preprocessing so it\n# takes RAW rows exactly like a train_model Pipeline.\nmodel = sm_load_model(job)\nmodel_info(model)",
+      "desc": "Pull a finished SageMaker model into the VM",
+      "name": "sm_load_model",
+      "returns": "",
+      "signature": "sm_load_model(job, *, timeout_s: int = 1800)",
+      "summary": "Pull a finished SageMaker model back into the VM as a ready-to-use predictor."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Remote inference against a deployed endpoint (handle OR 'microvm-ep-...' name).\npreds = sm_predict(ep, new_rows)\n# proba = sm_predict(ep, new_rows, proba=True)   # class probabilities",
+      "desc": "Invoke a live endpoint on raw rows",
+      "name": "sm_predict",
+      "returns": "",
+      "signature": "sm_predict(endpoint, data, *, proba: bool = False)",
+      "summary": "Invoke a deployed endpoint on RAW rows and return predictions."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Remote batch inference against a deployed endpoint (handle or name); appends\n# a prediction column.\nscored = sm_predict_batch(ep, df, output_col='prediction')\nscored.head()",
+      "desc": "Score a DataFrame against an endpoint",
+      "name": "sm_predict_batch",
+      "returns": "DataFrame",
+      "signature": "sm_predict_batch(target, df: pd.DataFrame, *, output_col: str = prediction, proba: bool = False, timeout_s: int = 1800) -> pd.DataFrame",
+      "summary": "Score a whole DataFrame with a SageMaker model and return a COPY of df with predictions appended as a new column."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Recreate a stopped instance endpoint from its retained config (a few min to InService).\nsm_start_endpoint(ep)",
+      "desc": "Resume a stopped instance endpoint",
+      "name": "sm_start_endpoint",
+      "returns": "SageMakerEndpoint",
+      "signature": "sm_start_endpoint(endpoint, *, wait: bool = True, timeout_s: int = 1200) -> SageMakerEndpoint",
+      "summary": "START (resume) a STOPPED instance endpoint by recreating it from its retained endpoint-config."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# INSTANCE endpoints only: tear down the running endpoint to pause billing, KEEPING\n# its config + model so you can resume. No-op on a serverless endpoint ($0 idle).\nsm_stop_endpoint(ep)",
+      "desc": "Stop an instance endpoint (pause billing)",
+      "name": "sm_stop_endpoint",
+      "returns": "str",
+      "signature": "sm_stop_endpoint(endpoint, *, wait: bool = False, timeout_s: int = 600) -> str",
+      "summary": "STOP an INSTANCE-backed endpoint to pause its per-instance-hour billing, while KEEPING everything needed to bring it back."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Scale-out training when data is too big for the VM / you need a GPU. NON-BLOCKING:\n# returns a job handle in seconds. Same target/features contract as train_model.\njob = sm_train(df, target=\"returned\")\nprint(job)   # poll with sm_training_job_status(job) in a LATER cell",
+      "desc": "Train on SageMaker-managed compute (non-blocking)",
+      "name": "sm_train",
+      "returns": "SageMakerJob",
+      "signature": "sm_train(df, target: str, *, features=None, task: str = None, framework: str = sklearn, estimator: str = random_forest, categorical=None, numeric=None, scale: bool = False, data_format: str = None, instance: str = None, max_depth: int = 6, n_estimators: int = 100, C: float = 1.0, alpha: float = 1.0, wait: bool = False) -> SageMakerJob",
+      "summary": "Train a model on SageMaker-managed compute — the scale-out counterpart of the in-VM train_model()."
+    },
+    {
+      "category": "Machine Learning / SageMaker",
+      "code": "# Cheap to call — re-run every ~30s: 'InProgress (3m)' → 'Completed' / 'Failed: ...'\nprint(sm_training_job_status(job))",
+      "desc": "Poll a training job until Completed",
+      "name": "sm_training_job_status",
+      "returns": "str",
+      "signature": "sm_training_job_status(job) -> str",
+      "summary": "Report a training job's status in one human line: 'InProgress (3m elapsed)' / 'Completed (2m)' / 'Failed: <reason>' / 'Stopped'."
+    }
+  ]
+}

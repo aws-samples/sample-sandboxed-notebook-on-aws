@@ -1,0 +1,127 @@
+{
+  "name": "Notebook Analytics & Cost",
+  "description": "A self-referential analytics workbook: it queries the platform's own read-only Aurora views (v_nb_*) to show your OPEN notebooks with their overall runs and cost, then lets you pick one from a dropdown for a full deep-dive — version history, runs, execution times, CPU, memory, and cost. Requires the proxy launched with --AuroraSetup.",
+  "savedAt": "2026-08-27T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 📊 Notebook Analytics & Cost\n\nThis workbook reads the platform's **own execution history** through the read-only Aurora views (`v_nb_*`) with the `read_aurora()` helper, and turns it into two things:\n\n1. **An overview of your open notebooks** — which ones are open, and their combined runs and cost.\n2. **A deep-dive on one notebook you pick** — its version history, runs, per-cell execution times, CPU, memory, and cost.\n\n> **Prerequisite:** the proxy must be started with `--AuroraSetup` (or `--AuroraReset`). Without it, `read_aurora` has no cluster to reach and the first query says so. The notebook user can query **only** the curated `v_nb_*` views — never raw cell code, output, or error text — so this dashboard is safe to share.\n\n> **What \"open\" means here.** A sandboxed cell reads the curated views only; the live RUNNING/SUSPENDED state of a VM isn't exposed to them. So we treat a notebook as **open** when it has an **associated session** (`v_nb_notebook.session_id`) — i.e. it has been opened and attached to a MicroVM. That's the best signal available from inside the sandbox.\n\n```mermaid\ngraph LR\n  A[\"Aurora v_nb_* views (read-only)\"] --> R[\"read_aurora()\"]\n  R --> O[\"Overview: open notebooks + runs + cost\"]\n  O --> S[\"Pick one (dropdown)\"]\n  S --> D[\"Deep-dive: versions, runs, time, CPU, memory, cost\"]\n```"
+    },
+    {
+      "type": "markdown",
+      "code": "## 1 · This notebook\n\n`this_notebook()` reports the identity injected into this MicroVM at launch — notebook name + id, session id, VM id, persistence mode — and, when Aurora is reachable, the session's usage and cost so far. No ids to copy or paste. We keep the result as `me` and reuse `me['session_id']` as the picker's default later."
+    },
+    {
+      "type": "code",
+      "code": "me = this_notebook()"
+    },
+    {
+      "type": "markdown",
+      "code": "## 2 · Which notebooks are open?\n\n`v_nb_notebook` has one row per notebook with pre-aggregated counts (`cell_count`, `total_runs`, `last_run_at`) and the `session_id` it's attached to. We pull the **open** ones — those with a non-null `session_id` — into `open_nbs`. Each also carries its session id, which we'll price and use as the picker's key."
+    },
+    {
+      "type": "code",
+      "code": "import pandas as pd\n\nopen_nbs = read_aurora(\"\"\"\n    SELECT notebook_id, name, tag, session_id,\n           cell_count, total_runs, updated_at, last_run_at\n    FROM v_nb_notebook\n    WHERE session_id IS NOT NULL\n    ORDER BY last_run_at DESC NULLS LAST, name\n\"\"\")\n\nprint(f\"{len(open_nbs)} open notebook(s) (attached to a session)\")\nif len(open_nbs):\n    print(f\"  Total cells across them: {int(open_nbs['cell_count'].sum())}\")\n    print(f\"  Total runs across them:  {int(open_nbs['total_runs'].sum())}\")\nopen_nbs[['name', 'tag', 'cell_count', 'total_runs', 'last_run_at']]"
+    },
+    {
+      "type": "markdown",
+      "code": "### Runs across open notebooks\n\nWhere execution activity is concentrated right now. `total_runs` counts every Run / Run All recorded for each open notebook."
+    },
+    {
+      "type": "code",
+      "code": "runnable = open_nbs[open_nbs['total_runs'] > 0].sort_values('total_runs', ascending=False)\nif len(runnable):\n    plot_bar(runnable, x='name', y='total_runs', color='tag',\n             title='Runs per open notebook')\nelse:\n    print('None of the open notebooks have recorded runs yet — run a few cells and re-run this.')"
+    },
+    {
+      "type": "markdown",
+      "code": "### Total cost across open notebooks\n\n`v_nb_session_cost` exposes objective **quantities** per session (running/suspended seconds, burst MB-seconds, memory tier, arch) but **no dollars** — pricing rates are platform config. We price each open notebook's session with `estimate_session_cost()` (the three-component model the platform bills on: compute + snapshot storage + burst) and total it up."
+    },
+    {
+      "type": "code",
+      "code": "if len(open_nbs):\n    # Pull the cost quantities for exactly the open notebooks' sessions.\n    sids = \"', '\".join(s.replace(\"'\", \"''\") for s in open_nbs['session_id'].dropna().tolist())\n    cost = read_aurora(f\"\"\"\n        SELECT session_id, notebook_id, notebook_name, vm_count,\n               running_secs, suspended_secs, burst_mb_seconds,\n               memory_mib, architecture\n        FROM v_nb_session_cost\n        WHERE session_id IN ('{sids}')\n    \"\"\")\nelse:\n    cost = pd.DataFrame()\n\nif len(cost):\n    priced = cost.apply(lambda r: estimate_session_cost(\n        running_secs=r['running_secs'], suspended_secs=r['suspended_secs'],\n        burst_mb_seconds=r['burst_mb_seconds'], memory_mib=r['memory_mib'],\n        architecture=r['architecture']), axis=1, result_type='expand')\n    cost = pd.concat([cost, priced[['running_cost_usd', 'suspended_cost_usd',\n                                    'burst_cost_usd', 'total_cost_usd']]], axis=1)\n    # Name each row (fall back to the denormalized session name).\n    cost = cost.merge(open_nbs[['notebook_id', 'name']], on='notebook_id', how='left')\n    cost['label'] = cost['name'].fillna(cost['notebook_name']).fillna('(unnamed)')\n    print(f\"Combined cost of {len(cost)} open notebook session(s): ${cost['total_cost_usd'].sum():.4f}\")\n    print(f\"  compute:   ${cost['running_cost_usd'].sum():.4f}\")\n    print(f\"  suspended: ${cost['suspended_cost_usd'].sum():.4f}\")\n    print(f\"  burst:     ${cost['burst_cost_usd'].sum():.4f}\")\n    plot_bar(cost.sort_values('total_cost_usd', ascending=False),\n             x='label', y='total_cost_usd', title='Cost per open notebook (USD, session to date)')\n    display(cost[['label', 'total_cost_usd', 'running_cost_usd', 'suspended_cost_usd', 'burst_cost_usd']])\nelse:\n    print('No cost rows yet for the open notebooks (a freshly-opened notebook can take ~1 min to sync).')"
+    },
+    {
+      "type": "markdown",
+      "code": "## 3 · Pick a notebook to deep-dive\n\nThe dropdown lists your **open notebooks**; its label is the notebook name and its **value is that notebook's session id**. Pick one and every cell below re-runs for it.\n\nHow it works:\n1. The next cell builds `nb_options` — a list of `{\"label\": \"Name (id)\", \"value\": \"<session_id>\"}`, one per open notebook.\n2. The `@param` dropdown uses `optionsFrom: \"nb_options\"`, so its choices come straight from that variable (no hardcoded list).\n3. `this_notebook(picked_session)` turns the chosen **session id** back into full identity + cost.\n\n> Run the next cell first (it defines `nb_options`), then choose from the dropdown."
+    },
+    {
+      "type": "code",
+      "code": "# Build the picker's choices from the open notebooks: label = \"Name (id)\",\n# value = the notebook's session_id (its stable analytics key).\nnb_options = [\n    {'label': f\"{r['name']} ({int(r['notebook_id'])})\", 'value': r['session_id']}\n    for _, r in open_nbs.iterrows()\n    if pd.notna(r['session_id'])\n]\nprint(f\"{len(nb_options)} open notebook(s) available to analyze:\")\nfor o in nb_options[:20]:\n    print(f\"  {o['label']}  →  session {str(o['value'])[:12]}…\")"
+    },
+    {
+      "type": "code",
+      "code": "# @param {\"type\": \"dropdown\", \"optionsFrom\": \"nb_options\", \"label\": \"Notebook to analyze\"}\npicked_session = \"\"\n# Default to THIS notebook on first run so the deep-dive works with zero clicks;\n# once you choose from the dropdown, your choice wins.\nif not picked_session:\n    picked_session = me.get('session_id') or (nb_options[0]['value'] if nb_options else '')\nprint('Analyzing session:', picked_session or '(none — run the cell above, then pick one)')"
+    },
+    {
+      "type": "code",
+      "code": "# Resolve the picked session id → full identity + cost via this_notebook(session_id).\nsel = this_notebook(picked_session) if picked_session else {}\nsel_nb_id = sel.get('notebook_id')\nsel_name = sel.get('notebook_name') or (f\"notebook #{sel_nb_id}\" if sel_nb_id is not None else '(unknown)')\nif sel_nb_id is None:\n    print('No history for this session yet (a brand-new notebook may take ~1 min to sync). Pick another, or re-run shortly.')\nelse:\n    hdr = open_nbs[open_nbs['notebook_id'] == sel_nb_id]\n    print(f\"Selected: {sel_name}  (notebook_id {sel_nb_id})\")\n    if len(hdr):\n        r = hdr.iloc[0]\n        print(f\"  cells: {int(r['cell_count'])}   total runs: {int(r['total_runs'])}   last run: {r['last_run_at']}\")\n    if sel.get('architecture'):\n        print(f\"  VM tier: {sel.get('memory_gb')} GB {sel.get('architecture')}   (vCPUs ≈ {(sel.get('memory_gb') or 0)/2:.1f})\")"
+    },
+    {
+      "type": "markdown",
+      "code": "## 4 · Selected notebook — version history\n\n`v_nb_versions` snapshots the notebook each time a version is captured (baseline, pre-restore, manual save…). There's no numeric version number — versions are ordered by `created_at` — so we number them ourselves and show the trigger, whether it's the baseline, and the cell count at that point."
+    },
+    {
+      "type": "code",
+      "code": "if sel_nb_id is not None:\n    versions = read_aurora(f\"\"\"\n        SELECT version_group_id, label, trigger, is_baseline, cell_count, created_at\n        FROM v_nb_versions\n        WHERE notebook_id = {int(sel_nb_id)}\n        ORDER BY created_at\n    \"\"\")\n    if len(versions):\n        versions = versions.reset_index(drop=True)\n        versions.insert(0, 'version', range(1, len(versions) + 1))\n        print(f\"{len(versions)} version(s) of {sel_name}\")\n        display(versions[['version', 'label', 'trigger', 'is_baseline', 'cell_count', 'created_at']])\n        plot_line(versions, x='created_at', y='cell_count', title=f'{sel_name} — cell count across versions')\n    else:\n        print('No saved versions for this notebook yet.')\nelse:\n    print('Pick a notebook above first.')"
+    },
+    {
+      "type": "markdown",
+      "code": "## 5 · Selected notebook — runs & reliability\n\n`v_nb_runs` has one row per run with a normalized `status` (`ok` / `error` / `interrupted`), a wall-clock `duration_sec`, and the summed in-cell `total_exec_sec`. We load the selected notebook's runs into `sel_runs` and reuse it below."
+    },
+    {
+      "type": "code",
+      "code": "if sel_nb_id is not None:\n    sel_runs = read_aurora(f\"\"\"\n        SELECT run_id, trigger, started_at, finished_at, duration_sec,\n               cells_executed, cells_errored, cells_interrupted,\n               total_exec_sec, status\n        FROM v_nb_runs\n        WHERE notebook_id = {int(sel_nb_id)}\n    \"\"\")\n    sel_runs['finished_at'] = pd.to_datetime(sel_runs['finished_at'], errors='coerce', utc=True)\n    sel_runs = sel_runs.sort_values('finished_at')\n    n = len(sel_runs)\n    if n:\n        mix = sel_runs['status'].value_counts()\n        ok = int(mix.get('ok', 0))\n        print(f\"{n} run(s) — ok {ok} ({ok/n*100:.0f}%) · error {int(mix.get('error',0))} · interrupted {int(mix.get('interrupted',0))}\")\n        print(f\"Median wall-clock: {sel_runs['duration_sec'].median():.2f}s   median compute: {sel_runs['total_exec_sec'].median():.2f}s\")\n        status_counts = sel_runs['status'].value_counts().reset_index()\n        status_counts.columns = ['status', 'runs']\n        plot_bar(status_counts, x='status', y='runs', color='status',\n                 title=f'{sel_name} — run outcomes')\n    else:\n        print('No runs recorded for this notebook yet.')\nelse:\n    sel_runs = pd.DataFrame()\n    print('Pick a notebook above first.')"
+    },
+    {
+      "type": "markdown",
+      "code": "### Duration over time — wall-clock vs. compute\n\nEach run carries both `duration_sec` (start→finish, includes think/queue time) and `total_exec_sec` (summed in-cell compute). Plotting both separates \"the compute got heavier\" from \"there was more idle time between cells.\""
+    },
+    {
+      "type": "code",
+      "code": "if len(sel_runs) and sel_runs['finished_at'].notna().any():\n    t = sel_runs.dropna(subset=['finished_at'])[['finished_at', 'duration_sec', 'total_exec_sec']].melt(\n        id_vars='finished_at', var_name='metric', value_name='seconds')\n    t['metric'] = t['metric'].map({'duration_sec': 'wall-clock', 'total_exec_sec': 'compute'})\n    plot_line(t, x='finished_at', y='seconds', color='metric',\n              title=f'{sel_name} — run duration over time')\nelse:\n    print('Not enough timestamped runs for a duration trend yet.')"
+    },
+    {
+      "type": "markdown",
+      "code": "## 6 · Selected notebook — execution time, CPU & memory per cell\n\n`v_nb_cell_runs` unpacks each run into one row **per cell**, carrying `exec_ms` / `exec_sec` and the guest-sampled `peak_cpu_pct` / `peak_mem_mb`. We pull the selected notebook's cell-runs into `sel_cells` and profile them. Cell labels (`PY-2`, `SQL-1`…) are unique **within** a notebook, so each bar below is one real cell."
+    },
+    {
+      "type": "code",
+      "code": "if sel_nb_id is not None:\n    sel_cells = read_aurora(f\"\"\"\n        SELECT run_id, cell_id, label, type, status,\n               exec_ms, exec_sec, peak_mem_mb, peak_cpu_pct, finished_at\n        FROM v_nb_cell_runs\n        WHERE notebook_id = {int(sel_nb_id)}\n    \"\"\")\n    print(f\"{len(sel_cells)} cell-execution record(s) for {sel_name}\")\nelse:\n    sel_cells = pd.DataFrame()\nsel_cells.head(10)"
+    },
+    {
+      "type": "markdown",
+      "code": "### Slowest cells (median execution time)\n\nCells ranked by **median** `exec_sec` across every run (median is robust to a single cold-start outlier), with run count so you can tell a reliably-slow cell from a one-off."
+    },
+    {
+      "type": "code",
+      "code": "if len(sel_cells) and sel_cells['exec_sec'].notna().any():\n    slow = (sel_cells.dropna(subset=['exec_sec'])\n            .groupby(['label', 'type'])\n            .agg(runs=('run_id', 'count'), median_sec=('exec_sec', 'median'), max_sec=('exec_sec', 'max'))\n            .reset_index().sort_values('median_sec', ascending=False).head(15))\n    slow[['median_sec', 'max_sec']] = slow[['median_sec', 'max_sec']].round(3)\n    plot_bar(slow, x='label', y='median_sec', color='type',\n             title=f'{sel_name} — slowest cells (median exec seconds)')\n    display(slow)\nelse:\n    print('No cell timing records for this notebook yet.')"
+    },
+    {
+      "type": "markdown",
+      "code": "### Peak CPU & memory per cell\n\nThe worst-case `peak_cpu_pct` and `peak_mem_mb` sampled for each cell across its runs. Cells near the VM's memory tier are the ones driving **burst** billing; sustained high CPU flags compute-bound work."
+    },
+    {
+      "type": "code",
+      "code": "if len(sel_cells) and (sel_cells['peak_mem_mb'].notna().any() or sel_cells['peak_cpu_pct'].notna().any()):\n    res = (sel_cells.groupby(['label', 'type'])\n           .agg(peak_mem_mb=('peak_mem_mb', 'max'), peak_cpu_pct=('peak_cpu_pct', 'max'))\n           .reset_index())\n    mem = res.dropna(subset=['peak_mem_mb']).sort_values('peak_mem_mb', ascending=False).head(15)\n    if len(mem):\n        mem['peak_mem_mb'] = mem['peak_mem_mb'].round(0)\n        plot_bar(mem, x='label', y='peak_mem_mb', color='type',\n                 title=f'{sel_name} — peak memory per cell (MB)')\n        display(res.sort_values('peak_mem_mb', ascending=False).head(15))\n    cpu = res.dropna(subset=['peak_cpu_pct']).sort_values('peak_cpu_pct', ascending=False).head(15)\n    if len(cpu):\n        cpu['peak_cpu_pct'] = cpu['peak_cpu_pct'].round(0)\n        plot_bar(cpu, x='label', y='peak_cpu_pct', color='type',\n                 title=f'{sel_name} — peak CPU per cell (%)')\nelse:\n    print('No peak CPU/memory samples for this notebook yet (older runs may predate resource sampling).')"
+    },
+    {
+      "type": "markdown",
+      "code": "## 7 · Selected notebook — cost breakdown\n\nPrice the selected notebook's session with `estimate_session_cost()`, split into compute / suspended / burst. This is the number the **cost pill** on the notebook row is built from. `this_notebook()` already computed the total; here we show the components."
+    },
+    {
+      "type": "code",
+      "code": "if sel_nb_id is not None and picked_session:\n    q = read_aurora(f\"\"\"\n        SELECT running_secs, suspended_secs, burst_mb_seconds, memory_mib, architecture, vm_count\n        FROM v_nb_session_cost\n        WHERE session_id = '{picked_session.replace(\"'\", \"''\")}'\n    \"\"\")\n    if len(q):\n        row = q.iloc[0].to_dict()\n        c = estimate_session_cost(running_secs=row['running_secs'], suspended_secs=row['suspended_secs'],\n                                  burst_mb_seconds=row['burst_mb_seconds'], memory_mib=row['memory_mib'],\n                                  architecture=row['architecture'])\n        print(f\"{sel_name} — session cost to date\")\n        print(f\"  VM tier   : {c['memory_gb']:.0f} GB {row['architecture']}  (vCPUs ≈ {c['memory_gb']/2:.1f}, VMs: {int(row['vm_count'])})\")\n        print(f\"  running   : {int(c['running_secs'])}s\")\n        print(f\"  suspended : {int(c['suspended_secs'])}s\")\n        print(f\"  compute   : ${c['running_cost_usd']:.4f}\")\n        print(f\"  suspended : ${c['suspended_cost_usd']:.4f}\")\n        print(f\"  burst     : ${c['burst_cost_usd']:.4f}\")\n        print(f\"  TOTAL     : ${c['total_cost_usd']:.4f}\")\n        breakdown = pd.DataFrame({'component': ['compute', 'suspended', 'burst'],\n                                  'usd': [c['running_cost_usd'], c['suspended_cost_usd'], c['burst_cost_usd']]})\n        plot_bar(breakdown, x='component', y='usd', color='component',\n                 title=f'{sel_name} — cost breakdown (USD)')\n    else:\n        print('No cost row for this session yet — run it (and let the VM run/suspend) to accrue cost.')\nelse:\n    print('Pick a notebook above first.')"
+    },
+    {
+      "type": "markdown",
+      "code": "## 8 · This notebook's own cost — the one-liner\n\nEverything above prices *other* sessions by hand (query `v_nb_session_cost`, splat the row into `estimate_session_cost`). For the session **you're running right now**, `session_cost()` does the whole thing with zero arguments — it resolves the current session id, reads its usage, and prices it. Same dict as `estimate_session_cost`, no SQL."
+    },
+    {
+      "type": "code",
+      "code": "# Zero-arg: price THIS running session. Returns the metrics dict, or {'error': ...}\n# if Aurora isn't configured or the session's usage row hasn't synced yet.\ncost = session_cost()\nif 'error' in cost:\n    print(cost['error'])\nelse:\n    print(f\"This session so far: ${cost['total_cost_usd']:.4f}\")\n    print(f\"  compute   : ${cost['running_cost_usd']:.4f}  ({int(cost['running_secs'])}s running)\")\n    print(f\"  suspended : ${cost['suspended_cost_usd']:.4f}  ({int(cost['suspended_secs'])}s suspended)\")\n    print(f\"  burst     : ${cost['burst_cost_usd']:.4f}\")\ncost"
+    },
+    {
+      "type": "markdown",
+      "code": "## Make it yours\n\n- **Widen the lens:** drop the `WHERE session_id IS NOT NULL` filter in Section 2 to analyze *every* notebook in history, not just the open ones.\n- **Scope by team:** add `WHERE tag = '...'` to the fleet query to focus on one group.\n- **Correlate changes:** join `v_nb_version_cells` to line a slowdown or new error up with the version where it appeared.\n- **Trust it:** every query reads only the curated, SELECT-only `v_nb_*` views — never raw cell code, output, or error bodies — so this dashboard is safe to share."
+    }
+  ]
+}

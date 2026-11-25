@@ -1,0 +1,115 @@
+{
+  "name": "Public API Data Analysis",
+  "description": "A market-expansion analyst's scratchpad: size markets (World Bank), read operating conditions (Open-Meteo), and gauge treasury exposure (CoinGecko) — all from free, no-auth public APIs.",
+  "savedAt": "2026-07-16T00:00:00.000Z",
+  "cells": [
+    {
+      "type": "markdown",
+      "code": "# 🌍 Public API Data Analysis\n\nYou're the analyst on a **global market-expansion** team. Before the company commits budget to new regions, you need a quick, defensible read on three questions — and you'd rather pull **live public data** than wait on a vendor.\n\nThis workbook answers each with a **free, no-auth public API**:\n\n- **How big is the opportunity?** — country populations from the **World Bank** to rank addressable markets\n- **What are the operating conditions?** — live **weather** (Open-Meteo) for candidate hub cities, a proxy for logistics and field-ops planning\n- **What's our treasury exposure?** — top **crypto** prices (CoinGecko) for a team that holds some digital assets on the balance sheet\n\nEverything below runs against real endpoints over the MicroVM's 80/443 egress — no API keys, no secrets. Change the widgets and cells re-run live.\n\n```mermaid\ngraph LR\n  W[\"World Bank API\"] --> M[\"Market size (population)\"]\n  O[\"Open-Meteo API\"] --> C[\"Operating conditions (weather)\"]\n  G[\"CoinGecko API\"] --> T[\"Treasury exposure (crypto)\"]\n  M --> B[\"Market-expansion brief\"]\n  C --> B\n  T --> B\n```",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 1 · Size the markets — World Bank population\n\nMarket size starts with people. We pull the **2022 total population** for every country from the World Bank indicator API, drop missing values and micro-territories (< 1M), and rank the result. This `countries` table is our shortlist of where demand could plausibly scale.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "code": "import requests\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\n# Fetch world population data from World Bank API (no auth needed)\nresp = requests.get('https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?date=2022&format=json&per_page=300', timeout=15)\ndata = resp.json()[1]  # First element is metadata, second is data\n\ncountries = pd.DataFrame(data)\ncountries = countries[countries['value'].notna()].copy()\ncountries = countries[['country', 'value']].copy()\ncountries['country_name'] = countries['country'].apply(lambda x: x['value'])\ncountries['population'] = countries['value'].astype(float).astype(int)\ncountries = countries[['country_name', 'population']].copy()\ncountries = countries[countries['population'] > 1000000]  # Filter small territories\ncountries = countries.sort_values('population', ascending=False).reset_index(drop=True)\nprint(f\"Fetched {len(countries)} candidate markets from the World Bank API\")\ncountries.head(15)",
+      "type": "code",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 2 · Rank the shortlist — top markets by population\n\nA leadership-ready ranking. Drag **Top N** to widen or tighten the shortlist; the chart re-runs so you can frame the conversation around the 10 biggest markets or the top 40.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "code": "# @param {\"type\": \"slider\", \"min\": 5, \"max\": 50, \"step\": 5, \"default\": 20, \"label\": \"Top N\"}\ntop_n = 20\n# Visualize the top N markets by population\ntopN = countries.head(top_n)\nplt.figure(figsize=(12, max(4, top_n * 0.3)))\nplt.barh(topN['country_name'], topN['population'] / 1e6, color='#89b4fa')\nplt.xlabel('Population (millions)', color='#a6adc8')\nplt.title(f'Top {top_n} Candidate Markets by Population (World Bank API, 2022)', color='white', fontsize=14)\nplt.gca().invert_yaxis()\nplt.xticks(color='#a6adc8')\nplt.yticks(color='#a6adc8')\nplt.grid(True, alpha=0.2, axis='x')\nplt.tight_layout()\nplt.show()",
+      "type": "code",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 3 · Read the operating conditions — live weather by hub city\n\nMarket size isn't the whole story — you also run people and product on the ground. We pull **current conditions** for a set of candidate hub cities from Open-Meteo. Temperature, wind, and humidity are a fast proxy for field-ops and logistics planning (cold-chain, outdoor install crews, warehouse HVAC load).",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "code": "import requests\nimport pandas as pd\n\n# Fetch weather data from Open-Meteo API (no key needed)\n# Current conditions for candidate hub cities\ncities = [\n    {'name': 'New York', 'lat': 40.71, 'lon': -74.01},\n    {'name': 'London', 'lat': 51.51, 'lon': -0.13},\n    {'name': 'Tokyo', 'lat': 35.68, 'lon': 139.69},\n    {'name': 'Sydney', 'lat': -33.87, 'lon': 151.21},\n    {'name': 'Paris', 'lat': 48.86, 'lon': 2.35},\n    {'name': 'Berlin', 'lat': 52.52, 'lon': 13.40},\n    {'name': 'Mumbai', 'lat': 19.08, 'lon': 72.88},\n    {'name': 'S\\u00e3o Paulo', 'lat': -23.55, 'lon': -46.63},\n]\n\nweather_data = []\nfor city in cities:\n    url = f\"https://api.open-meteo.com/v1/forecast?latitude={city['lat']}&longitude={city['lon']}&current=temperature_2m,wind_speed_10m,relative_humidity_2m\"\n    r = requests.get(url, timeout=10)\n    current = r.json()['current']\n    weather_data.append({\n        'city': city['name'],\n        'temperature_c': current['temperature_2m'],\n        'wind_speed_kmh': current['wind_speed_10m'],\n        'humidity_pct': current['relative_humidity_2m'],\n    })\n\nweather = pd.DataFrame(weather_data)\nprint(\"Live operating conditions from Open-Meteo API:\")\nweather",
+      "type": "code",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 4 · Compare conditions side by side\n\nThree quick panels — temperature, wind, humidity — across the hub cities. Bars are colored by temperature band (blue = cold, green = mild, red = hot) so extremes that could complicate operations jump out at a glance.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "code": "# Plot weather comparison\nfig, axes = plt.subplots(1, 3, figsize=(14, 4))\n\ncolors = ['#f38ba8' if t > 25 else '#89b4fa' if t < 10 else '#a6e3a1' for t in weather['temperature_c']]\naxes[0].barh(weather['city'], weather['temperature_c'], color=colors)\naxes[0].set_xlabel('\\u00b0C', color='#a6adc8')\naxes[0].set_title('Temperature', color='white')\naxes[0].tick_params(colors='#a6adc8')\naxes[0].axvline(0, color='#585b70', linewidth=0.5)\n\naxes[1].barh(weather['city'], weather['wind_speed_kmh'], color='#cba6f7')\naxes[1].set_xlabel('km/h', color='#a6adc8')\naxes[1].set_title('Wind Speed', color='white')\naxes[1].tick_params(colors='#a6adc8')\n\naxes[2].barh(weather['city'], weather['humidity_pct'], color='#89dceb')\naxes[2].set_xlabel('%', color='#a6adc8')\naxes[2].set_title('Humidity', color='white')\naxes[2].tick_params(colors='#a6adc8')\n\nplt.suptitle('Live Operating Conditions Across Hub Cities (Open-Meteo API)', color='white', fontsize=14, y=1.02)\nplt.tight_layout()\nplt.show()",
+      "type": "code",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Step 5 · Gauge treasury exposure — crypto prices\n\nFinally, treasury. The company holds a slice of digital assets, so before expanding we sanity-check that book against the market. Pick a **reporting currency** and how many top coins to pull; CoinGecko returns live prices, market caps, and 24h moves. Use the **24h Change %** column as a fast volatility read on what we're carrying.",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "code": "# @param {\"type\": \"dropdown\", \"options\": [\"usd\", \"eur\", \"gbp\", \"jpy\"], \"default\": \"usd\", \"label\": \"Reporting currency\"}\nvs_currency = \"usd\"\n# @param {\"type\": \"slider\", \"min\": 5, \"max\": 50, \"step\": 5, \"default\": 20, \"label\": \"Number of coins\"}\nnum_coins = 20\n\nimport requests\nimport pandas as pd\n\n# Fetch cryptocurrency prices from CoinGecko (no auth)\nresp = requests.get('https://api.coingecko.com/api/v3/coins/markets', params={\n    'vs_currency': vs_currency,\n    'order': 'market_cap_desc',\n    'per_page': num_coins,\n    'sparkline': False\n}, timeout=15)\ncrypto = pd.DataFrame(resp.json())[['name', 'symbol', 'current_price', 'market_cap', 'price_change_percentage_24h']]\ncrypto.columns = ['Name', 'Symbol', 'Price', 'Market Cap', '24h Change %']\nprint(f\"Treasury check — top {num_coins} assets by market cap (reported in {vs_currency.upper()})\")\ncrypto",
+      "type": "code",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    },
+    {
+      "type": "markdown",
+      "code": "## Wrap-up\n\nIn a few cells and three public APIs you've assembled the backbone of an expansion brief: a **ranked market shortlist** (World Bank), a **live operating-conditions** read for candidate hubs (Open-Meteo), and a **treasury exposure** snapshot (CoinGecko) — no credentials anywhere.\n\n**Where to take it next**\n- Join the population ranking to your own revenue-per-capita assumptions to turn size into a TAM estimate\n- Pull Open-Meteo's forecast (not just current) to flag seasonal risk windows per hub\n- Log the crypto snapshot to S3 on a schedule to build your own price history",
+      "output": null,
+      "error": null,
+      "html": null,
+      "image": null,
+      "executionNumber": null
+    }
+  ]
+}
