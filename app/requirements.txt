@@ -23,7 +23,7 @@ psutil==7.0.0
 # File format support
 openpyxl==3.1.5
 xlrd==2.0.2
-pyarrow==19.0.1
+pyarrow==23.0.1
 
 # Statistical analysis
 scipy==1.15.3
